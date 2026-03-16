@@ -1,121 +1,129 @@
-# Projeto Integrador — Plataforma de Conexão entre Freelancers e Empresas
+# Projeto Integrador — Plataforma de Conexão entre Freelancers de TI e Empresas
 
 ## Descrição do Projeto
 
-Este projeto tem como objetivo desenvolver um **site e aplicativo voltados para a promoção de serviços freelancers**, conectando profissionais autônomos a pessoas e empresas que buscam soluções específicas.
+Este projeto tem como objetivo desenvolver um **site e aplicativo voltados para a promoção de serviços freelancers na área de Tecnologia da Informação (TI)**, conectando profissionais de tecnologia a pessoas e empresas que buscam soluções digitais.
 
-A plataforma permitirá que freelancers cadastrem seus perfis, adicionem habilidades e encontrem oportunidades de trabalho compatíveis com suas competências. Ao mesmo tempo, empresas poderão cadastrar vagas, projetos ou serviços pontuais, facilitando a contratação de profissionais qualificados.
+A plataforma permitirá que **freelancers de TI** cadastrem seus perfis, adicionem suas habilidades técnicas e encontrem oportunidades de trabalho compatíveis com suas competências. Ao mesmo tempo, empresas poderão cadastrar **projetos de desenvolvimento, suporte técnico, design digital, análise de dados e outros serviços de tecnologia**, facilitando a contratação de profissionais qualificados.
 
-Além disso, o sistema oferecerá recursos que tornam o processo de contratação mais seguro e transparente, como **avaliações, histórico de serviços, chat entre usuários e controle de horas trabalhadas**.
+Além disso, o sistema oferecerá recursos que tornam o processo de contratação mais seguro e transparente, como **avaliações, histórico de projetos, chat entre usuários e controle de horas trabalhadas**.
 
-A proposta busca **valorizar o trabalho independente**, ampliar a visibilidade dos freelancers e facilitar o acesso a serviços profissionais de maneira rápida, prática e confiável.
+A proposta busca **valorizar o trabalho independente na área de tecnologia**, ampliar a visibilidade dos profissionais de TI e facilitar o acesso a serviços tecnológicos de maneira rápida, prática e confiável.
 
 ---
 
-## Situação Problema (Cenário)
+## Situação Problema
 
-Atualmente, muitos profissionais freelancers enfrentam dificuldades para encontrar oportunidades de trabalho de forma organizada e confiável. Em diversos casos, a divulgação de serviços ocorre de maneira informal, principalmente por redes sociais ou indicações, o que limita o alcance desses profissionais e dificulta a construção de uma reputação sólida no mercado.
+Atualmente, muitos profissionais freelancers da área de **Tecnologia da Informação** enfrentam dificuldades para encontrar oportunidades de trabalho de forma organizada e confiável. Em muitos casos, a divulgação de serviços ocorre de maneira informal, principalmente por redes sociais, grupos ou indicações, o que limita o alcance desses profissionais e dificulta a construção de uma reputação sólida no mercado.
 
-Por outro lado, pessoas e empresas que precisam contratar serviços temporários ou específicos também enfrentam desafios para encontrar profissionais qualificados de forma rápida e segura. A ausência de plataformas acessíveis que conectem diretamente essas duas partes pode gerar perda de tempo, falta de transparência nas negociações e insegurança durante a contratação.
+Por outro lado, empresas e empreendedores que precisam contratar **desenvolvedores, designers, especialistas em suporte técnico ou profissionais de tecnologia para projetos específicos** também enfrentam dificuldades para encontrar profissionais qualificados de forma rápida e segura.
 
-Além disso, há pouca estrutura para acompanhar aspectos importantes do trabalho freelancer, como **controle de horas trabalhadas, avaliações entre contratante e profissional, histórico de serviços e comunicação organizada entre as partes**.
+A ausência de plataformas acessíveis que conectem diretamente essas duas partes pode gerar perda de tempo, falta de transparência nas negociações e insegurança durante a contratação.
 
-Diante desse cenário, surge a necessidade de uma plataforma que facilite essa conexão, oferecendo um ambiente confiável, transparente e eficiente para ambos os lados.
+Além disso, muitas dessas contratações não possuem ferramentas adequadas para acompanhar aspectos importantes do trabalho freelancer, como **controle de horas trabalhadas, histórico de projetos, avaliações entre contratante e profissional e comunicação organizada entre as partes**.
+
+Diante desse cenário, surge a necessidade de uma plataforma especializada em **freelancers de TI**, que facilite essa conexão, oferecendo um ambiente confiável, transparente e eficiente para empresas e profissionais da área tecnológica.
 
 ---
 
 ## Descrição da Proposta
 
-A proposta do projeto é criar uma **plataforma digital que conecte freelancers e empresas**, permitindo que oportunidades de trabalho sejam divulgadas e preenchidas de maneira rápida e eficiente.
-
-A plataforma contará com diferentes funcionalidades, como:
-
-### Cadastro de Usuários
-
-No momento do cadastro, o usuário poderá escolher entre dois perfis:
-
-**Freelancer**
-
-* Nome completo
-* Telefone
-* CPF (informação privada)
-* Idade
-* Sexo (opcional)
-* Habilidades (seleção por categorias)
-
-**Empresa**
-
-* Nome da empresa
-* CNPJ
-* Endereço
-* Área de atuação (ex.: restaurante, escola, comércio)
+A proposta do projeto é criar uma **plataforma digital que conecte freelancers de TI e empresas**, permitindo que projetos tecnológicos sejam divulgados e preenchidos de maneira rápida e eficiente.
 
 ---
 
-### Funcionalidades para Empresas
+## Cadastro de Usuários
 
-* Cadastro de vagas ou projetos (jobs)
-* Definição de valor por serviço ou por hora
-* Definição de horas de trabalho
-* Prazo para execução
-* Local do serviço
-* Seleção do candidato ideal
-* Histórico de contratações
-* Dashboard com gastos totais e avaliação média dos profissionais contratados
+No momento do cadastro, o usuário poderá escolher entre dois perfis.
 
----
+### Freelancer de TI
 
-### Funcionalidades para Freelancers
+- Nome completo  
+- Telefone  
+- CPF (informação privada)  
+- Idade  
+- Sexo (opcional)  
+- Área de atuação (ex.: desenvolvimento web, design UI/UX, suporte técnico, análise de dados, segurança da informação)  
+- Tecnologias dominadas (ex.: JavaScript, Python, React, SQL)
 
-* Busca por oportunidades de trabalho compatíveis com suas habilidades
-* Sistema de filtro de vagas por:
+### Empresa
 
-  * Valor por hora
-  * Avaliação
-  * Distância
-  * Disponibilidade
-* Histórico de serviços realizados
-* Dashboard com:
-
-  * Total ganho no mês
-  * Horas trabalhadas
-  * Avaliação média
+- Nome da empresa  
+- CNPJ  
+- Endereço  
+- Área de atuação (ex.: startup, e-commerce, empresa de tecnologia, agência digital)
 
 ---
 
-### Recursos da Plataforma
+## Funcionalidades para Empresas
 
-* Sistema de **login e autenticação**
-* **Menu de categorias** de serviços
-* **Barra de pesquisa com filtros inteligentes**
-* **Chat interno** entre freelancers e empresas
-* **Avaliação com estrelas e comentários** após a finalização do serviço
-* **Contratos automáticos**
-* Encerramento automático de vagas quando atingir o número máximo de profissionais
-* Página de **denúncias e reclamações**
-* **Pré-requisitos mínimos** para determinados serviços (certificados ou cursos)
+- Cadastro de **projetos ou demandas de TI**
+- Definição de valor por projeto ou por hora
+- Definição de prazo para entrega
+- Descrição detalhada do projeto
+- Tecnologias necessárias para execução
+- Seleção do freelancer ideal
+- Histórico de projetos contratados
 
----
+### Dashboard da Empresa
 
-### Sistema de Controle de Trabalho
-
-A plataforma contará com um sistema de controle baseado em **localização (GPS)**:
-
-* O freelancer registra sua presença no local do trabalho
-* O sistema confirma a localização
-* Um cronômetro inicia automaticamente
-* O tempo trabalhado é registrado dentro do intervalo definido pela empresa
-
-Isso garante maior **transparência e confiabilidade** no registro das horas trabalhadas.
-
+- Total investido em projetos
+- Avaliação média dos freelancers contratados
 
 ---
 
-# Equipe
+## Funcionalidades para Freelancers
 
-* Breno Otávio Rohregger
-* João Pedro Bachmann
-* Ricardo Baron Rodrigues
-* Mateus Oliveira Ramos
+- Busca por **projetos de TI compatíveis com suas habilidades**
+- Sistema de filtro de vagas por:
+  - Valor do projeto ou hora
+  - Avaliação da empresa
+  - Tipo de projeto
+  - Tecnologia utilizada
+  - Prazo de entrega
 
+- Histórico de projetos realizados
+- Portfólio com trabalhos anteriores
 
+### Dashboard do Freelancer
+
+- Total ganho no mês
+- Projetos concluídos
+- Avaliação média recebida
+
+---
+
+## Recursos da Plataforma
+
+- Sistema de **login e autenticação**
+- **Menu de categorias de tecnologia**
+- **Barra de pesquisa com filtros inteligentes**
+- **Chat interno** entre freelancers e empresas
+- **Sistema de avaliação com estrelas e comentários**
+- **Contratos digitais automáticos**
+- Encerramento automático de vagas
+- Página de **denúncias e suporte**
+- **Sistema de portfólio profissional**
+- Upload de **arquivos do projeto**
+
+---
+
+## Sistema de Controle de Trabalho
+
+A plataforma contará com um sistema de controle baseado em **registro de atividades e tempo de trabalho**:
+
+- O freelancer poderá iniciar um **cronômetro de trabalho dentro da plataforma**
+- O sistema registra o tempo dedicado ao projeto
+- As horas trabalhadas ficam registradas no sistema
+- A empresa pode acompanhar o progresso do trabalho
+
+Isso garante maior **transparência, organização e confiabilidade** no acompanhamento do desenvolvimento dos projetos.
+
+---
+
+## Equipe
+
+- Breno Otávio Rohregger  
+- João Pedro Bachmann  
+- Ricardo Baron Rodrigues  
+- Mateus Oliveira Ramos
