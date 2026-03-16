@@ -31,7 +31,109 @@ Diante desse cenário, surge a necessidade de uma plataforma que facilite essa c
 A proposta do projeto é criar uma **plataforma digital que conecte freelancers e empresas**, permitindo que oportunidades de trabalho sejam divulgadas e preenchidas de maneira rápida e eficiente.
 
 A plataforma contará com diferentes funcionalidades, como:
+Cadastro de Usuários
 
+No momento do cadastro, o usuário poderá escolher entre dois perfis:
+
+Freelancer
+
+Nome completo
+
+Telefone
+
+CPF (informação privada)
+
+Idade
+
+Sexo (opcional)
+
+Habilidades (seleção por categorias)
+
+Empresa
+
+Nome da empresa
+
+CNPJ
+
+Endereço
+
+Área de atuação (ex.: restaurante, escola, comércio)
+
+Funcionalidades para Empresas
+
+Cadastro de vagas ou projetos (jobs)
+
+Definição de valor por serviço ou por hora
+
+Definição de horas de trabalho
+
+Prazo para execução
+
+Local do serviço
+
+Seleção do candidato ideal
+
+Histórico de contratações
+
+Dashboard com gastos totais e avaliação média dos profissionais contratados
+
+Funcionalidades para Freelancers
+
+Busca por oportunidades de trabalho compatíveis com suas habilidades
+
+Sistema de filtro de vagas por:
+
+Valor por hora
+
+Avaliação
+
+Distância
+
+Disponibilidade
+
+Histórico de serviços realizados
+
+Dashboard com:
+
+Total ganho no mês
+
+Horas trabalhadas
+
+Avaliação média
+
+Recursos da Plataforma
+
+Sistema de login e autenticação
+
+Menu de categorias de serviços
+
+Barra de pesquisa com filtros inteligentes
+
+Chat interno entre freelancers e empresas
+
+Avaliação com estrelas e comentários após a finalização do serviço
+
+Contratos automáticos
+
+Encerramento automático de vagas quando atingir o número máximo de profissionais
+
+Página de denúncias e reclamações
+
+Pré-requisitos mínimos para determinados serviços (certificados ou cursos)
+
+Sistema de Controle de Trabalho
+
+A plataforma contará com um sistema de controle baseado em localização (GPS):
+
+O freelancer registra sua presença no local do trabalho
+
+O sistema confirma a localização
+
+Um cronômetro inicia automaticamente
+
+O tempo trabalhado é registrado dentro do intervalo definido pela empresa
+
+Isso garante maior transparência e confiabilidade no registro das horas trabalhadas.
 
 ---
 
