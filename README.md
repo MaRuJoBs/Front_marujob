@@ -1,5 +1,3 @@
-# Front_marujob
-
 # Projeto Integrador — Plataforma de Conexão entre Freelancers e Empresas
 
 ## Descrição do Projeto
