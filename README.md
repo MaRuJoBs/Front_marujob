@@ -232,9 +232,8 @@ As regras de negócio definem as condições e restrições que garantem o funci
 
 Abaixo está a representação da modelagem do banco de dados utilizada no sistema:
 
-<p>
-  <img src="./docs/banco.png" width="700"/>
-</p>
+![Diagrama do Banco de Dados](./docs/banco.png)
+
 
 ## Equipe
 
