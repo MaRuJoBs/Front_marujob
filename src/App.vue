@@ -1,11 +1,13 @@
 <template>
   <div class="app">
     <Header />
+    <HomeComponent />
   </div>
 </template>
 
 <script setup>
 import Header from './components/Header.vue'
+import HomeComponent from './src/components/HomeComponent.vue';
 </script>
 
 <style>
