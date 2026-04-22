@@ -7,7 +7,7 @@
 
 <script setup>
 import Header from './components/Header.vue'
-import HomeComponent from './src/components/HomeComponent.vue';
+import HomeComponent from '../src/components/HomeComponent.vue';
 </script>
 
 <style>
