@@ -2,15 +2,17 @@
   <div class="app">
     <Header />
     <HomeComponent />
+    <Footer />
   </div>
 </template>
 
 <script setup>
 import Header from './components/Header.vue'
-import HomeComponent from './src/components/HomeComponent.vue';
+import HomeComponent from './components/HomeComponent.vue'
+import Footer from './components/Footer.vue'
 </script>
 
-<style>
+<style scoped>
 * {
   margin: 0;
   padding: 0;

@@ -67,7 +67,6 @@ main {
   padding: 0 16px 16px 16px;
 }
 
-/* PRINCIPAIS */
 
 
 .principais h2 {
@@ -85,16 +84,16 @@ main {
   height: 60px;
   background-color: #939292;
   border-radius: 10px;
-  margin: 0; /* importante */
+  margin: 0; 
 }
 .card {
   background: #D8D2E6;
   border-radius: 12px;
-  padding: 25px 12px 25px 12px; /* 🔥 só do lado direito */
+  padding: 25px 12px 25px 12px; 
   margin-top: 12px;
   display: flex;
   align-items: center;
-  gap: 12px; /* espaço entre itens */
+  gap: 12px; 
 }
 
 .card h3 {
@@ -122,7 +121,7 @@ div.preco {
   color: #777;
 }
 .arrow {
-  margin-left: auto; /* 🔥 empurra pra direita */
+  margin-left: auto; 
   font-size: 50px;
   color: #5b3cc4;
 }
@@ -146,7 +145,6 @@ div.preco {
   background: #5b3cc4;
 }
 
-/* MAIS OPORTUNIDADES */
 .mais h3 {
   margin: 8px 0;
   color: #49357B;
@@ -187,7 +185,7 @@ div.preco {
   color: white;
   border-radius: 10px;
   padding: 6px 8px;
-  margin: 15px auto 0 auto; /* 🔥 isso centraliza */
-  display: block; /* 🔥 importante */
+  margin: 15px auto 0 auto; 
+  display: block; 
 }
 </style>
