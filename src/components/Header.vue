@@ -16,18 +16,19 @@
 </script>
 
 <style scoped>
+body {
+  margin: 0;
+  padding: 0;
+}
 .header {
   width: 100%;
-  height: 300px;
+  height: 33vh;
   position: relative;
-  overflow: hidden;
-
   background: url('@/assets/images/fundo.png') no-repeat center top;
   background-size: cover;
-
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: center;  
 }
 
 .overlay {
@@ -46,10 +47,10 @@
 
 .logo-top {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  width: 48px;
-  z-index: 2;
+  top: -3px;
+  left: -7px;
+  width: 100px;
+  
 
   animation: fadeDown 0.8s ease;
 }
@@ -71,8 +72,8 @@
 }
 
 .slogan {
-  margin-top: 10px;
-  width: 190px;
+  margin-top: 15vw;
+  width: 370px;
   opacity: 0.95;
 }
 
