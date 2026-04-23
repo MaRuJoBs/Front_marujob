@@ -1,24 +1,32 @@
 <template>
   <footer class="footer">
-    <div class="item active">
-      <span class="icon">🏠</span>
-      <p>Início</p>
-    </div>
+  <div class="item active">
+  <span class="icon">
+    <FontAwesomeIcon :icon="['fas', 'house']" />
+  </span>
+  <p>Início</p>
+</div>
 
-    <div class="item">
-      <span class="icon">💼</span>
-      <p>Freelances</p>
-    </div>
+<div class="item">
+  <span class="icon">
+    <FontAwesomeIcon :icon="['fas', 'briefcase']" />
+  </span>
+  <p>Freelances</p>
+</div>
 
-    <div class="item">
-      <span class="icon">💬</span>
-      <p>Mensagens</p>
-    </div>
+<div class="item">
+  <span class="icon">
+    <FontAwesomeIcon :icon="['fas', 'message']" />
+  </span>
+  <p>Mensagens</p>
+</div>
 
-    <div class="item">
-      <span class="icon">👤</span>
-      <p>Perfil</p>
-    </div>
+<div class="item">
+  <span class="icon">
+    <FontAwesomeIcon :icon="['fas', 'user']" />
+  </span>
+  <p>Perfil</p>
+</div>
   </footer>
 </template>
 
