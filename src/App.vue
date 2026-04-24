@@ -1,13 +1,11 @@
 <template>
   <div class="app">
-    <Header />
-    <HomeComponent />
+    <OportunidadeComponent />
   </div>
 </template>
 
 <script setup>
-import Header from './components/Header.vue'
-import HomeComponent from '../src/components/HomeComponent.vue';
+import OportunidadeComponent from './components/OportunidadeComponent.vue';
 </script>
 
 <style>
