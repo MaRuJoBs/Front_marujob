@@ -5,21 +5,17 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-import { registerSW } from 'virtual:pwa-register'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faHouse, faBriefcase, faMessage, faUser } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
 
-app.mount('#app')
+library.add(faHouse, faBriefcase, faMessage, faUser)
 
-registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    console.log('🆕 Nova versão disponível do app')
-  },
-  onOfflineReady() {
-    console.log('📦 App pronto para uso offline')
-  }
-})
+app.component('FontAwesomeIcon', FontAwesomeIcon)
+
+app.mount('#app')
