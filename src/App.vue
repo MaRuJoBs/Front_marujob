@@ -1,24 +1,27 @@
 <template>
   <div class="app">
+
     <Header />
-    <HomeComponent />
+
+    <router-view />
+
     <Footer />
+
   </div>
 </template>
 
 <script setup>
 import Header from './components/Header.vue'
-import HomeComponent from './components/HomeComponent.vue'
 import Footer from './components/Footer.vue'
 </script>
 
 <style scoped>
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-
 
 body {
   font-family: 'Poppins', sans-serif;
@@ -29,4 +32,5 @@ body {
   max-width: 420px;
   margin: 0 auto;
 }
+
 </style>
