@@ -1,15 +1,11 @@
 <template>
   <div class="app">
-    <Header />
-    <HomeComponent />
-    <Footer />
+   <PerfilComponent />
   </div>
 </template>
 
 <script setup>
-import Header from './components/Header.vue'
-import HomeComponent from './components/HomeComponent.vue'
-import Footer from './components/Footer.vue'
+import PerfilComponent from './components/PerfilComponent.vue';
 </script>
 
 <style scoped>
