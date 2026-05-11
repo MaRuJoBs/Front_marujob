@@ -1,32 +1,44 @@
+<!-- Footer.vue -->
+
 <template>
   <footer class="footer">
-  <div class="item active">
-  <span class="icon">
-    <FontAwesomeIcon :icon="['fas', 'house']" />
-  </span>
-  <p>Início</p>
-</div>
 
-<div class="item">
-  <span class="icon">
-    <FontAwesomeIcon :icon="['fas', 'briefcase']" />
-  </span>
-  <p>Freelances</p>
-</div>
+    <!-- Início -->
+    <router-link to="/" class="item">
+      <span class="icon">
+        <FontAwesomeIcon :icon="['fas', 'house']" />
+      </span>
 
-<div class="item">
-  <span class="icon">
-    <FontAwesomeIcon :icon="['fas', 'message']" />
-  </span>
-  <p>Mensagens</p>
-</div>
+      <p>Início</p>
+    </router-link>
 
-<div class="item">
-  <span class="icon">
-    <FontAwesomeIcon :icon="['fas', 'user']" />
-  </span>
-  <p>Perfil</p>
-</div>
+    <!-- Freelances -->
+    <router-link to="/freelances" class="item">
+      <span class="icon">
+        <FontAwesomeIcon :icon="['fas', 'briefcase']" />
+      </span>
+
+      <p>Freelances</p>
+    </router-link>
+
+    <!-- Mensagens -->
+    <router-link to="/mensagens" class="item">
+      <span class="icon">
+        <FontAwesomeIcon :icon="['fas', 'message']" />
+      </span>
+
+      <p>Mensagens</p>
+    </router-link>
+
+    <!-- Perfil -->
+    <router-link to="/perfil" class="item">
+      <span class="icon">
+        <FontAwesomeIcon :icon="['fas', 'user']" />
+      </span>
+
+      <p>Perfil</p>
+    </router-link>
+
   </footer>
 </template>
 
@@ -34,19 +46,21 @@
 </script>
 
 <style scoped>
+
 .footer {
   position: fixed;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
 
-  width: 100%;
-  max-width: 420px;
+  width: 420px; 
 
   height: 85px;
+
   padding-bottom: env(safe-area-inset-bottom);
 
   background: #e9e4f5;
+
   border-radius: 25px 25px 0 0;
 
   display: flex;
@@ -54,23 +68,35 @@
   align-items: center;
 
   box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+
   z-index: 999;
 }
+
+/* Itens */
 
 .item {
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  text-decoration: none;
+
   font-size: 12px;
+
   color: #8b7bb5;
 }
+
+/* Ícone */
 
 .icon {
   font-size: 22px;
   margin-bottom: 3px;
 }
 
-.item.active {
+/* Página ativa */
+
+.router-link-active {
   color: #5b3cc4;
 }
+
 </style>
