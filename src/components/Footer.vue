@@ -53,8 +53,7 @@
   left: 50%;
   transform: translateX(-50%);
 
-  width: 100%;
-  max-width: 420px;
+  width: 420px; 
 
   height: 85px;
 

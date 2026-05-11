@@ -1,14 +1,16 @@
 <template>
   <div class="page">
-    <h1>Freelances</h1>
+   <OportunidadeComponent />
   </div>
 </template>
 
 <script setup>
+import OportunidadeComponent from '@/components/OportunidadeComponent.vue';
+
 </script>
 
 <style scoped>
 .page {
-  padding: 20px;
+  max-width: 420px;
 }
 </style>
