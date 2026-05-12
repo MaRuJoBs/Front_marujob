@@ -89,7 +89,7 @@ body {
 }
 
 .slogan {
-  margin-top: 15vw;
+  margin-top: 10vw;
   width: 370px;
   opacity: 0.95;
 }
