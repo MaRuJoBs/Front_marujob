@@ -5,6 +5,10 @@
 
     <img src="@/assets/images/logo.png" class="logo-top" />
 
+    <router-link to="/favoritos" class="heart-icon">
+  <FontAwesomeIcon :icon="['fas', 'heart']" />
+</router-link>
+
     <div class="brand"> 
       <img src="@/assets/images/slogan.png" class="slogan" />
     </div>
@@ -20,6 +24,7 @@ body {
   margin: 0;
   padding: 0;
 }
+
 .header {
   width: 100%;
   height: 33vh;
@@ -50,9 +55,21 @@ body {
   top: -3px;
   left: -7px;
   width: 100px;
-  
+
+  z-index: 3;
 
   animation: fadeDown 0.8s ease;
+}
+
+.heart-icon {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+
+  font-size: 32px;
+  z-index: 3;
+
+  text-decoration: none;
 }
 
 .brand {
@@ -99,6 +116,20 @@ body {
   }
 }
 
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
 @media (max-width: 400px) {
   .title {
     font-size: 28px;
@@ -106,6 +137,11 @@ body {
 
   .slogan {
     width: 150px;
+  }
+
+  .heart-icon {
+    font-size: 28px;
+    right: 15px;
   }
 }
 </style>

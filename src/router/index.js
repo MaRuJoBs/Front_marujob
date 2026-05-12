@@ -6,6 +6,7 @@ import HomeView from '../views/HomeView.vue'
 import PerfilView from '../views/PerfilView.vue'
 import FreelancesView from '../views/FreelancesView.vue'
 import MensagensView from '../views/MensagensView.vue'
+import FavoritosView from '@/views/Favoritos.View.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +34,12 @@ const router = createRouter({
       path: '/perfil',
       name: 'perfil',
       component: PerfilView,
+    },
+
+    {
+      path: '/favoritos',
+      name: 'favoritos',
+      component: FavoritosView,
     },
   ],
 })
