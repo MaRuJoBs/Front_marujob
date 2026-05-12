@@ -59,9 +59,10 @@ body {
 main {
   background-color: #E0D1F9;
   border-radius: 60px 60px 0 0;
-  margin-top: -100px;
+  margin-top: -55px;
   position: relative;
   z-index: 5;
+  padding-top: 20px;
 }
 .home {
   padding: 0 16px 16px 16px;
