@@ -174,11 +174,14 @@
   position: relative;
   border-bottom-left-radius: 40px;
   border-bottom-right-radius: 40px;
-  background-image: url('@/assets/images/perfil.png');
+
+  background-image: url('/src/assets/images/perfil.png');
+
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  padding: 30px 20px 90px;
+
+  padding: 40px 50px 120px;
   overflow: hidden;
 }
 
@@ -204,7 +207,7 @@
 .avatar{
   width: 90px;
   height: 90px;
-  background: #8c8c8c;
+  background:   #8c8c8c;
   border-radius: 50%;
 }
 
@@ -252,7 +255,7 @@
 .stats{
   position: absolute;
   left: 50%;
-  bottom: -45px;
+  bottom: 10px;
   transform: translateX(-50%);
   width: 92%;
   display: flex;
