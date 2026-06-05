@@ -1,13 +1,14 @@
-// src/router/index.js
-
 import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '../views/HomeView.vue'
 import PerfilView from '../views/PerfilView.vue'
 import FreelancesView from '../views/FreelancesView.vue'
 import MensagensView from '../views/MensagensView.vue'
-import FavoritosView from '@/views/Favoritos.View.vue'
+
+import FavoritosView from '../views/Favoritos.View.vue'
+import RegisterComponent from '@/components/RegisterComponent.vue'
 import LoginView from '@/views/LoginView.vue'
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,6 +25,12 @@ const router = createRouter({
       path: '/home',
       name: 'home',
       component: HomeView,
+    },
+
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterComponent,
     },
 
     {

@@ -13,7 +13,10 @@ import {
   faMessage,
   faUser,
   faHeart,
-  faTrash
+  faTrash,
+  faEnvelope,
+  faLock,
+  faShieldHalved
 } from '@fortawesome/free-solid-svg-icons'
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -29,7 +32,10 @@ library.add(
   faMessage,
   faUser,
   faHeart,
-  faTrash
+  faTrash,
+  faEnvelope,
+  faLock,
+  faShieldHalved
 )
 
 app.component('FontAwesomeIcon', FontAwesomeIcon)
