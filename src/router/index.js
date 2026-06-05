@@ -1,4 +1,3 @@
-
 import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '../views/HomeView.vue'
@@ -6,7 +5,7 @@ import PerfilView from '../views/PerfilView.vue'
 import FreelancesView from '../views/FreelancesView.vue'
 import MensagensView from '../views/MensagensView.vue'
 import FavoritosView from '../views/Favoritos.View.vue'
-import RegisterView from '../views/RegisterView.vue'
+import RegisterComponent from '@/components/RegisterComponent.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,7 +20,7 @@ const router = createRouter({
     {
       path: '/register',
       name: 'register',
-      component: RegisterView,
+      component: RegisterComponent,
     },
 
     {

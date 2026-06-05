@@ -25,27 +25,46 @@
     <div class="card">
 
       <div class="field">
-        <label>Nome completo</label>
-        <input type="text" />
-      </div>
+  <label>Nome completo</label>
+
+  <div class="input-box">
+    <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
+    <input type="text" placeholder="Digite seu nome completo..." />
+  </div>
+</div>
 
       <div class="field">
-        <label>E-mail</label>
-        <input type="email" />
-      </div>
+  <label>E-mail</label>
+
+  <div class="input-box">
+    <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
+    <input type="email" placeholder="Digite seu e-mail..." />
+  </div>
+</div>
 
       <div class="field">
-        <label>Senha</label>
-        <input type="password" />
-      </div>
+  <label>Senha</label>
+
+  <div class="input-box">
+    <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
+    <input type="password" placeholder="Crie sua senha..." />
+  </div>
+</div>
 
       <div class="field">
-        <label>Confirmar senha</label>
-        <input type="password" />
-      </div>
+  <label>Confirmar senha</label>
+
+  <div class="input-box">
+    <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
+    <input type="password" placeholder="Confirme sua senha..." />
+  </div>
+</div>
 
       <div class="password-box">
-        <p>Sua senha deve conter:</p>
+        <p class="password-title">
+  <FontAwesomeIcon :icon="['fas', 'shield-halved']" class="icon" />
+  Sua senha deve conter:
+</p>
 
         <div class="rules">
           <span>○ +7 Caracteres</span>
@@ -73,11 +92,12 @@
 
 <style scoped>
 
-.container{
-  min-height:100vh;
-  background:#f4f4f4;
-  padding:30px;
-  font-family:Arial, Helvetica, sans-serif;
+.container {
+  min-height: 100vh;
+  background: #f4f4f4;
+  padding: 30px;
+  padding-bottom: 120px; /* 👈 ESSENCIAL */
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .top{
@@ -132,12 +152,12 @@
 }
 
 h1{
-  margin-top:25px;
   color:#2e1a74;
+  font-weight: bold;
 }
 
 .subtitle{
-  color:#555;
+  color:#3c2398c0;
   margin-bottom:20px;
   max-width:260px;
 }
@@ -211,6 +231,53 @@ h1{
   color:#2e1a74;
   text-decoration:none;
   font-weight:bold;
+}
+
+
+/* NOVOS ESTILOS PARA O TÍTULO DE REQUISITOS DE SENHA */
+.password-title{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2e1a74;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.password-title .icon{
+  color: #6d4dc2;
+  font-size: 16px;
+}
+
+
+/* NOVOS ESTILOS PARA OS CAMPOS DE INPUT */
+.input-box {
+  display: flex;
+  align-items: center;
+  background: #d6d6d6;
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 45px;
+  gap: 10px;
+}
+
+.input-box .icon {
+  color: #6d4dc2;
+  font-size: 18px;
+  min-width: 20px;
+}
+
+.input-box input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+  color: #333;
+}
+
+.input-box input::placeholder {
+  color: #888;
 }
 
 </style>

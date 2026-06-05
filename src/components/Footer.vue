@@ -31,7 +31,7 @@
     </router-link>
 
     <!-- Perfil -->
-    <router-link to="/perfil" class="item">
+    <router-link to="/register" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'user']" />
       </span>
