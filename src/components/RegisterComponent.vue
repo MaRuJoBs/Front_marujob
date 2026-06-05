@@ -1,10 +1,42 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
+
+
+const router = useRouter()
+const name = ref('')
+const email = ref('')
+const senha = ref('')
+const confirmarSenha = ref('')
+
+const criarConta = async () => {
+  if (senha.value !== confirmarSenha.value) {
+    alert('As senhas não conferem')
+    return
+  }
+
+  try {
+    await axios.post('http://127.0.0.1:8000/api/registro/', {
+      name: name.value,
+      email: email.value,
+      password: senha.value,
+    })
+
+    router.push('/home')
+  } catch (error) {
+    console.log(error.response)
+    alert('Não foi possível criar a conta: e-mail em uso.')
+  }
+}
+// estilização da pagina de registro, ainda não finalizada
+
+</script>
+
 <template>
   <div class="container">
-
     <div class="top">
-      <button class="back-button">
-        ←
-      </button>
+      <button class="back-button">←</button>
 
       <div class="photo-section">
         <div class="photo-box">
@@ -18,53 +50,50 @@
 
     <h1>Criar conta</h1>
 
-    <p class="subtitle">
-      Junte-se à nossa plataforma e mostre seu trabalho para o mundo.
-    </p>
+    <p class="subtitle">Junte-se à nossa plataforma e mostre seu trabalho para o mundo.</p>
 
     <div class="card">
+      <div class="field">
+        <label>Nome completo</label>
+
+        <div class="input-box">
+          <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
+          <input v-model="name" type="text" placeholder="Digite seu nome completo..." />
+        </div>
+      </div>
 
       <div class="field">
-  <label>Nome completo</label>
+        <label>E-mail</label>
 
-  <div class="input-box">
-    <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
-    <input type="text" placeholder="Digite seu nome completo..." />
-  </div>
-</div>
-
-      <div class="field">
-  <label>E-mail</label>
-
-  <div class="input-box">
-    <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
-    <input type="email" placeholder="Digite seu e-mail..." />
-  </div>
-</div>
+        <div class="input-box">
+          <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
+          <input v-model="email" type="email" placeholder="Digite seu e-mail..." />
+        </div>
+      </div>
 
       <div class="field">
-  <label>Senha</label>
+        <label>Senha</label>
 
-  <div class="input-box">
-    <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
-    <input type="password" placeholder="Crie sua senha..." />
-  </div>
-</div>
+        <div class="input-box">
+          <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
+          <input v-model="senha" type="password" placeholder="Crie sua senha..." />
+        </div>
+      </div>
 
       <div class="field">
-  <label>Confirmar senha</label>
+        <label>Confirmar senha</label>
 
-  <div class="input-box">
-    <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
-    <input type="password" placeholder="Confirme sua senha..." />
-  </div>
-</div>
+        <div class="input-box">
+          <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
+          <input v-model="confirmarSenha" type="password" placeholder="Confirme sua senha..." />
+        </div>
+      </div>
 
       <div class="password-box">
         <p class="password-title">
-  <FontAwesomeIcon :icon="['fas', 'shield-halved']" class="icon" />
-  Sua senha deve conter:
-</p>
+          <FontAwesomeIcon :icon="['fas', 'shield-halved']" class="icon" />
+          Sua senha deve conter:
+        </p>
 
         <div class="rules">
           <span>○ +7 Caracteres</span>
@@ -73,25 +102,19 @@
         </div>
       </div>
 
-      <button class="create-account">
-        Criar conta
-      </button>
+      <button class="create-account" @click="criarConta">
+  Criar conta
+</button>
 
       <div class="login">
         Já tem uma conta?
-        <a href="#">Entrar</a>
+        <router-link to="/login"><span>Entrar</span></router-link>
       </div>
-
     </div>
-
   </div>
 </template>
 
-<script setup>
-</script>
-
 <style scoped>
-
 .container {
   min-height: 100vh;
   background: #f4f4f4;
@@ -100,142 +123,141 @@
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.top{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-.back-button{
-  width:45px;
-  height:45px;
-  border:none;
-  border-radius:50%;
-  background:#d8c6ff;
-  color:#5b38b0;
-  font-size:20px;
-  cursor:pointer;
+.back-button {
+  width: 45px;
+  height: 45px;
+  border: none;
+  border-radius: 50%;
+  background: #d8c6ff;
+  color: #5b38b0;
+  font-size: 20px;
+  cursor: pointer;
 }
 
-.photo-section{
-  text-align:center;
+.photo-section {
+  text-align: center;
 }
 
-.photo-box{
-  width:120px;
-  height:120px;
-  border-radius:20px;
-  background:#ece5f7;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  position:relative;
-  box-shadow:0 3px 10px rgba(0,0,0,.15);
+.photo-box {
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+  background: #ece5f7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
-.photo-box span{
-  font-size:45px;
-  color:#6d4dc2;
+.photo-box span {
+  font-size: 45px;
+  color: #6d4dc2;
 }
 
-.plus{
-  position:absolute;
-  right:15px;
-  bottom:15px;
-  font-size:28px !important;
+.plus {
+  position: absolute;
+  right: 15px;
+  bottom: 15px;
+  font-size: 28px !important;
 }
 
-.photo-section p{
-  margin-top:8px;
-  font-size:12px;
-  color:#666;
+.photo-section p {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
 }
 
-h1{
-  color:#2e1a74;
+h1 {
+  color: #2e1a74;
   font-weight: bold;
 }
 
-.subtitle{
-  color:#3c2398c0;
-  margin-bottom:20px;
-  max-width:260px;
+.subtitle {
+  color: #3c2398c0;
+  margin-bottom: 20px;
+  max-width: 260px;
 }
 
-.card{
-  background:#e8dcf3;
-  border-radius:20px;
-  padding:25px;
+.card {
+  background: #e8dcf3;
+  border-radius: 20px;
+  padding: 25px;
 }
 
-.field{
-  margin-bottom:20px;
+.field {
+  margin-bottom: 20px;
 }
 
-.field label{
-  display:block;
-  margin-bottom:8px;
-  color:#2e1a74;
-  font-weight:600;
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #2e1a74;
+  font-weight: 600;
 }
 
-.field input{
-  width:100%;
-  height:42px;
-  border:none;
-  border-radius:8px;
-  background:#d6d6d6;
-  padding:0 12px;
+.field input {
+  width: 100%;
+  height: 42px;
+  border: none;
+  border-radius: 8px;
+  background: #d6d6d6;
+  padding: 0 12px;
 }
 
-.password-box{
-  background:#d9d1e7;
-  border-radius:12px;
-  padding:15px;
-  margin-top:15px;
+.password-box {
+  background: #d9d1e7;
+  border-radius: 12px;
+  padding: 15px;
+  margin-top: 15px;
 }
 
-.password-box p{
-  color:#2e1a74;
-  font-weight:600;
-  margin-bottom:10px;
+.password-box p {
+  color: #2e1a74;
+  font-weight: 600;
+  margin-bottom: 10px;
 }
 
-.rules{
-  display:flex;
-  justify-content:space-between;
-  font-size:12px;
-  color:#666;
+.rules {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
 }
 
-.create-account{
-  width:100%;
-  height:50px;
-  margin-top:30px;
-  border:none;
-  border-radius:12px;
-  background:#6f50c5;
-  color:white;
-  font-size:18px;
-  font-weight:600;
-  cursor:pointer;
+.create-account {
+  width: 100%;
+  height: 50px;
+  margin-top: 30px;
+  border: none;
+  border-radius: 12px;
+  background: #6f50c5;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.login{
-  text-align:center;
-  margin-top:20px;
-  color:#777;
+.login {
+  text-align: center;
+  margin-top: 20px;
+  color: #777;
 }
 
-.login a{
-  color:#2e1a74;
-  text-decoration:none;
-  font-weight:bold;
+.login a {
+  color: #2e1a74;
+  text-decoration: none;
+  font-weight: bold;
 }
-
 
 /* NOVOS ESTILOS PARA O TÍTULO DE REQUISITOS DE SENHA */
-.password-title{
+.password-title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -244,11 +266,10 @@ h1{
   margin-bottom: 10px;
 }
 
-.password-title .icon{
+.password-title .icon {
   color: #6d4dc2;
   font-size: 16px;
 }
-
 
 /* NOVOS ESTILOS PARA OS CAMPOS DE INPUT */
 .input-box {
@@ -279,5 +300,4 @@ h1{
 .input-box input::placeholder {
   color: #888;
 }
-
 </style>

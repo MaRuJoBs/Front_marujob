@@ -84,11 +84,13 @@ const login = async () => {
 
         <div class="register">
           Não tem uma conta?
-          <span>Criar conta</span>
+          <ul>
+            <li><router-link to="/register"><span>Criar conta Usuário</span></router-link></li>
+            <li><router-link to="/registerEmpresa"><span>Criar conta Empresa</span></router-link></li>
+          </ul>
         </div>
       </div>
     </div>
-
     <!-- decoração rodapé -->
     <div class="wave-bottom"></div>
   </div>
@@ -244,6 +246,11 @@ const login = async () => {
   text-align: center;
   font-size: 12px;
   color: #8a8a8a;
+  
+}
+.register ul {
+  list-style: none;
+  margin-top: 8px;
 }
 
 .register span {
