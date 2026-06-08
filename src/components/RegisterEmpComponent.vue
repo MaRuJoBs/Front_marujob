@@ -34,7 +34,7 @@ const criarConta = async () => {
   if (erros.value.length > 0) return
 
   try {
-    await axios.post('http://127.0.0.1:8000/api/registro/', {
+    await axios.post('http://127.0.0.1:8000/api/registro/empresa/', {
       name: name.value,
       email: email.value,
       password: senha.value,
@@ -66,30 +66,30 @@ const criarConta = async () => {
           <span class="plus">+</span>
         </div>
 
-        <p>Adicione uma foto sua</p>
+        <p>Cadastro para empresa</p>
       </div>
     </div>
 
-    <h1>Criar conta</h1>
+    <h1>Criar conta da Empresa</h1>
 
-    <p class="subtitle">Junte-se à nossa plataforma e mostre seu trabalho para o mundo.</p>
+    <p class="subtitle">Junte-se à nossa plataforma e impulsione sua empresa.</p>
 
     <div class="card">
       <div class="field">
-        <label>Nome completo</label>
+        <label>Nome da empresa</label>
 
         <div class="input-box">
-          <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
-          <input v-model="name" type="text" placeholder="Digite seu nome completo..." />
+          <FontAwesomeIcon :icon="['fas', 'building']" class="icon" />
+          <input v-model="name" type="text" placeholder="Digite o nome da sua empresa..." />
         </div>
       </div>
 
       <div class="field">
-        <label>E-mail</label>
+        <label>E-mail corporativo</label>
 
         <div class="input-box">
           <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
-          <input v-model="email" type="email" placeholder="Digite seu e-mail..." />
+          <input v-model="email" type="email" placeholder="Digite seu e-mail corporativo..." />
         </div>
       </div>
 
