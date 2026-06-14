@@ -1,14 +1,51 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const user = ref(null)
+const email = ref('')
+
+onMounted(async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/api/usuarios/me/', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    })
+    console.log('USER:', response.data)
+  console.log('IMAGE PATH:', response.data.profile_image)
+  console.log('FINAL URL:', getImageUrl(response.data.profile_image))
+    user.value = response.data
+    email.value = response.data.email
+  } catch (error) {
+    console.error('Erro ao buscar usuário:', error)
+  }
+  
+})
+
+const getImageUrl = (path) => {
+  if (!path) return null
+
+  if (path.startsWith('http')) return path
+
+  return `http://127.0.0.1:8000${path}`
+}
+</script>
 <template>
   <div class="profile-page">
-
     <!-- HEADER -->
     <section class="profile-header">
       <div class="overlay"></div>
 
       <div class="profile-content">
-
         <div class="avatar-box">
-          <div class="avatar"></div>
+          <img
+            v-if="user && user.profile_image"
+            :src="getImageUrl(user.profile_image)"
+            class="avatar"
+          />
+
+          <div v-else class="avatar"></div>
 
           <button class="camera-btn">
             <i class="fa-solid fa-camera"></i>
@@ -16,7 +53,7 @@
         </div>
 
         <div class="user-info">
-          <h2>João Silva</h2>
+          <h2>{{ user?.name }}</h2>
           <span>Designer Gráfico</span>
 
           <div class="location">
@@ -24,12 +61,10 @@
             <p>São Paulo, SP</p>
           </div>
         </div>
-
       </div>
 
       <!-- STATS -->
       <div class="stats">
-
         <div class="card">
           <i class="fa-regular fa-folder"></i>
           <h3>24</h3>
@@ -47,7 +82,6 @@
           <h3>118</h3>
           <p>Horas</p>
         </div>
-
       </div>
     </section>
 
@@ -58,14 +92,13 @@
         <h3>Sobre</h3>
       </div>
       <p>
-        Designer gráfico apaixonado por criar marcas e identidades
-        visuais únicas. Transformo ideias em designs memoráveis.
+        Designer gráfico apaixonado por criar marcas e identidades visuais únicas. Transformo ideias
+        em designs memoráveis.
       </p>
     </section>
 
     <!-- HABILIDADES -->
     <section class="section-box">
-
       <div class="section-title">
         <i class="fa-regular fa-folder"></i>
         <h3>Habilidades</h3>
@@ -77,25 +110,20 @@
         <span>Branding</span>
         <span>Photoshop</span>
       </div>
-
     </section>
 
     <!-- PORTFÓLIO -->
     <section class="section-box">
-
       <div class="portfolio-header">
-
         <div class="section-title">
           <i class="fa-regular fa-folder-open"></i>
           <h3>Portfólio</h3>
         </div>
 
-        <button>Ver todos > </button>
-
+        <button>Ver todos ></button>
       </div>
 
       <div class="portfolio">
-
         <div class="portfolio-card">
           <div class="portfolio-image"></div>
           <h4>Branding Minimalista</h4>
@@ -113,56 +141,44 @@
           <h4>Social Media</h4>
           <p>Marketing</p>
         </div>
-
       </div>
-
     </section>
 
     <!-- CONTATO -->
     <div class="contact-grid">
-
       <section class="contact-card">
-
         <div class="section-title">
           <i class="fa-regular fa-envelope"></i>
           <h3>E-mail</h3>
         </div>
 
-        <p>joao@email.com</p>
-
+        <p>{{ email }}</p>
       </section>
 
       <section class="contact-card">
-
         <div class="section-title">
           <i class="fa-solid fa-phone"></i>
           <h3>Telefone</h3>
         </div>
 
         <p>(11) 99999-9999</p>
-
       </section>
-
     </div>
 
     <!-- BOTÃO -->
-    <button class="edit-btn">
-      Editar Perfil
-    </button>
-
+    <button class="edit-btn">Editar Perfil</button>
   </div>
 </template>
 
 <style scoped>
-
-*{
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: sans-serif;
 }
 
-.profile-page{
+.profile-page {
   background: #e8e1f2;
   min-height: 100vh;
   padding-bottom: 40px;
@@ -170,7 +186,7 @@
 
 /* HEADER */
 
-.profile-header{
+.profile-header {
   position: relative;
   border-bottom-left-radius: 40px;
   border-bottom-right-radius: 40px;
@@ -185,14 +201,14 @@
   overflow: hidden;
 }
 
-.overlay{
+.overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(2px);
 }
 
-.profile-content{
+.profile-content {
   position: relative;
   display: flex;
   align-items: center;
@@ -200,18 +216,18 @@
   z-index: 2;
 }
 
-.avatar-box{
+.avatar-box {
   position: relative;
 }
 
-.avatar{
+.avatar {
   width: 90px;
   height: 90px;
-  background:   #8c8c8c;
+  background: #8c8c8c;
   border-radius: 50%;
 }
 
-.camera-btn{
+.camera-btn {
   position: absolute;
   bottom: 0;
   right: 0;
@@ -224,8 +240,7 @@
   cursor: pointer;
 }
 
-
-.user-info{
+.user-info {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -235,24 +250,24 @@
   text-align: center;
 }
 
-.user-info h2{
+.user-info h2 {
   color: white;
   font-size: 24px;
   font-weight: 700;
 }
 
-.user-info span{
+.user-info span {
   color: #ece2ff;
   font-size: 14px;
 }
 
-.location{
+.location {
   justify-content: center;
-} 
+}
 
 /* STATS */
 
-.stats{
+.stats {
   position: absolute;
   left: 50%;
   bottom: 10px;
@@ -263,9 +278,9 @@
   z-index: 3;
 }
 
-.card{
+.card {
   flex: 1;
-  background: rgba(255,255,255,0.6);
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(12px);
   border-radius: 16px;
   text-align: center;
@@ -273,32 +288,32 @@
   color: #5e4d77;
 }
 
-.card.active{
-  background: rgba(255,255,255,0.9);
+.card.active {
+  background: rgba(255, 255, 255, 0.9);
 }
 
-.card i{
+.card i {
   margin-bottom: 6px;
 }
 
-.card h3{
+.card h3 {
   font-size: 18px;
 }
 
-.card p{
+.card p {
   font-size: 12px;
 }
 
 /* SECTION */
 
-.section-box{
+.section-box {
   background: #f5f2fb;
   margin: 25px 14px 10px 14px;
   padding: 16px;
   border-radius: 18px;
 }
 
-.section-title{
+.section-title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -306,28 +321,28 @@
   margin-bottom: 12px;
 }
 
-.section-title h3{
+.section-title h3 {
   font-weight: 650;
   font-size: 16px;
 }
 
-.section-box p{
-  color: #513F7C;
+.section-box p {
+  color: #513f7c;
   font-size: 14px;
   line-height: 1.5;
 }
 
 /* SKILLS */
 
-.skills{
+.skills {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.skills span{
-  background:#ABA6B5;
-  color: #49357B;
+.skills span {
+  background: #aba6b5;
+  color: #49357b;
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 13px;
@@ -336,13 +351,13 @@
 
 /* PORTFOLIO */
 
-.portfolio-header{
+.portfolio-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.portfolio-header button{
+.portfolio-header button {
   border: none;
   background: none;
   color: #7a3ff2;
@@ -350,22 +365,22 @@
   cursor: pointer;
 }
 
-.portfolio{
+.portfolio {
   display: flex;
   gap: 12px;
   overflow-x: auto;
   margin-top: 12px;
 }
 
-.portfolio::-webkit-scrollbar{
+.portfolio::-webkit-scrollbar {
   display: none;
 }
 
-.portfolio-card{
+.portfolio-card {
   min-width: 140px;
 }
 
-.portfolio-image{
+.portfolio-image {
   width: 100%;
   height: 90px;
   background: #aaa;
@@ -373,38 +388,38 @@
   margin-bottom: 8px;
 }
 
-.portfolio-card h4{
+.portfolio-card h4 {
   font-size: 13px;
   color: #444;
 }
 
-.portfolio-card p{
+.portfolio-card p {
   font-size: 11px;
   color: #777;
 }
 
 /* CONTACT */
 
-.contact-grid{
+.contact-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   padding: 0 16px;
 }
 
-.contact-card{
+.contact-card {
   background: #f5f2fb;
   border-radius: 18px;
   padding: 16px;
 }
 
-.contact-card p{
+.contact-card p {
   font-size: 13px;
   color: #666;
 }
 
 /* BUTTON */
-.edit-btn{
+.edit-btn {
   width: 80%;
   margin: 24px auto;
   padding: 14px;
@@ -415,6 +430,6 @@
   font-size: 15px;
   font-weight: 700;
   display: block;
+  margin-bottom: 100px;
 }
-
 </style>

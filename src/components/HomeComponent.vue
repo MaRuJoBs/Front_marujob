@@ -109,6 +109,7 @@ main {
 }
 .home {
   padding: 0 16px 16px 16px;
+  padding-bottom: 1000px; 
 }
 
 /* PRINCIPAIS */

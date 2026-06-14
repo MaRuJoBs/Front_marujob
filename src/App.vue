@@ -1,7 +1,6 @@
 <template>
   <div class="app">
 
-   <PerfilComponent />
 
     <router-view />
 
@@ -13,9 +12,6 @@
 
 <script setup>
 
-import PerfilComponent from './components/PerfilComponent.vue';
-
-import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
 
 </script>

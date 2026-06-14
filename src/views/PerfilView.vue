@@ -1,14 +1,13 @@
 <template>
-  <div class="page">
-    <h1>Perfil</h1>
-  </div>
+ 
+    <PerfilComponent />
+ 
 </template>
 
 <script setup>
+import PerfilComponent from '../components/PerfilComponent.vue'
 </script>
 
 <style scoped>
-.page {
-  padding: 20px;
-}
+
 </style>
