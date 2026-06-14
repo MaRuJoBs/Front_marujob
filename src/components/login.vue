@@ -19,7 +19,7 @@ const login = async () => {
       }
     )
 
-    localStorage.setItem('access', response.data.access)
+    localStorage.setItem('token', response.data.access)
     localStorage.setItem('refresh', response.data.refresh)
 
     router.push('/home')
@@ -27,6 +27,7 @@ const login = async () => {
     error.value = 'E-mail ou senha inválidos.'
   }
 }
+
 </script>
 
 <template>

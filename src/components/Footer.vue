@@ -4,7 +4,7 @@
   <footer class="footer">
 
     <!-- Início -->
-    <router-link to="/" class="item">
+    <router-link to="/home" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'house']" />
       </span>
@@ -31,7 +31,7 @@
     </router-link>
 
     <!-- Perfil -->
-    <router-link to="/register" class="item">
+    <router-link to="/perfil" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'user']" />
       </span>

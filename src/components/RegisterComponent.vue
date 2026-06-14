@@ -9,6 +9,9 @@ const name = ref('')
 const email = ref('')
 const senha = ref('')
 const confirmarSenha = ref('')
+const fileInput = ref(null)
+const imagem = ref(null)
+const preview = ref(null)
 
 const criarConta = async () => {
   if (senha.value !== confirmarSenha.value) {
@@ -17,19 +20,37 @@ const criarConta = async () => {
   }
 
   try {
-    await axios.post('http://127.0.0.1:8000/api/registro/', {
-      name: name.value,
-      email: email.value,
-      password: senha.value,
-    })
+    const formData = new FormData()
 
-    router.push('/home')
+formData.append('name', name.value)
+formData.append('email', email.value)
+formData.append('password', senha.value)
+
+if (imagem.value) {
+  formData.append('profile_image', imagem.value)
+}
+
+await axios.post('http://127.0.0.1:8000/api/registro/', formData, {
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+})
+
+    router.push('/login')
   } catch (error) {
     console.log(error.response)
     alert('Não foi possível criar a conta: e-mail em uso.')
   }
 }
 // estilização da pagina de registro, ainda não finalizada
+
+function handleImageChange(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  imagem.value = file
+  preview.value = URL.createObjectURL(file)
+}
 
 </script>
 
@@ -39,9 +60,13 @@ const criarConta = async () => {
       <button class="back-button">←</button>
 
       <div class="photo-section">
-        <div class="photo-box">
+        <div class="photo-box" @click="fileInput.click()">
+          <input type="file" @change="handleImageChange" hidden ref="fileInput">
+          <img v-if="preview" :src="preview" class="preview-img" />
+          <div v-else class="placeholder">
           <span>👤</span>
           <span class="plus">+</span>
+          </div>
         </div>
 
         <p>Adicione uma foto sua</p>
@@ -115,6 +140,12 @@ const criarConta = async () => {
 </template>
 
 <style scoped>
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+}
 .container {
   min-height: 100vh;
   background: #f4f4f4;
