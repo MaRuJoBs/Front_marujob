@@ -104,30 +104,30 @@ function handleImageChange(event) {
           </div>
         </div>
 
-        <p>Adicione uma foto sua</p>
+        <p>Adicione a logo da sua empresa</p>
       </div>
     </div>
 
-    <h1>Criar conta</h1>
+    <h1>Criar conta da Empresa</h1>
 
-    <p class="subtitle">Junte-se à nossa plataforma e mostre seu trabalho para o mundo.</p>
+    <p class="subtitle">Junte-se à nossa plataforma e impulsione sua empresa.</p>
 
     <div class="card">
       <div class="field">
-        <label>Nome completo</label>
+        <label>Nome da empresa</label>
 
         <div class="input-box">
-          <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
-          <input v-model="name" type="text" placeholder="Digite seu nome completo..." />
+          <FontAwesomeIcon :icon="['fas', 'building']" class="icon" />
+          <input v-model="name" type="text" placeholder="Digite o nome da sua empresa..." />
         </div>
       </div>
 
       <div class="field">
-        <label>E-mail</label>
+        <label>E-mail corporativo</label>
 
         <div class="input-box">
           <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
-          <input v-model="email" type="email" placeholder="Digite seu e-mail..." />
+          <input v-model="email" type="email" placeholder="Digite seu e-mail corporativo..." />
         </div>
       </div>
 
@@ -162,8 +162,10 @@ function handleImageChange(event) {
         </div>
       </div>
 
-      <button class="create-account" @click="criarConta">Criar conta</button>
-      <div v-if="tentouEnviar && erros.length" class="error-box">
+      <button class="create-account" @click="criarConta">
+  Criar conta
+</button>
+<div v-if="tentouEnviar && erros.length" class="error-box">
   <p v-for="(erro, index) in erros" :key="index">
     • {{ erro }}
   </p>
@@ -223,7 +225,12 @@ function handleImageChange(event) {
 }
 
 .photo-section {
-  text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin-bottom: 30px;
+  
 }
 
 .photo-box {

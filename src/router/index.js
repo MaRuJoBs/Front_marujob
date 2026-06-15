@@ -8,6 +8,7 @@ import MensagensView from '../views/MensagensView.vue'
 import FavoritosView from '../views/Favoritos.View.vue'
 import RegisterComponent from '@/components/RegisterComponent.vue'
 import LoginView from '@/views/LoginView.vue'
+import RegisterEmpComponent from '@/components/RegisterEmpComponent.vue'
 
 
 const router = createRouter({
@@ -31,6 +32,11 @@ const router = createRouter({
       path: '/register',
       name: 'register',
       component: RegisterComponent,
+    },
+    {
+      path: '/registerEmpresa',
+      name: 'registerEmpresa',
+      component: RegisterEmpComponent,
     },
 
     {
