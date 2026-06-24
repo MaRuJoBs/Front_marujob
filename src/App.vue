@@ -2,8 +2,8 @@
   <div class="app">
 
 
-    <router-view />
-
+    
+    <HomeEmpresaComponent />
     <Footer v-if="!$route.meta.hideFooter" />
 
 
@@ -13,7 +13,7 @@
 <script setup>
 
 import Footer from './components/Footer.vue'
-
+import HomeEmpresaComponent from './components/HomeEmpresaComponent.vue';
 </script>
 
 <style scoped>
