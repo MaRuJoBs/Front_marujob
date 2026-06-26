@@ -1,7 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const user = ref(null)
 const email = ref('')
 
@@ -29,6 +31,9 @@ const getImageUrl = (path) => {
   if (path.startsWith('http')) return path
 
   return `http://127.0.0.1:8000${path}`
+}
+const editarPerfil = () => {
+  router.push('/editar-perfil')
 }
 </script>
 <template>
@@ -166,7 +171,9 @@ const getImageUrl = (path) => {
     </div>
 
     <!-- BOTÃO -->
-    <button class="edit-btn">Editar Perfil</button>
+  <button class="edit-btn" @click="editarPerfil">
+  Editar Perfil
+</button>
   </div>
 </template>
 

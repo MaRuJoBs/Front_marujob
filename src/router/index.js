@@ -10,6 +10,8 @@ import RegisterComponent from '@/components/RegisterComponent.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterEmpComponent from '@/components/RegisterEmpComponent.vue'
 
+import EditPerfil from '@/views/EditPerfil.vue'
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -61,6 +63,11 @@ const router = createRouter({
       path: '/favoritos',
       name: 'favoritos',
       component: FavoritosView,
+    },
+    {
+  path: '/editar-perfil',
+  name: 'EditPerfil',
+  component: EditPerfil,
     },
   ],
 })
