@@ -9,6 +9,7 @@ import FavoritosView from '../views/Favoritos.View.vue'
 import RegisterComponent from '@/components/RegisterComponent.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterEmpComponent from '@/components/RegisterEmpComponent.vue'
+import CriarVagaView from '@/views/CriarVagaView.vue'
 
 
 const router = createRouter({
@@ -61,6 +62,12 @@ const router = createRouter({
       path: '/favoritos',
       name: 'favoritos',
       component: FavoritosView,
+    },
+
+    {
+      path: '/CriarVaga',
+      name: 'CriarVaga',
+      component: CriarVagaView,
     },
   ],
 })
