@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL
+
 const router = useRouter()
 
 const email = ref('')
@@ -12,7 +14,7 @@ const error = ref('')
 const login = async () => {
   try {
     const response = await axios.post(
-      'http://127.0.0.1:8000/api/token/',
+      `${API_URL}/api/token/`,
       {
         email: email.value,
         password: senha.value,
@@ -27,7 +29,6 @@ const login = async () => {
     error.value = 'E-mail ou senha inválidos.'
   }
 }
-
 </script>
 
 <template>

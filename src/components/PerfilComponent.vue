@@ -2,25 +2,28 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL
+
 const user = ref(null)
 const email = ref('')
 
 onMounted(async () => {
   try {
-    const response = await axios.get('http://127.0.0.1:8000/api/usuarios/me/', {
+    const response = await axios.get(`${API_URL}/api/usuarios/me/`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
     })
+
     console.log('USER:', response.data)
-  console.log('IMAGE PATH:', response.data.profile_image)
-  console.log('FINAL URL:', getImageUrl(response.data.profile_image))
+    console.log('IMAGE PATH:', response.data.profile_image)
+    console.log('FINAL URL:', getImageUrl(response.data.profile_image))
+
     user.value = response.data
     email.value = response.data.email
   } catch (error) {
     console.error('Erro ao buscar usuário:', error)
   }
-  
 })
 
 const getImageUrl = (path) => {
@@ -28,7 +31,7 @@ const getImageUrl = (path) => {
 
   if (path.startsWith('http')) return path
 
-  return `http://127.0.0.1:8000${path}`
+  return `${API_URL}${path}`
 }
 </script>
 <template>

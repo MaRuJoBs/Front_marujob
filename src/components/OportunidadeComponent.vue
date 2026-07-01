@@ -1,5 +1,8 @@
 <script setup>
 import { RouterLink } from 'vue-router'
+import { RouterLink } from 'vue-router'
+
+const API_URL = import.meta.env.VITE_API_URL
 </script>
 
 <template>

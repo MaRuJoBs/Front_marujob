@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL
+
 const router = useRouter()
 const name = ref('')
 const email = ref('')
@@ -18,6 +20,7 @@ const tentouEnviar = ref(false)
 const criarConta = async () => {
   tentouEnviar.value = true
   erros.value = []
+
   if (!name.value) {
     erros.value.push('Nome é obrigatório')
   }
@@ -47,13 +50,13 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post('http://127.0.0.1:8000/api/registro/', formData, {
+    await axios.post(`${API_URL}/api/registro/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
 
-    const loginResponse = await axios.post('http://127.0.0.1:8000/api/token/', {
+    const loginResponse = await axios.post(`${API_URL}/api/token/`, {
       email: email.value,
       password: senha.value,
     })
@@ -62,23 +65,22 @@ const criarConta = async () => {
     localStorage.setItem('refresh', loginResponse.data.refresh)
 
     router.push('/home')
-
   } catch (error) {
     const data = error.response?.data
+
     if (data) {
-    if (data.email) {
-      erros.value.push('Este email já está em uso')
-    } else if (data.detail) {
-      erros.value.push(data.detail)
+      if (data.email) {
+        erros.value.push('Este email já está em uso')
+      } else if (data.detail) {
+        erros.value.push(data.detail)
+      } else {
+        erros.value.push('Erro ao criar conta')
+      }
     } else {
-      erros.value.push('Erro ao criar conta')
+      erros.value.push('Erro de conexão com o servidor')
     }
-  } else {
-    erros.value.push('Erro de conexão com o servidor')
-  }
   }
 }
-// estilização da pagina de registro, ainda não finalizada
 
 function handleImageChange(event) {
   const file = event.target.files[0]

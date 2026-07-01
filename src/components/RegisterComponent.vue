@@ -47,11 +47,11 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post('http://127.0.0.1:8000/api/registro/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
+  await axios.post(`${import.meta.env.VITE_API_URL}/api/registro/`, formData, {
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+})
 
     const loginResponse = await axios.post('http://127.0.0.1:8000/api/token/', {
       email: email.value,

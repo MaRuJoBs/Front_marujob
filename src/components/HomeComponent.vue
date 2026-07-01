@@ -1,21 +1,32 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 
+const API_URL = import.meta.env.VITE_API_URL
 
 const jobs = ref([])
 const page = ref(1)
 const totalPages = ref(1)
 const temProximaPagina = ref(false)
+
 const buscarJobs = async () => {
-  const res = await fetch(`http://127.0.0.1:8000/api/freelances/?page=${page.value}`)
-  const data = await res.json()
+  try {
+    const res = await fetch(`${API_URL}/api/freelances/?page=${page.value}`)
+    const data = await res.json()
 
-    console.log("PAGE:", page.value)
-  console.log("RESULTS:", data.results)
+    console.log('PAGE:', page.value)
+    console.log('RESULTS:', data.results)
 
-  jobs.value = [...jobs.value, ...data.results]
-  temProximaPagina.value = data.next !== null
+    jobs.value = [...jobs.value, ...data.results]
+    temProximaPagina.value = data.next !== null
+
+    if (data.count) {
+      totalPages.value = Math.ceil(data.count / data.results.length)
+    }
+  } catch (error) {
+    console.error('Erro ao buscar freelances:', error)
+  }
 }
+
 onMounted(() => {
   buscarJobs()
 })
@@ -25,11 +36,10 @@ const principais = computed(() => {
 })
 
 const limite = ref(3)
+
 const principaisLimitados = computed(() => {
   return principais.value.slice(0, limite.value)
 })
-
-
 
 const gruposPrincipais = computed(() => {
   const grupos = []
@@ -40,6 +50,7 @@ const gruposPrincipais = computed(() => {
 
   return grupos
 })
+
 const slideAtual = ref(0)
 </script>
 
