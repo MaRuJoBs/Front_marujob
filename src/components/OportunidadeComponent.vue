@@ -1,6 +1,5 @@
 <script setup>
 import { RouterLink } from 'vue-router'
-import { RouterLink } from 'vue-router'
 
 const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
 
