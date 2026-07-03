@@ -6,5 +6,5 @@
 <script setup>
 import Header from '@/components/Header.vue';
 import HomeComponent from '../components/HomeComponent.vue'
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 </script>

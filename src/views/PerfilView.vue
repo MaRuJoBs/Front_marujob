@@ -6,7 +6,7 @@
 
 <script setup>
 import PerfilComponent from '../components/PerfilComponent.vue'
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 </script>
 
 <style scoped>

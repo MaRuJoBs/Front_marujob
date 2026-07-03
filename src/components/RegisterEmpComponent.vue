@@ -3,8 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL
-
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const router = useRouter()
 const name = ref('')
 const email = ref('')

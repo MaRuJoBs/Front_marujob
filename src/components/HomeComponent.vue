@@ -1,8 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 
-const API_URL = import.meta.env.VITE_API_URL
-
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const jobs = ref([])
 const page = ref(1)
 const totalPages = ref(1)

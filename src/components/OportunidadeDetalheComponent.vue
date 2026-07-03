@@ -89,8 +89,7 @@
 
 <script setup>
 import { ref } from "vue";
-
-// ❤️ estado do favorito
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const isFavorite = ref(false);
 
 function toggleFavorite() {
