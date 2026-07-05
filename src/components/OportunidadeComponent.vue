@@ -1,21 +1,69 @@
 <script setup>
+import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
+// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+
+
+const jobs = ref([])
+const page = ref(1)
+const temProximaPagina = ref(false)
+const favoritos = ref([])
+
+const buscarFreelances = async () => {
+
+  try {
+    
+    const res = await fetch(`http://127.0.0.1:8000/api/freelances/?page=${page.value}`)
+    const data = await res.json()
+
+   
+
+    jobs.value = [...jobs.value, ...data.results]
+    temProximaPagina.value = data.next !== null
+
+    page.value++
+    
+  } catch (error) {
+    console.error('Erro ao buscar freelances:', error)
+
+}
+}
+onMounted(() => {
+  const salvos = localStorage.getItem('favoritos')
+  if (salvos) {
+    favoritos.value = JSON.parse(salvos)
+  }
+
+  buscarFreelances()
+})
+
+const toggleFavorito = (job) => {
+  const index = favoritos.value.indexOf(job.id)
+
+  if (index === -1) {
+    favoritos.value.push(job.id)
+  } else {
+    favoritos.value.splice(index, 1)
+  }
+
+  localStorage.setItem('favoritos', JSON.stringify(favoritos.value))
+}
+</script>
+
 
 <template>
-  <div class="app">
+  <div class="body">
 
-    <!-- BUSCA -->
-    <div class="search-box">
+    <div class="nav">
       <input type="text" placeholder="Buscar oportunidades..." />
       <button>
-        <i class="fa-solid fa-filter"></i> Filtros
+        <span class="fa-solid fa-filter"></span> Filtros
       </button>
     </div>
 
-    <!-- FILTROS -->
-    <div class="filters">
+    
+    <div class="filtro">
       <button class="active">Todas</button>
       <button>Design</button>
       <button>Design</button>
@@ -23,110 +71,62 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
       <button>Design Gráfico</button>
     </div>
 
-    <!-- CARD 1 -->
-    <section class="card">
-      <div class="card-top">
-        <div>
-          <h3>Design Gráfico</h3>
-          <p class="company">Design Pro</p>
-        </div>
-        <button class="fav">
-          <i class="fa-solid fa-heart"></i>
-        </button>
+    
+    <section
+  class="vaga"
+  v-for="job in jobs"
+  :key="job.id"
+>
+  <div class="vaga-superior">
+
+    <div style="display:flex; gap:12px;">
+      <div>
+        <h3>{{ job.titulo }}</h3>
+        <p class="tag">{{ job.tag }}</p>
       </div>
 
-      <div class="info">
-        <p><i class="fa-solid fa-location-dot"></i> Centro, SP</p>
-        <p>
-          <i class="fa-solid fa-calendar"></i> 29/04/2026 •
-          <i class="fa-solid fa-briefcase"></i> 9:00 - 15:00
-        </p>
-        <p><i class="fa-solid fa-briefcase"></i> Home office</p>
-      </div>
+    </div>
 
-      <div class="card-bottom">
-        <RouterLink to="/oportunidade">
-          <button class="details">Ver detalhes</button>
-        </RouterLink>
+    <button class="favorito" @click="toggleFavorito(job)">
+  <FontAwesomeIcon
+    :icon="['fas', 'heart']"
+    :class="{ ativo: favoritos.includes(job.id) }"
+  />
+</button>
+  </div>
 
-        <span class="price">R$ 200</span>
-      </div>
-    </section>
+  <div class="info">
+    <p>{{ job.descricao }}</p>
+    <p>{{ job.tempo }} horas</p>
+  </div>
 
-    <!-- CARD 2 -->
-    <section class="card">
-      <div class="card-top">
-        <div>
-          <h3>Design Gráfico</h3>
-          <p class="company">Design Pro</p>
-        </div>
-        <button class="fav">
-          <i class="fa-solid fa-heart"></i>
-        </button>
-      </div>
+  <div class="vaga-inferior">
 
-      <div class="info">
-        <p><i class="fa-solid fa-location-dot"></i> Centro, SP</p>
-        <p>
-          <i class="fa-solid fa-calendar"></i> 29/04/2026 •
-          <i class="fa-solid fa-briefcase"></i> 9:00 - 15:00
-        </p>
-        <p><i class="fa-solid fa-briefcase"></i> Home office</p>
-      </div>
+    <RouterLink :to="`/oportunidade/${job.id}`">
+      <button class="details">
+        Ver detalhes
+      </button>
+    </RouterLink>
 
-      <div class="card-bottom">
-        <RouterLink to="/oportunidade">
-          <button class="details">Ver detalhes</button>
-        </RouterLink>
+    <span class="preco">
+      R$ {{ job.preco }}
+    </span>
 
-        <span class="price">R$ 200</span>
-      </div>
-    </section>
+  </div>
+</section>
 
-    <!-- AVISO -->
-    <section class="tip">
+    <section class="obs">
       <span>
-        <i class="fa-solid fa-heart"></i>
+        <span class="fa-solid fa-heart"></span>
         Salve oportunidades em seus favoritos!
       </span>
       <span>›</span>
     </section>
-
-    <!-- CARD 3 -->
-    <section class="card">
-      <div class="card-top">
-        <div>
-          <h3>Design Gráfico</h3>
-          <p class="company">Design Pro</p>
-        </div>
-        <button class="fav off">
-          <i class="fa-solid fa-heart"></i>
-        </button>
-      </div>
-
-      <div class="info">
-        <p><i class="fa-solid fa-location-dot"></i> Centro, SP</p>
-        <p>
-          <i class="fa-solid fa-calendar"></i> 29/04/2026 •
-          <i class="fa-solid fa-briefcase"></i> 9:00 - 15:00
-        </p>
-        <p><i class="fa-solid fa-briefcase"></i> Home office</p>
-      </div>
-
-      <div class="card-bottom">
-        <RouterLink to="/oportunidade">
-          <button class="details">Ver detalhes</button>
-        </RouterLink>
-
-        <span class="price">R$ 200</span>
-      </div>
-    </section>
-
   </div>
 </template>
 
 <style scoped>
-.app {
+.body {
   min-height: 100vh;
   padding: 15px;
   font-family: Arial, sans-serif;
@@ -136,24 +136,26 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
   margin: 0 auto;
   box-sizing: border-box;
   padding-bottom: 100px;
+
 }
 
-.search-box {
+.nav {
   display: flex;
   gap: 10px;
   margin-bottom: 15px;
 }
 
-.search-box input {
+.nav input {
   flex: 1;
   padding: 12px;
   border-radius: 25px;
   border: none;
   background: #f1ecff;
   outline: none;
+
 }
 
-.search-box button {
+.nav button {
   background: #6c4ad1;
   color: white;
   border: none;
@@ -161,6 +163,9 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
   border-radius: 12px;
   cursor: pointer;
 }
+
+
+
 
 .filters {
   display: flex;
@@ -183,9 +188,10 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
 .filters .active {
   background: #6c4ad1;
   color: white;
+  
 }
 
-.card {
+.vaga {
   background: #f7f5ff;
   border-radius: 16px;
   padding: 15px;
@@ -193,33 +199,44 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-.card-top {
+.vaga-superior {
   display: flex;
   justify-content: space-between;
-  align-items: center;
 }
 
-.card-top h3 {
+
+
+.vaga-superior h3 {
   margin: 0;
   color: #5a46b5;
 }
 
-.company {
+.tag {
   margin: 3px 0 10px;
   color: #888;
   font-size: 14px;
 }
 
-.fav {
+.favorito {
   border: none;
   background: none;
-  font-size: 18px;
+  font-size: 22px;
   cursor: pointer;
+  padding-top: 2px;
+  align-self: flex-start;
+  color: #888;
 }
+
+.favorito .ativo {
+  color: red;
+}
+
+
 
 .fav.off {
   opacity: 0.5;
 }
+
 
 .info p {
   margin: 3px 0;
@@ -227,12 +244,14 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
   color: #6b6b6b;
 }
 
-.card-bottom {
+.vaga-inferior {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
 }
+
+
 
 .details {
   background: #6c4ad1;
@@ -243,7 +262,7 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
   cursor: pointer;
 }
 
-.price {
+.preco {
   background: #cdcccf;
   padding: 5px 10px;
   border-radius: 20px;
@@ -251,7 +270,7 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
   font-weight: bold;
 }
 
-.tip {
+.obs {
   background: #ede7ff;
   padding: 12px;
   border-radius: 12px;

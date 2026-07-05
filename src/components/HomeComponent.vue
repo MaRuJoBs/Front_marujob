@@ -1,29 +1,35 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+
+// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+
 const jobs = ref([])
 const page = ref(1)
-const totalPages = ref(1)
+// const user = ref(null)
+
 const temProximaPagina = ref(false)
 
 const buscarJobs = async () => {
+
   try {
-    const res = await fetch(`${API_URL}/api/freelances/?page=${page.value}`)
+    // const res = await fetch(`${API_URL}/api/freelances/?page=${page.value}`)
+    const res = await fetch(`http://127.0.0.1:8000/api/freelances/?page=${page.value}`)
     const data = await res.json()
 
-    console.log('PAGE:', page.value)
-    console.log('RESULTS:', data.results)
+   
 
     jobs.value = [...jobs.value, ...data.results]
     temProximaPagina.value = data.next !== null
 
-    if (data.count) {
-      totalPages.value = Math.ceil(data.count / data.results.length)
-    }
+    page.value++
+    // if (data.count) {
+    //   totalPages.value = Math.ceil(data.count / data.results.length)
+    // }
   } catch (error) {
     console.error('Erro ao buscar freelances:', error)
-  }
+
+}
 }
 
 onMounted(() => {
@@ -31,7 +37,11 @@ onMounted(() => {
 })
 
 const principais = computed(() => {
-  return jobs.value.filter((job) => job.preco >= 50)
+  return jobs.value.filter((job) => job.preco >= 2500)
+})
+
+const jobsHome = computed(() => {
+  return jobs.value.slice(0, 20)
 })
 
 const limite = ref(3)
@@ -40,17 +50,37 @@ const principaisLimitados = computed(() => {
   return principais.value.slice(0, limite.value)
 })
 
-const gruposPrincipais = computed(() => {
-  const grupos = []
 
-  for (let i = 0; i < principais.value.length; i += 3) {
-    grupos.push(principais.value.slice(i, i + 3))
+// const gruposPrincipais = computed(() => {
+//   const grupos = []
+
+//   for (let i = 0; i < principais.value.length; i += 3) {
+//     grupos.push(principais.value.slice(i, i + 3))
+//   }
+//   return grupos
+// })
+
+const grupos = computed(() => {
+  const resultado = []
+
+  for (let i = 0; i < jobsHome.value.length; i += 10) {
+    resultado.push(jobsHome.value.slice(i, i + 10))
+
   }
-
-  return grupos
+  return resultado
 })
 
-const slideAtual = ref(0)
+
+// const slideAtual = ref(0)
+
+const getImageUrl = (path) => {
+  if (!path) return null
+
+  if (path.startsWith('http')) return path
+
+  return `${path}`
+}
+
 </script>
 
 <template>
@@ -58,8 +88,15 @@ const slideAtual = ref(0)
     <section class="principais">
       <h2>Principais</h2>
 
-      <div v-for="job in principaisLimitados" :key="job.id" class="card">
-        <div class="retangulo"></div>
+      <router-link
+        v-for="job in principaisLimitados"
+        :key="job.id"
+        :to="`/oportunidade/${job.id}`"
+        class="card"
+      >
+        <div class="imagem">
+          <img :src="getImageUrl(job.foto)" class="avatar" />
+        </div>
 
         <div class="info">
           <h3>{{ job.titulo }}</h3>
@@ -71,10 +108,10 @@ const slideAtual = ref(0)
             <p class="horas">{{ job.tempo }} horas</p>
           </div>
         </div>
-      </div>
+      </router-link>
     </section>
 
-    <div class="dots">
+    <div class="pontos-rolagem">
       <span class="active"></span>
       <span></span>
       <span></span>
@@ -84,45 +121,39 @@ const slideAtual = ref(0)
     <section class="mais">
       <h3>Mais oportunidade...</h3>
 
-      <div class="scroll">
-        <div class="mini-card" v-for="job in jobs" :key="job.id">
+      <div class="scroll" v-for="(grupo, index) in grupos" :key="index">
+        <div class="mini-card" v-for="job in grupo" :key="job.id">
           <h4>{{ job.titulo }}</h4>
           <p>Empresa</p>
-          <!--<p>{{ job.empresa }}</p>-->
           <span>R${{ job.preco }}</span>
           <p>{{ job.tempo }} horas</p>
-          <button>Ver Detalhes</button>
+
+          <router-link :to="`/oportunidade/${job.id}`">
+            <button>Ver detalhes</button>
+          </router-link>
         </div>
       </div>
-      <button 
-  v-if="temProximaPagina"
-  @click="page++; buscarJobs()"
->
-  Ver mais
-</button>
+
+      <router-link to="/freelances">
+        <button class="btn-mais">Ver todos</button>
+      </router-link>
     </section>
   </main>
 </template>
+
 <style scoped>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #ebebeb;
-}
 main {
   background-color: #e0d1f9;
   border-radius: 60px 60px 0 0;
-  margin-top: -85px;
+  margin-top: -95px;
   position: relative;
   z-index: 5;
-  height: 100vh;
+ 
 }
 .home {
   padding: 0 16px 16px 16px;
-  padding-bottom: 1000px; 
+  padding-bottom: 25vh;
 }
-
-/* PRINCIPAIS */
 
 .principais h2 {
   color: rgb(226, 205, 205);
@@ -134,12 +165,18 @@ main {
   border-radius: 0 0 10px 10px;
   margin: 0 auto;
 }
-.retangulo {
+.imagem {
   width: 80px;
   height: 80px;
   background-color: #939292;
   border-radius: 10px;
   margin: 0;
+}
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
 }
 .card {
   background: #d8d2e6;
@@ -149,6 +186,7 @@ main {
   display: flex;
   align-items: center;
   gap: 12px;
+  text-decoration: none;
 }
 
 .card h3 {
@@ -175,19 +213,13 @@ div.preco {
   font-size: 15px;
   color: #777;
 }
-.arrow {
-  margin-left: auto;
-  font-size: 50px;
-  color: #5b3cc4;
-}
 
-/* DOTS */
-.dots {
+.pontos-rolagem {
   text-align: center;
   margin: 10px 0;
 }
 
-.dots span {
+.pontos-rolagem span {
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -196,11 +228,10 @@ div.preco {
   border-radius: 50%;
 }
 
-.dots .active {
+.pontos-rolagem .active {
   background: #5b3cc4;
 }
 
-/* MAIS OPORTUNIDADES */
 .mais h3 {
   margin: 8px 0;
   color: #49357b;
@@ -211,24 +242,24 @@ div.preco {
   display: flex;
   overflow-x: auto;
   gap: 10px;
-
   scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
+  /* -webkit-overflow-scrolling: touch; */
+  margin-bottom: 10px;
 }
 
 .mini-card {
+  scroll-snap-align: start;
   background: #fff;
   border-radius: 10px;
   padding: 20px 15px 20px 12px;
   color: #49357b;
-
   width: 150px;
   height: 210px;
   flex-shrink: 0;
-
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  /* margin-bottom: 10px; */
 }
 
 .mini-card span {
@@ -257,7 +288,16 @@ div.preco {
   color: white;
   border-radius: 15px;
   padding: 8px 16px;
-  margin: 15px auto 0 auto; /* 🔥 isso centraliza */
-  display: block; /* 🔥 importante */
+  margin: 15px auto 0 auto;
+  display: block;
+}
+.btn-mais {
+  background: #5b3cc4;
+  color: white;
+  border-radius: 15px;
+  padding: 8px 16px;
+  margin: 50px auto 0 auto;
+  display: block;
+  border: none;
 }
 </style>
