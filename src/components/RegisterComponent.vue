@@ -51,12 +51,12 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post(`${API_URL}/api/registro/`, {
+    await axios.post(`${API_URL}/api/registro/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
-    //possivel erro aqui
+    
 
     const loginResponse = await axios.post(`${API_URL}/api/token/`, {
       email: email.value,
