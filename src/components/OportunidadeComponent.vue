@@ -11,23 +11,21 @@ const temProximaPagina = ref(false)
 const favoritos = ref([])
 
 const buscarFreelances = async () => {
-
   try {
-    
-    const res = await fetch(`http://127.0.0.1:8000/api/freelances/?page=${page.value}`)
-    const data = await res.json()
+    let url = `http://127.0.0.1:8000/api/freelances/?page=1`
 
-   
+    while (url) {
+      const res = await fetch(url)
+      const data = await res.json()
 
-    jobs.value = [...jobs.value, ...data.results]
-    temProximaPagina.value = data.next !== null
+      jobs.value.push(...data.results)
 
-    page.value++
-    
+      url = data.next 
+    }
+
   } catch (error) {
     console.error('Erro ao buscar freelances:', error)
-
-}
+  }
 }
 onMounted(() => {
   const salvos = localStorage.getItem('favoritos')

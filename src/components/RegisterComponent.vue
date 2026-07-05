@@ -3,12 +3,12 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
-
 const router = useRouter()
 const name = ref('')
 const email = ref('')
 const senha = ref('')
+// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+const loading = ref(false)
 const arquivoImp = ref(null)
 const imagem = ref(null)
 const preview = ref(null)
@@ -17,12 +17,9 @@ const confirmarSenha = ref('')
 const erros = ref([])
 const tentouEnviar = ref(false)
 
-const loading = ref(false)
-
 const criarConta = async () => {
   tentouEnviar.value = true
   erros.value = []
-
   if (!name.value) {
     erros.value.push('Nome é obrigatório')
   }
@@ -54,13 +51,13 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post(`${API_URL}/api/registro/`, formData, {
+    await axios.post('http://127.0.0.1:8000/api/registro/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
 
-    const loginResponse = await axios.post(`${API_URL}/api/token/`, {
+    const loginResponse = await axios.post('http://127.0.0.1:8000/api/token/', {
       email: email.value,
       password: senha.value,
     })
@@ -72,23 +69,22 @@ const criarConta = async () => {
 
   } catch (error) {
     const data = error.response?.data
-
     if (data) {
-      if (data.email) {
-        erros.value.push('Este email já está em uso')
-      } else if (data.detail) {
-        erros.value.push(data.detail)
-      } else {
-        erros.value.push('Erro ao criar conta')
-      }
+    if (data.email) {
+      erros.value.push('Este email já está em uso')
+    } else if (data.detail) {
+      erros.value.push(data.detail)
     } else {
-      erros.value.push('Erro de conexão com o servidor')
+      erros.value.push('Erro ao criar conta')
     }
+  } else {
+    erros.value.push('Erro de conexão com o servidor')
+  }
   } finally {
     loading.value = false
-
-  }
+  } 
 }
+// estilização da pagina de registro, ainda não finalizada
 
 function handleImageChange(event) {
   const file = event.target.files[0]

@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const router = useRouter()
 const name = ref('')
 const email = ref('')
@@ -53,13 +53,13 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post(`${API_URL}/api/registro/`, formData, {
+    await axios.post('http://127.0.0.1:8000/api/registro/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
 
-    const loginResponse = await axios.post(`${API_URL}/api/token/`, {
+    const loginResponse = await axios.post('http://127.0.0.1:8000/api/token/', {
       email: email.value,
       password: senha.value,
     })
@@ -97,6 +97,7 @@ function handleImageChange(event) {
   preview.value = URL.createObjectURL(file)
 }
 </script>
+
 
 <template>
   <div class="container">
