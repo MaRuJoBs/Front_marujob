@@ -7,7 +7,7 @@ const router = useRouter()
 const name = ref('')
 const email = ref('')
 const senha = ref('')
-// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const loading = ref(false)
 const arquivoImp = ref(null)
 const imagem = ref(null)
@@ -51,16 +51,18 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post('http://127.0.0.1:8000/api/registro/', formData, {
+    await axios.post(`${API_URL}/api/registro/`, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
+    //possivel erro aqui
 
-    const loginResponse = await axios.post('http://127.0.0.1:8000/api/token/', {
+    const loginResponse = await axios.post(`${API_URL}/api/token/`, {
       email: email.value,
       password: senha.value,
     })
+    //possivel erro aqui
 
     localStorage.setItem('token', loginResponse.data.access)
     localStorage.setItem('refresh', loginResponse.data.refresh)
