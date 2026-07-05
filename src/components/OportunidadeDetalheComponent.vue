@@ -1,54 +1,76 @@
+<script setup>
+import { useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
+const route = useRoute()
+const job = ref(null)
+// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+const isFavorite = ref(false);
+
+function favoritar() {
+  isFavorite.value = !isFavorite.value;
+}
+onMounted(async () => {
+  try {
+    const res = await fetch(`http://127.0.0.1:8000/api/freelances/${route.params.id}/`)
+    job.value = await res.json()
+  } catch (error) {
+    console.log(error)
+  }
+})
+</script>
+
 <template>
-  <div class="container">
-    <!-- Header -->
+  <section class="fundo">
     <div class="header">
-      <button class="back-btn">
-        <i class="fa-solid fa-arrow-left"></i>
+      <button class="btn-voltar">
+        <span class="fa-solid fa-arrow-left"></span>
       </button>
 
-      <div class="title-area">
-        <h1>Design Gráfico</h1>
-        <p>Design Pro</p>
+      <div class="titulo">
+        <h1>{{ job?.titulo }}</h1>
+<p>{{ job?.tag }}</p>
       </div>
 
-      <!-- ❤️ FAVORITO -->
-      <button class="favorite-btn" @click="toggleFavorite">
+      
+      <button class="btn-favorito" @click="favoritar">
         <i
           :class="isFavorite ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"
         ></i>
       </button>
     </div>
 
-    <!-- Sobre -->
+   
     <div class="card">
+      <div class="sup-card">
+      <p>!</p>
       <h2>Sobre a oportunidade</h2>
-      <p>
-        Lorem Ipsum is simply dummy text of the printing and typesetting
-        industry. Lorem Ipsum has been the industry's standard type specimen
-        book. It has survive
-      </p>
+      </div>
+      <p>{{ job?.descricao }}</p>
     </div>
 
-    <!-- Informações -->
+  
     <div class="card">
-      <h2>Informações Principais</h2>
-
-      <div class="info">
-        <p>
-          <i class="fa-solid fa-location-dot"></i>
-          Centro, SP
-        </p>
-
-        <p>29/05/2026</p>
-        <p>9:00 - 15:00</p>
+      <div class="sup-card">
+        <p>!</p>
+        <h2>Informações Principais</h2>
       </div>
 
-      <div class="price">R$200</div>
+      <div class="info">
+        <p><span class="fa-solid fa-location-dot"></span>Centro, SP</p>
+<p><span class="fa-regular fa-clock"></span> {{ job?.tempo }} horas</p>
+      </div>
+
+      <div class="price">R${{ job?.preco }}</div>
     </div>
 
-    <!-- Atividades -->
+
     <div class="card">
-      <h2>Atividades</h2>
+      <div class="sup-card">
+        <p>!</p>
+        <h2>Atividades</h2>
+      </div>
 
       <ul>
         <li>Criação de artes para redes-sociais, e-mail marketing.</li>
@@ -58,9 +80,12 @@
       </ul>
     </div>
 
-    <!-- Requisitos -->
+
     <div class="card">
-      <h2>Requisitos</h2>
+      <div class="sup-card">
+        <p>!</p>
+        <h2>Requisitos</h2>
+      </div>
 
       <ul>
         <li>Conhecimento em Photoshop, Illustrator e/ou Canva.</li>
@@ -69,36 +94,41 @@
       </ul>
     </div>
 
-    <!-- Dúvidas -->
-    <div class="contact">
+
+    <div class="mensagem">
       <h3>Dúvidas?</h3>
       <p>Fale com o recrutador</p>
 
-      <button class="message-btn">
+      <button class="btn-mensagem">
         <i class="fa-regular fa-message"></i>
         Enviar Mensagem
       </button>
     </div>
 
-    <!-- Botão final -->
-    <div class="bottom-action">
+    <div class="candidatar">
       <button>Quero me candidatar</button>
     </div>
-  </div>
+
+  </section>
 </template>
 
-<script setup>
-import { ref } from "vue";
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
-const isFavorite = ref(false);
-
-function toggleFavorite() {
-  isFavorite.value = !isFavorite.value;
-}
-</script>
 
 <style scoped>
-.container {
+.sup-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.sup-card p {
+  font-size: 20px;
+  color: #ee0303;
+  font-weight: bold;
+  border-radius: 100%;
+  border: 2px solid #ff0000;
+  padding: 0px 10px;
+}
+.fundo {
   min-height: 100vh;
   padding: 20px;
   padding-bottom: 100px;
@@ -108,7 +138,6 @@ function toggleFavorite() {
   margin: 0 auto;
 }
 
-/* HEADER */
 .header {
   display: flex;
   align-items: center;
@@ -116,42 +145,44 @@ function toggleFavorite() {
   margin-bottom: 20px;
 }
 
-.back-btn,
-.favorite-btn {
+.btn-voltar,
+.btn-favorito {
   background: none;
   border: none;
   font-size: 22px;
   cursor: pointer;
 }
 
-.back-btn {
+.btn-voltar {
   color: #5d45b6;
 }
 
-.favorite-btn {
+.btn-favorito {
   color: red;
 }
 
-.title-area {
+.titulo {
   text-align: center;
 }
 
-.title-area h1 {
+.titulo h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 22px;
+  width: 280px;
+  
   color: #4f389e;
 }
 
-.title-area p {
+.titulo p {
   margin: 0;
   color: #8f8f8f;
 }
 
-/* CARDS */
+
 .card {
   background: white;
   border-radius: 20px;
-  padding: 18px;
+  padding: 0 18px 18px 18px;
   margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
@@ -161,6 +192,7 @@ function toggleFavorite() {
   margin-bottom: 12px;
   color: #4f389e;
   font-size: 18px;
+  margin-top: 13px
 }
 
 .card p,
@@ -173,7 +205,7 @@ function toggleFavorite() {
   padding-left: 18px;
 }
 
-/* INFO */
+
 .info p {
   color: #7a63c8;
   margin: 12px 0;
@@ -190,23 +222,23 @@ function toggleFavorite() {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
-/* DÚVIDAS */
-.contact {
+
+.mensagem {
   text-align: center;
   margin-top: 50px;
 }
 
-.contact h3 {
+.mensagem h3 {
   margin-bottom: 4px;
   color: #4f389e;
 }
 
-.contact p {
+.mensagem p {
   color: #888;
   margin-bottom: 10px;
 }
 
-.message-btn {
+.btn-mensagem {
   background: white;
   border: 1px solid #d8d8d8;
   border-radius: 20px;
@@ -217,8 +249,8 @@ function toggleFavorite() {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* BOTÃO FINAL */
-.bottom-action {
+
+.candidatar {
   position: fixed;
   bottom: 15px;
   left: 50%;
@@ -227,7 +259,7 @@ function toggleFavorite() {
   max-width: 380px;
 }
 
-.bottom-action button {
+.candidatar button {
   width: 100%;
   border: none;
   background: #6548c7;
@@ -237,5 +269,5 @@ function toggleFavorite() {
   font-size: 18px;
   font-weight: bold;
   cursor: pointer;
-}
+}  
 </style>

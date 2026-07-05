@@ -5,7 +5,7 @@ import PerfilView from '../views/PerfilView.vue'
 import FreelancesView from '../views/FreelancesView.vue'
 import MensagensView from '../views/MensagensView.vue'
 
-import FavoritosView from '../views/Favoritos.View.vue'
+import FavoritosView from '../views/FavoritosView.vue'
 import RegisterComponent from '@/components/RegisterComponent.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterEmpComponent from '@/components/RegisterEmpComponent.vue'
@@ -21,7 +21,7 @@ const router = createRouter({
       component: LoginView,
       meta: { hideFooter: true }
     },
-    //problema aqui
+
     {
       path: '/home',
       name: 'home',
@@ -32,11 +32,13 @@ const router = createRouter({
       path: '/register',
       name: 'register',
       component: RegisterComponent,
+      meta: { hideFooter: true }
     },
     {
       path: '/registerEmpresa',
       name: 'registerEmpresa',
       component: RegisterEmpComponent,
+      meta: { hideFooter: true }
     },
 
     {
@@ -63,7 +65,7 @@ const router = createRouter({
       component: FavoritosView,
     },
     {
-    path: '/oportunidade',
+    path: '/oportunidade/:id',
     name: 'oportunidade',
     component: () => import('../components/OportunidadeDetalheComponent.vue')
     },

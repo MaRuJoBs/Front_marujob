@@ -9,13 +9,15 @@ const router = useRouter()
 const name = ref('')
 const email = ref('')
 const senha = ref('')
-const fileInput = ref(null)
+const arquivoImp = ref(null)
 const imagem = ref(null)
 const preview = ref(null)
 
 const confirmarSenha = ref('')
 const erros = ref([])
 const tentouEnviar = ref(false)
+
+const loading = ref(false)
 
 const criarConta = async () => {
   tentouEnviar.value = true
@@ -38,6 +40,8 @@ const criarConta = async () => {
   }
 
   if (erros.value.length > 0) return
+
+  loading.value = true
 
   try {
     const formData = new FormData()
@@ -80,6 +84,9 @@ const criarConta = async () => {
     } else {
       erros.value.push('Erro de conexão com o servidor')
     }
+  } finally {
+    loading.value = false
+
   }
 }
 
@@ -95,15 +102,17 @@ function handleImageChange(event) {
 <template>
   <div class="container">
     <div class="top">
-      <button class="back-button">←</button>
+      <router-link to="/">
+        <button class="btn-voltar">←</button>
+      </router-link>
 
-      <div class="photo-section">
-        <div class="photo-box" @click="fileInput.click()">
-          <input type="file" @change="handleImageChange" hidden ref="fileInput" />
+      <div class="div-foto">
+        <div class="photo-box" @click="arquivoImp.click()">
+          <input type="file" @change="handleImageChange" hidden ref="arquivoImp" />
           <img v-if="preview" :src="preview" class="preview-img" />
           <div v-else class="placeholder">
             <span>👤</span>
-            <span class="plus">+</span>
+            
           </div>
         </div>
 
@@ -115,57 +124,59 @@ function handleImageChange(event) {
 
     <p class="subtitle">Junte-se à nossa plataforma e mostre seu trabalho para o mundo.</p>
 
-    <div class="card">
-      <div class="field">
+    <div class="form">
+      <div class="card">
         <label>Nome completo</label>
 
-        <div class="input-box">
+        <div class="box">
           <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
           <input v-model="name" type="text" placeholder="Digite seu nome completo..." />
         </div>
       </div>
 
-      <div class="field">
+      <div class="card">
         <label>E-mail</label>
 
-        <div class="input-box">
+        <div class="box">
           <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
           <input v-model="email" type="email" placeholder="Digite seu e-mail..." />
         </div>
       </div>
 
-      <div class="field">
+      <div class="card">
         <label>Senha</label>
 
-        <div class="input-box">
+        <div class="box">
           <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
           <input v-model="senha" type="password" placeholder="Crie sua senha..." />
         </div>
       </div>
 
-      <div class="field">
+      <div class="card">
         <label>Confirmar senha</label>
 
-        <div class="input-box">
+        <div class="box">
           <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
           <input v-model="confirmarSenha" type="password" placeholder="Confirme sua senha..." />
         </div>
       </div>
 
-      <div class="password-box">
-        <p class="password-title">
+      <div class="box-senha">
+        <p class="title">
           <FontAwesomeIcon :icon="['fas', 'shield-halved']" class="icon" />
           Sua senha deve conter:
         </p>
 
-        <div class="rules">
+        <div class="infos">
           <span>○ +7 Caracteres</span>
           <span>○ +5 letras</span>
           <span>○ +2 números</span>
         </div>
       </div>
 
-      <button class="create-account" @click="criarConta">Criar conta</button>
+      <button class="criarConta" @click="criarConta" :disabled="loading">
+        {{ loading ? 'Criando conta...' : 'Criar conta' }}
+      </button>
       <div v-if="tentouEnviar && erros.length" class="error-box">
   <p v-for="(erro, index) in erros" :key="index">
     • {{ erro }}
@@ -204,7 +215,7 @@ function handleImageChange(event) {
   min-height: 100vh;
   background: #f4f4f4;
   padding: 30px;
-  padding-bottom: 120px; /* 👈 ESSENCIAL */
+  padding-bottom: 120px; 
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -214,7 +225,7 @@ function handleImageChange(event) {
   align-items: flex-start;
 }
 
-.back-button {
+.btn-voltar {
   width: 45px;
   height: 45px;
   border: none;
@@ -225,7 +236,7 @@ function handleImageChange(event) {
   cursor: pointer;
 }
 
-.photo-section {
+.div-foto {
   text-align: center;
 }
 
@@ -236,6 +247,8 @@ function handleImageChange(event) {
   background: #ece5f7;
   display: flex;
   justify-content: center;
+
+
   align-items: center;
   position: relative;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
@@ -244,18 +257,16 @@ function handleImageChange(event) {
 .photo-box span {
   font-size: 45px;
   color: #6d4dc2;
+
+
 }
 
-.plus {
-  position: absolute;
-  right: 15px;
-  bottom: 15px;
-  font-size: 28px !important;
-}
 
-.photo-section p {
+
+.div-foto p {
   margin-top: 8px;
   font-size: 12px;
+
   color: #666;
 }
 
@@ -265,29 +276,32 @@ h1 {
 }
 
 .subtitle {
+
   color: #3c2398c0;
   margin-bottom: 20px;
   max-width: 260px;
 }
 
-.card {
+.form {
   background: #e8dcf3;
   border-radius: 20px;
   padding: 25px;
 }
 
-.field {
+.card {
   margin-bottom: 20px;
 }
 
-.field label {
+.card label {
   display: block;
+
+
   margin-bottom: 8px;
   color: #2e1a74;
   font-weight: 600;
 }
 
-.field input {
+.card input {
   width: 100%;
   height: 42px;
   border: none;
@@ -296,27 +310,28 @@ h1 {
   padding: 0 12px;
 }
 
-.password-box {
+.box-senha {
   background: #d9d1e7;
   border-radius: 12px;
   padding: 15px;
   margin-top: 15px;
 }
 
-.password-box p {
+.box-senha p {
   color: #2e1a74;
   font-weight: 600;
   margin-bottom: 10px;
 }
 
-.rules {
+.infos {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
+
   color: #666;
 }
 
-.create-account {
+.criarConta {
   width: 100%;
   height: 50px;
   margin-top: 30px;
@@ -333,6 +348,7 @@ h1 {
   text-align: center;
   margin-top: 20px;
   color: #777;
+
 }
 
 .login a {
@@ -341,8 +357,8 @@ h1 {
   font-weight: bold;
 }
 
-/* NOVOS ESTILOS PARA O TÍTULO DE REQUISITOS DE SENHA */
-.password-title {
+
+.title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -351,15 +367,18 @@ h1 {
   margin-bottom: 10px;
 }
 
-.password-title .icon {
+.title .icon {
   color: #6d4dc2;
   font-size: 16px;
 }
 
-/* NOVOS ESTILOS PARA OS CAMPOS DE INPUT */
-.input-box {
+
+
+.box {
   display: flex;
   align-items: center;
+
+
   background: #d6d6d6;
   border-radius: 10px;
   padding: 0 12px;
@@ -367,22 +386,23 @@ h1 {
   gap: 10px;
 }
 
-.input-box .icon {
+.box .icon {
   color: #6d4dc2;
   font-size: 18px;
   min-width: 20px;
 }
 
-.input-box input {
+.box input {
   border: none;
   outline: none;
   background: transparent;
   width: 100%;
   font-size: 14px;
   color: #333;
+
 }
 
-.input-box input::placeholder {
+.box input::placeholder {
   color: #888;
 }
 </style>

@@ -9,8 +9,10 @@ const router = useRouter()
 const email = ref('')
 const senha = ref('')
 const error = ref('')
+const carregando = ref(false)
 
 const login = async () => {
+  carregando.value = true
   try {
     const response = await axios.post(
       `${API_URL}/api/token/`,
@@ -20,28 +22,32 @@ const login = async () => {
       }
     )
 
+
+
     localStorage.setItem('token', response.data.access)
     localStorage.setItem('refresh', response.data.refresh)
 
     router.push('/home')
   } catch (erro) {
     error.value = 'E-mail ou senha inválidos.'
+  } finally {
+    carregando.value = false
   }
 }
 </script>
 
 <template>
-  <div class="login-page">
-    <!-- decoração topo -->
-    <div class="wave-top"></div>
-
+  <div class="paginaLogin">
     <div class="content">
-      <img src="@/assets/images/logo.png" alt="logo" class="logo" />
+      <div class="header">
+      <img src="@/assets/images/logo.png" class="logo-top" />
+      <img src="@/assets/images/slogan.png" class="slogan" />
+      </div>
 
-      <div class="hero">
+      <div class="info">
+
         <div class="text">
           <h1>Entrar</h1>
-
           <p>Acesse sua conta e continue conectado ao que importa</p>
         </div>
 
@@ -50,6 +56,7 @@ const login = async () => {
             <i class="mdi mdi-account"></i>
           </div>
         </div>
+
       </div>
 
       <div class="form-card">
@@ -73,27 +80,29 @@ const login = async () => {
           </div>
         </div>
         <p v-if="error" class="error-message">
-    {{ error }}
-  </p>
-        <button @click="login"></button>
+          {{ error }}
+        </p>
+        
 
         <div class="forgot">Esqueceu sua senha?</div>
 
-        <button class="btn-login" @click="login">
-  Entrar
-</button>
+        <button class="btn-login" @click="login" :disabled="carregando">
+          {{ carregando ? 'Entrando...' : 'Entrar' }}
+        </button>
 
         <div class="register">
           Não tem uma conta?
           <ul>
-            <li><router-link to="/register"><span>Criar conta Usuário</span></router-link></li>
-            <li><router-link to="/registerEmpresa"><span>Criar conta Empresa</span></router-link></li>
+            <li>
+              <router-link to="/register"><span>Criar conta Usuário</span></router-link>
+            </li>
+            <li>
+              <router-link to="/registerEmpresa"><span>Criar conta Empresa</span></router-link>
+            </li>
           </ul>
         </div>
       </div>
     </div>
-    <!-- decoração rodapé -->
-    <div class="wave-bottom"></div>
   </div>
 </template>
 
@@ -103,15 +112,31 @@ const login = async () => {
   padding: 0;
   box-sizing: border-box;
 }
-.error-message{
-    color: red;
-    font-size: 12px;
-    margin-top: -10px;
-    margin-bottom: 10px;
-    text-align: center;
+.header{
+  display: flex;
+  justify-content: center;
+  height: 150px;
 }
 
-.login-page {
+.logo-top {
+  width: 100px;
+  height: 100px;
+  margin-top: 10px;
+}
+.slogan {
+  width: 200px;
+  height: 200px;
+  padding-bottom: 30px;
+}
+.error-message {
+  color: red;
+  font-size: 12px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.paginaLogin {
   min-height: 100vh;
   background: #e7d9f3;
   position: relative;
@@ -119,18 +144,14 @@ const login = async () => {
 }
 
 .content {
-  padding: 22px;
+  padding: 10px 22px 22px 22px;
   position: relative;
   z-index: 2;
 }
 
-.logo {
-  width: 185px;
-  display: block;
-  margin: 8px auto 35px;
-}
 
-.hero {
+
+.info {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -247,7 +268,6 @@ const login = async () => {
   text-align: center;
   font-size: 12px;
   color: #8a8a8a;
-  
 }
 .register ul {
   list-style: none;
@@ -257,27 +277,5 @@ const login = async () => {
 .register span {
   color: #4f2ba5;
   font-weight: 700;
-}
-
-.wave-top {
-  position: absolute;
-  top: -100px;
-  left: -80px;
-
-  width: 220px;
-  height: 220px;
-
-  background: radial-gradient(circle, rgba(190, 150, 255, 0.5), transparent 70%);
-}
-
-.wave-bottom {
-  position: absolute;
-  bottom: -60px;
-  left: -20px;
-
-  width: 120%;
-  height: 180px;
-
-  background: radial-gradient(ellipse at center, rgba(177, 120, 255, 0.35), transparent 70%);
 }
 </style>
