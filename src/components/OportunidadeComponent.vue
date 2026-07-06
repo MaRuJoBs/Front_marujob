@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 
-// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 
 
 const jobs = ref([])
@@ -12,7 +12,7 @@ const favoritos = ref([])
 
 const buscarFreelances = async () => {
   try {
-    let url = `http://127.0.0.1:8000/api/freelances/?page=1`
+    let url = `${API_URL}/api/freelances/?page=1`
 
     while (url) {
       const res = await fetch(url)
