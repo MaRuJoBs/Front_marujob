@@ -1,35 +1,24 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 
-
-// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+const API_URL = import.meta.env.VITE_API_URL
 
 const jobs = ref([])
 const page = ref(1)
-// const user = ref(null)
-
 const temProximaPagina = ref(false)
 
 const buscarJobs = async () => {
-
   try {
-    // const res = await fetch(`${API_URL}/api/freelances/?page=${page.value}`)
-    const res = await fetch(`http://127.0.0.1:8000/api/freelances/?page=${page.value}`)
+    const res = await fetch(`${API_URL}/api/freelances/?page=${page.value}`)
     const data = await res.json()
-
-   
 
     jobs.value = [...jobs.value, ...data.results]
     temProximaPagina.value = data.next !== null
 
     page.value++
-    // if (data.count) {
-    //   totalPages.value = Math.ceil(data.count / data.results.length)
-    // }
   } catch (error) {
     console.error('Erro ao buscar freelances:', error)
-
-}
+  }
 }
 
 onMounted(() => {
@@ -50,37 +39,21 @@ const principaisLimitados = computed(() => {
   return principais.value.slice(0, limite.value)
 })
 
-
-// const gruposPrincipais = computed(() => {
-//   const grupos = []
-
-//   for (let i = 0; i < principais.value.length; i += 3) {
-//     grupos.push(principais.value.slice(i, i + 3))
-//   }
-//   return grupos
-// })
-
 const grupos = computed(() => {
   const resultado = []
 
   for (let i = 0; i < jobsHome.value.length; i += 10) {
     resultado.push(jobsHome.value.slice(i, i + 10))
-
   }
+
   return resultado
 })
 
-
-// const slideAtual = ref(0)
-
 const getImageUrl = (path) => {
   if (!path) return null
-
   if (path.startsWith('http')) return path
-
-  return `${path}`
+  return path
 }
-
 </script>
 
 <template>
@@ -103,7 +76,7 @@ const getImageUrl = (path) => {
           <p>{{ job.tag }}</p>
 
           <div class="preco">
-            <span>R${{ job.preco }}</span>
+            <span>R$ {{ job.preco }}</span>
             <p>•</p>
             <p class="horas">{{ job.tempo }} horas</p>
           </div>
@@ -125,7 +98,7 @@ const getImageUrl = (path) => {
         <div class="mini-card" v-for="job in grupo" :key="job.id">
           <h4>{{ job.titulo }}</h4>
           <p>Empresa</p>
-          <span>R${{ job.preco }}</span>
+          <span>R$ {{ job.preco }}</span>
           <p>{{ job.tempo }} horas</p>
 
           <router-link :to="`/oportunidade/${job.id}`">
@@ -148,8 +121,8 @@ main {
   margin-top: -95px;
   position: relative;
   z-index: 5;
- 
 }
+
 .home {
   padding: 0 16px 16px 16px;
   padding-bottom: 25vh;
@@ -165,23 +138,25 @@ main {
   border-radius: 0 0 10px 10px;
   margin: 0 auto;
 }
+
 .imagem {
   width: 80px;
   height: 80px;
   background-color: #939292;
   border-radius: 10px;
-  margin: 0;
 }
+
 .avatar {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 10px;
 }
+
 .card {
   background: #d8d2e6;
   border-radius: 12px;
-  padding: 25px 12px 25px 12px;
+  padding: 25px 12px;
   margin-top: 12px;
   display: flex;
   align-items: center;
@@ -200,15 +175,18 @@ main {
   color: #777;
   font-size: 15px;
 }
+
 div.preco {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .card span {
   font-size: 15px;
   color: #543b91;
 }
+
 .card .horas {
   font-size: 15px;
   color: #777;
@@ -243,7 +221,6 @@ div.preco {
   overflow-x: auto;
   gap: 10px;
   scroll-snap-type: x mandatory;
-  /* -webkit-overflow-scrolling: touch; */
   margin-bottom: 10px;
 }
 
@@ -251,15 +228,13 @@ div.preco {
   scroll-snap-align: start;
   background: #fff;
   border-radius: 10px;
-  padding: 20px 15px 20px 12px;
-  color: #49357b;
+  padding: 20px 15px;
   width: 150px;
   height: 210px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  /* margin-bottom: 10px; */
 }
 
 .mini-card span {
@@ -269,11 +244,9 @@ div.preco {
 
 .mini-card h4 {
   font-size: 20px;
-  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  height: 2.4em;
 }
 
 .mini-card p {
@@ -291,6 +264,7 @@ div.preco {
   margin: 15px auto 0 auto;
   display: block;
 }
+
 .btn-mais {
   background: #5b3cc4;
   color: white;
