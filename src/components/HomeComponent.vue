@@ -12,6 +12,9 @@ const buscarJobs = async () => {
     const res = await fetch(`${API_URL}/api/freelances/?page=${page.value}`)
     const data = await res.json()
 
+    console.log(data)
+    console.log(data.results.length)
+
     jobs.value = [...jobs.value, ...data.results]
     temProximaPagina.value = data.next !== null
 
@@ -243,6 +246,7 @@ div.preco {
 }
 
 .mini-card h4 {
+  color: #49357b;
   font-size: 20px;
   white-space: nowrap;
   overflow: hidden;

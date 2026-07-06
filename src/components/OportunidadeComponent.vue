@@ -64,8 +64,8 @@ const toggleFavorito = (job) => {
     <div class="filtro">
       <button class="active">Todas</button>
       <button>Design</button>
-      <button>Design</button>
-      <button>Design</button>
+      <button>Desenvolvimento</button>
+      <button>Marketing</button>
       <button>Design Gráfico</button>
     </div>
 
@@ -164,29 +164,29 @@ const toggleFavorito = (job) => {
 
 
 
-
-.filters {
+.filtro {
   display: flex;
   gap: 8px;
+  overflow-x: auto;
   margin-bottom: 20px;
-  justify-content: center;
+  padding-bottom: 5px;
 }
 
-.filters button {
+.filtro button {
   background: #e9e3ff;
   border: none;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 13px;
   color: #5a46b5;
   white-space: nowrap;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-.filters .active {
+.filtro .active {
   background: #6c4ad1;
   color: white;
-  
 }
 
 .vaga {
