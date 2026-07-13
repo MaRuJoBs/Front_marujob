@@ -7,7 +7,6 @@
 
             <!-- Header -->
             <header class="hero">
-
                 <img :src="logoMaruJob" alt="MaRuJob" class="logo" />
 
             </header>
@@ -47,17 +46,17 @@
                     </div>
 
                     <div class="job-date">
-                        📅 3 dias
+                      <i class="fa-regular fa-calendar"></i> 3 dias
                     </div>
 
                     <div class="job-footer">
 
                         <div class="job-info">
-                            📍 Centro, SP
+                            <i class="fa-solid fa-location-dot"></i> Centro, SP
                         </div>
 
                         <div class="job-info">
-                            💼 Home Office
+                            <i class="fa-solid fa-briefcase"></i> Home Office
                         </div>
 
                         <button class="details-btn">
@@ -79,17 +78,17 @@
                     </div>
 
                     <div class="job-date">
-                        📅 3 dias
+                        <i class="fa-regular fa-calendar"></i> 3 dias
                     </div>
 
                     <div class="job-footer">
 
                         <div class="job-info">
-                            📍 Centro, SP
+                            <i class="fa-solid fa-location-dot"></i> Centro, SP
                         </div>
 
                         <div class="job-info">
-                            💼 Home Office
+                            <i class="fa-solid fa-briefcase"></i> Home Office
                         </div>
 
                         <button class="details-btn">
@@ -141,7 +140,11 @@
                         <p>Design Gráfico</p>
 
                         <div class="stars">
-                            ⭐⭐⭐⭐⭐
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
                         </div>
 
                         <button>
@@ -207,7 +210,6 @@
     width: 180px;
     height: auto;
     object-fit: contain;
-
     position: relative;
     top: -10px;
     /* sobe a logo */
@@ -243,7 +245,7 @@
 .welcome h2 {
     color: #5e3ea7;
     font-size: 22px;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .welcome p {
@@ -255,9 +257,7 @@
 .new-job {
     margin-top: 20px;
 
-    background: linear-gradient(90deg,
-            #4ba0c4,
-            #5868d8);
+    background-color: #4687AB;
 
     border: none;
 
@@ -337,7 +337,7 @@
 .price {
     background: white;
 
-    padding: 7px 14px;
+    padding: 0px 14px;
 
     border-radius: 30px;
 
