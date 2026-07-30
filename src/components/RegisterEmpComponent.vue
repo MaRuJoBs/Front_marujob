@@ -1,9 +1,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { registrar, login as fazerLogin } from '@/services/authService'
 
-// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+
 const router = useRouter()
 const name = ref('')
 const email = ref('')
@@ -53,19 +53,13 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post('http://127.0.0.1:8000/api/registro/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
+    await registrar(formData)
 
-    const loginResponse = await axios.post('http://127.0.0.1:8000/api/token/', {
-      email: email.value,
-      password: senha.value,
-    })
+    const loginResponse = await fazerLogin(email.value, senha.value)
+    //automatico
 
-    localStorage.setItem('token', loginResponse.data.access)
-    localStorage.setItem('refresh', loginResponse.data.refresh)
+    localStorage.setItem('token', loginResponse.access)
+    localStorage.setItem('refresh', loginResponse.refresh)
 
     router.push('/home')
   } catch (error) {
