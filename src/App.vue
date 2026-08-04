@@ -4,7 +4,7 @@
 
     <router-view />
 
-    <Footer v-if="!$route.meta.hideFooter" />
+    <FooterEmpresaComponent v-if="!$route.meta.hideFooter" />
 
 
   </div>
@@ -13,6 +13,7 @@
 <script setup>
 
 import Footer from './components/Footer.vue'
+import FooterEmpresaComponent from './components/FooterEmpresaComponent.vue';
 
 
 </script>
