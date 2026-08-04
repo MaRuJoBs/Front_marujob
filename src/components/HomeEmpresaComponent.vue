@@ -1,479 +1,417 @@
-    <script setup>
-    import logoMaruJob from '@/assets/images/logoempresa.png'
+<script setup>
+import logoMaruJob from '@/assets/images/logoempresa.png'
+import fundoEmpresa from '@/assets/images/fundoempresa.png'
 </script>
+<template>
+  <main class="home":style="{backgroundImage: `url('${fundoEmpresa}')`,}">
+    <!-- Header -->
+    <header class="hero">
+      <img :src="logoMaruJob" alt="MaRuJob" class="logo" />
+    </header>
 
-    <template>
-        <main class="home">
+    <!-- Welcome -->
+    <section class="welcome">
+      <h2>Bem-vindo, Nome da Empresa!</h2>
 
-            <!-- Header -->
-            <header class="hero">
-                <img :src="logoMaruJob" alt="MaRuJob" class="logo" />
+      <p>Encontre os melhores freelancers para seus projetos.</p>
 
-            </header>
+      <button class="new-job">
+        <span>+</span>
+        Criar nova vaga
+      </button>
+    </section>
 
-            <!-- Welcome -->
-            <section class="welcome">
+    <!-- Vagas -->
+    <section class="section">
+      <div class="section-title">
+        <h3>Vagas Ativas</h3>
+        <span>Ver todos ›</span>
+      </div>
 
-                <h2>Bem-vindo, Nome da Empresa!</h2>
+      <div class="job-card">
+        <div class="job-header">
+          <h4>Vagas Ativas</h4>
 
-                <p>
-                    Encontre os melhores freelancers para seus projetos.
-                </p>
+          <div class="price">R$ 200</div>
+        </div>
 
-                <button class="new-job">
-                    <span>+</span>
-                    Criar nova vaga
-                </button>
+        <div class="job-date"><i class="fa-regular fa-calendar"></i> 3 dias</div>
 
-            </section>
+        <div class="job-footer">
+          <div class="job-info"><i class="fa-solid fa-location-dot"></i> Centro, SP</div>
 
-            <!-- Vagas -->
-            <section class="section">
+          <div class="job-info"><i class="fa-solid fa-briefcase"></i> Home Office</div>
 
-                <div class="section-title">
-                    <h3>Vagas Ativas</h3>
-                    <span>Ver todos ›</span>
-                </div>
+          <button class="details-btn">Ver mais</button>
+        </div>
+      </div>
 
-                <div class="job-card">
+      <div class="job-card">
+        <div class="job-header">
+          <h4>Vagas Ativas</h4>
 
-                    <div class="job-header">
-                        <h4>Vagas Ativas</h4>
+          <div class="price">R$ 200</div>
+        </div>
 
-                        <div class="price">
-                            R$ 200
-                        </div>
-                    </div>
+        <div class="job-date"><i class="fa-regular fa-calendar"></i> 3 dias</div>
 
-                    <div class="job-date">
-                      <i class="fa-regular fa-calendar"></i> 3 dias
-                    </div>
+        <div class="job-footer">
+          <div class="job-info"><i class="fa-solid fa-location-dot"></i> Centro, SP</div>
 
-                    <div class="job-footer">
+          <div class="job-info"><i class="fa-solid fa-briefcase"></i> Home Office</div>
 
-                        <div class="job-info">
-                            <i class="fa-solid fa-location-dot"></i> Centro, SP
-                        </div>
+          <button class="details-btn">Ver mais</button>
+        </div>
+      </div>
+    </section>
 
-                        <div class="job-info">
-                            <i class="fa-solid fa-briefcase"></i> Home Office
-                        </div>
+    <!-- Recomendações -->
+    <section class="section">
+      <div class="section-title">
+        <h3>Recomendações de Freelancers</h3>
+        <span>Ver todos ›</span>
+      </div>
 
-                        <button class="details-btn">
-                            Ver mais
-                        </button>
+      <div class="categories">
+        <button class="active">Design</button>
 
-                    </div>
+        <button>Redação</button>
 
-                </div>
+        <button>Marketing</button>
 
-                <div class="job-card">
+        <button>Vídeo</button>
+      </div>
 
-                    <div class="job-header">
-                        <h4>Vagas Ativas</h4>
+      <div class="freelancers">
+        <div class="freelancer-card">
+          <div class="avatar"></div>
 
-                        <div class="price">
-                            R$ 200
-                        </div>
-                    </div>
+          <h4>Ricardo Baron</h4>
 
-                    <div class="job-date">
-                        <i class="fa-regular fa-calendar"></i> 3 dias
-                    </div>
+          <p>Design Gráfico</p>
 
-                    <div class="job-footer">
+          <div class="stars">
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+          </div>
 
-                        <div class="job-info">
-                            <i class="fa-solid fa-location-dot"></i> Centro, SP
-                        </div>
+          <button>Ver perfil</button>
+        </div>
 
-                        <div class="job-info">
-                            <i class="fa-solid fa-briefcase"></i> Home Office
-                        </div>
+        <div class="freelancer-card">
+          <div class="avatar"></div>
 
-                        <button class="details-btn">
-                            Ver mais
-                        </button>
+          <h4>Ricardo Baron</h4>
 
-                    </div>
+          <p>Design Gráfico</p>
 
-                </div>
+          <div class="stars">⭐⭐⭐⭐⭐</div>
 
-            </section>
-
-            <!-- Recomendações -->
-            <section class="section">
-
-                <div class="section-title">
-                    <h3>Recomendações de Freelancers</h3>
-                    <span>Ver todos ›</span>
-                </div>
-
-                <div class="categories">
-
-                    <button class="active">
-                        Design
-                    </button>
-
-                    <button>
-                        Redação
-                    </button>
-
-                    <button>
-                        Marketing
-                    </button>
-
-                    <button>
-                        Vídeo
-                    </button>
-
-                </div>
-
-                <div class="freelancers">
-
-                    <div class="freelancer-card">
-
-                        <div class="avatar"></div>
-
-                        <h4>Ricardo Baron</h4>
-
-                        <p>Design Gráfico</p>
-
-                        <div class="stars">
-                            <i class="fa-solid fa-star"></i>
-                            <i class="fa-solid fa-star"></i>
-                            <i class="fa-solid fa-star"></i>
-                            <i class="fa-solid fa-star"></i>
-                            <i class="fa-solid fa-star"></i>
-                        </div>
-
-                        <button>
-                            Ver perfil
-                        </button>
-
-                    </div>
-
-                    <div class="freelancer-card">
-
-                        <div class="avatar"></div>
-
-                        <h4>Ricardo Baron</h4>
-
-                        <p>Design Gráfico</p>
-
-                        <div class="stars">
-                            ⭐⭐⭐⭐⭐
-                        </div>
-
-                        <button>
-                            Ver perfil
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-        </main>
-    </template>
+          <button>Ver perfil</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</template>
 
 <style scoped>
 .home {
-    min-height: 100vh;
-    background: #e8d9f7;
-    padding-bottom: 30px;
+  min-height: 100vh;
+  width: 100%;
+
+  background-repeat: no-repeat;
+  background-position: top center;
+
+  /* Ajuste o tamanho da imagem */
+  background-size: cover;
+
+  /* Faz a imagem acompanhar a rolagem */
+  background-attachment: scroll;
+
+  padding-bottom: 30px;
 }
+
 
 /* HERO */
 
 .hero {
-    height: 70px;
-
-    background: linear-gradient(180deg,
-            #cba9f2 0%,
-            #e3d2f8 100%);
-
-    border-radius: 0 0 30px 30px;
-
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-
-    padding: 5px 15px 0;
-
-    position: relative;
-    overflow: hidden;
+  height: 70px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 5px 15px 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .logo {
-    width: 180px;
-    height: auto;
-    object-fit: contain;
-    position: relative;
-    top: -10px;
-    /* sobe a logo */
-    z-index: 2;
+  width: 180px;
+  height: auto;
+  object-fit: contain;
+  position: relative;
+  top: -10px;
+  /* sobe a logo */
+  z-index: 2;
 }
 
 .hero::after {
-    content: "";
+  content: '';
 
-    position: absolute;
-    width: 350px;
-    height: 350px;
+  position: absolute;
+  width: 350px;
+  height: 350px;
 
-    border-radius: 50%;
+  border-radius: 50%;
 
-    background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
 
-    bottom: -250px;
-    left: -100px;
+  bottom: -250px;
+  left: -100px;
 }
 
 .logo {
-    width: 300px;
-    z-index: 2;
+  width: 300px;
+  z-index: 2;
 }
 
 /* WELCOME */
 
 .welcome {
-    padding: 20px;
+  padding: 20px;
 }
 
 .welcome h2 {
-    color: #5e3ea7;
-    font-size: 22px;
-    font-weight: 800;
+  color: #5e3ea7;
+  font-size: 22px;
+  font-weight: 800;
 }
 
 .welcome p {
-    color: #74688f;
-    font-size: 14px;
-    margin-top: 6px;
+  color: #74688f;
+  font-size: 14px;
+  margin-top: 6px;
 }
 
 .new-job {
-    margin-top: 20px;
+  margin-top: 20px;
 
-    background-color: #4687AB;
+  background-color: #4687ab;
 
-    border: none;
+  border: none;
 
-    color: white;
+  color: white;
 
-    padding: 14px 20px;
+  padding: 14px 20px;
 
-    border-radius: 15px;
+  border-radius: 15px;
 
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
-    font-size: 15px;
-    font-weight: 600;
+  font-size: 15px;
+  font-weight: 600;
 
-    box-shadow: 0 4px 10px rgba(0, 0, 0, .12);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 .new-job span {
-    font-size: 22px;
+  font-size: 22px;
 }
 
 /* SECTION */
 
 .section {
-    padding: 0 20px;
-    margin-top: 18px;
+  padding: 0 20px;
+  margin-top: 18px;
 }
 
 .section-title {
-    background: #efe5fa;
+  background: #efe5fa;
 
-    padding: 14px 16px;
+  padding: 14px 16px;
 
-    border-radius: 14px;
+  border-radius: 14px;
 
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .section-title h3 {
-    color: #5f469a;
-    font-size: 18px;
+  color: #5f469a;
+  font-size: 18px;
 }
 
 .section-title span {
-    color: #8474a9;
-    font-size: 13px;
+  color: #8474a9;
+  font-size: 13px;
 }
 
 /* JOB CARD */
 
 .job-card {
-    background: #f6effd;
+  background: #f6effd;
 
-    border-radius: 18px;
+  border-radius: 18px;
 
-    padding: 16px;
+  padding: 16px;
 
-    margin-top: 12px;
+  margin-top: 12px;
 
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .job-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .job-header h4 {
-    color: #5e3ea7;
+  color: #5e3ea7;
 }
 
 .price {
-    background: white;
-
-    padding: 0px 14px;
-
-    border-radius: 30px;
-
-    color: #5e3ea7;
-    font-weight: 700;
+  background: white;
+  padding: 4px 16px;
+  border-radius: 30px;
+  color: #5e3ea7;
+  font-weight: 700;
 }
 
 .job-date {
-    margin-top: 10px;
-    color: #80759b;
+  margin-top: 10px;
+  color: #80759b;
 }
 
 .job-footer {
-    margin-top: 14px;
+  margin-top: 14px;
 
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .job-info {
-    color: #80759b;
-    font-size: 13px;
+  color: #80759b;
+  font-size: 13px;
 }
 
 .details-btn {
-    margin-left: auto;
+  margin-left: auto;
 
-    border: none;
+  border: none;
 
-    background: #7854d7;
+  background: #7854d7;
 
-    color: white;
+  color: white;
 
-    padding: 8px 16px;
+  padding: 8px 16px;
 
-    border-radius: 20px;
+  border-radius: 20px;
 
-    font-weight: 600;
+  font-weight: 600;
 }
 
 /* TAGS */
 
 .categories {
-    display: flex;
-    gap: 8px;
+  display: flex;
+  gap: 8px;
 
-    overflow-x: auto;
+  overflow-x: auto;
 
-    margin-top: 14px;
-    padding-bottom: 5px;
+  margin-top: 14px;
+  padding-bottom: 5px;
 }
 
 .categories button {
-    border: none;
+  border: none;
 
-    background: white;
+  background: white;
 
-    color: #75658f;
+  color: #75658f;
 
-    padding: 8px 14px;
+  padding: 8px 14px;
 
-    border-radius: 20px;
+  border-radius: 20px;
 
-    white-space: nowrap;
+  white-space: nowrap;
 }
 
 .categories .active {
-    background: #7b58d3;
-    color: white;
+  background: #7b58d3;
+  color: white;
 }
 
 /* FREELANCERS */
 
 .freelancers {
-    margin-top: 16px;
+  margin-top: 16px;
 
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
 
-    gap: 12px;
+  gap: 12px;
 }
 
 .freelancer-card {
-    background: #f6effd;
+  background: #f6effd;
 
-    border-radius: 18px;
+  border-radius: 18px;
 
-    padding: 16px;
+  padding: 16px;
 
-    text-align: center;
+  text-align: center;
 
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .avatar {
-    width: 90px;
-    height: 90px;
+  width: 90px;
+  height: 90px;
 
-    border-radius: 50%;
+  border-radius: 50%;
 
-    background: #d8d8d8;
+  background: #d8d8d8;
 
-    margin: 0 auto 12px;
+  margin: 0 auto 12px;
 }
 
 .freelancer-card h4 {
-    color: #5e3ea7;
-    font-size: 15px;
+  color: #5e3ea7;
+  font-size: 15px;
 }
 
 .freelancer-card p {
-    color: #8474a9;
-    font-size: 13px;
+  color: #8474a9;
+  font-size: 13px;
 
-    margin-top: 4px;
+  margin-top: 4px;
 }
 
 .stars {
-    margin: 10px 0;
+  margin: 10px 0;
 }
 
 .freelancer-card button {
-    width: 100%;
+  width: 100%;
 
-    border: none;
+  border: none;
 
-    background: #7854d7;
+  background: #7854d7;
 
-    color: white;
+  color: white;
 
-    padding: 10px;
+  padding: 10px;
 
-    border-radius: 20px;
+  border-radius: 20px;
 
-    font-weight: 600;
+  font-weight: 600;
 }
 </style>
