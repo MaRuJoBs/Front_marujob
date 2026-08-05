@@ -84,6 +84,7 @@ const router = createRouter({
   name: 'portfolioDetalhe',
   component: () => import('../views/PortfolioDetalheView.vue')
     },
+    
   ],
 })
 
