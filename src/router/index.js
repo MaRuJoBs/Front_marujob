@@ -72,17 +72,17 @@ const router = createRouter({
     {
   path: '/portfolio',
   name: 'portfolio',
-  component: () => import('../views/PortfolioView.vue')
+  component: () => import('@/views/PortfolioView.vue')
     },
     {
   path: '/portfolio/adicionar',
   name: 'portfolioAdicionar',
-  component: () => import('../views/PortfolioAdicionarView.vue')
+  component: () => import('@/views/PortfolioAdicionarView.vue')
     },
     {
   path: '/portfolio/:id',
   name: 'portfolioDetalhe',
-  component: () => import('../views/PortfolioDetalheView.vue')
+  component: () => import('@/views/PortfolioDetalheView.vue')
     },
     
   ],
