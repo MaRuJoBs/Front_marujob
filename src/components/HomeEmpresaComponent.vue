@@ -185,14 +185,14 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 
 .welcome h2 {
   color: #5e3ea7;
-  font-size: 22px;
+  font-size: 25px;
   font-weight: 800;
 }
 
 .welcome p {
   color: #74688f;
   font-size: 14px;
-  margin-top: 6px;
+  margin-top: 2px;
 }
 
 .new-job {
