@@ -1,13 +1,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { registrar, login as fazerLogin } from '@/services/authService'
 
 const router = useRouter()
 const name = ref('')
 const email = ref('')
 const senha = ref('')
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const loading = ref(false)
 const arquivoImp = ref(null)
 const imagem = ref(null)
@@ -51,42 +50,40 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post(`${API_URL}/api/registro/`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    
+    for (const [key, value] of formData.entries()) {
+  console.log(key, value)
+}
 
-    const loginResponse = await axios.post(`${API_URL}/api/token/`, {
-      email: email.value,
-      password: senha.value,
-    })
-    //possivel erro aqui
+  localStorage.removeItem('token')
+  localStorage.removeItem('refresh')
 
-    localStorage.setItem('token', loginResponse.data.access)
-    localStorage.setItem('refresh', loginResponse.data.refresh)
+    await registrar(formData)
+
+    const loginResponse = await fazerLogin(email.value, senha.value)
+    //automatico
+
+    localStorage.setItem('token', loginResponse.access)
+    localStorage.setItem('refresh', loginResponse.refresh)
 
     router.push('/home')
-
   } catch (error) {
     const data = error.response?.data
     if (data) {
-    if (data.email) {
-      erros.value.push('Este email já está em uso')
-    } else if (data.detail) {
-      erros.value.push(data.detail)
+      if (data.email) {
+        erros.value.push('Este email já está em uso')
+      } else if (data.detail) {
+        erros.value.push(data.detail)
+      } else {
+        erros.value.push('Erro ao criar conta')
+      }
     } else {
-      erros.value.push('Erro ao criar conta')
+      erros.value.push('Erro de conexão com o servidor')
     }
-  } else {
-    erros.value.push('Erro de conexão com o servidor')
-  }
   } finally {
     loading.value = false
-  } 
+  }
 }
-// estilização da pagina de registro, ainda não finalizada
+
 
 function handleImageChange(event) {
   const file = event.target.files[0]
@@ -110,7 +107,6 @@ function handleImageChange(event) {
           <img v-if="preview" :src="preview" class="preview-img" />
           <div v-else class="placeholder">
             <span>👤</span>
-            
           </div>
         </div>
 
@@ -176,10 +172,8 @@ function handleImageChange(event) {
         {{ loading ? 'Criando conta...' : 'Criar conta' }}
       </button>
       <div v-if="tentouEnviar && erros.length" class="error-box">
-  <p v-for="(erro, index) in erros" :key="index">
-    • {{ erro }}
-  </p>
-</div>
+        <p v-for="(erro, index) in erros" :key="index">• {{ erro }}</p>
+      </div>
 
       <div class="login">
         Já tem uma conta?
@@ -213,7 +207,7 @@ function handleImageChange(event) {
   min-height: 100vh;
   background: #f4f4f4;
   padding: 30px;
-  padding-bottom: 120px; 
+  padding-bottom: 120px;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -246,7 +240,6 @@ function handleImageChange(event) {
   display: flex;
   justify-content: center;
 
-
   align-items: center;
   position: relative;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
@@ -255,11 +248,7 @@ function handleImageChange(event) {
 .photo-box span {
   font-size: 45px;
   color: #6d4dc2;
-
-
 }
-
-
 
 .div-foto p {
   margin-top: 8px;
@@ -274,7 +263,6 @@ h1 {
 }
 
 .subtitle {
-
   color: #3c2398c0;
   margin-bottom: 20px;
   max-width: 260px;
@@ -292,7 +280,6 @@ h1 {
 
 .card label {
   display: block;
-
 
   margin-bottom: 8px;
   color: #2e1a74;
@@ -346,7 +333,6 @@ h1 {
   text-align: center;
   margin-top: 20px;
   color: #777;
-
 }
 
 .login a {
@@ -354,7 +340,6 @@ h1 {
   text-decoration: none;
   font-weight: bold;
 }
-
 
 .title {
   display: flex;
@@ -370,12 +355,9 @@ h1 {
   font-size: 16px;
 }
 
-
-
 .box {
   display: flex;
   align-items: center;
-
 
   background: #d6d6d6;
   border-radius: 10px;
@@ -397,7 +379,6 @@ h1 {
   width: 100%;
   font-size: 14px;
   color: #333;
-
 }
 
 .box input::placeholder {

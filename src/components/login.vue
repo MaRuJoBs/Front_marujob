@@ -1,9 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { login as fazerLogin } from '@/services/authService'
 
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const router = useRouter()
 
 const email = ref('')
@@ -13,19 +12,15 @@ const carregando = ref(false)
 
 const login = async () => {
   carregando.value = true
+
   try {
-    const response = await axios.post(
-      `${API_URL}/api/token/`,
-      {
-        email: email.value,
-        password: senha.value,
-      }
+    const response = await fazerLogin(
+      email.value,
+      senha.value
     )
 
-
-
-    localStorage.setItem('token', response.data.access)
-    localStorage.setItem('refresh', response.data.refresh)
+    localStorage.setItem('token', response.access)
+    localStorage.setItem('refresh', response.refresh)
 
     router.push('/home')
   } catch (erro) {

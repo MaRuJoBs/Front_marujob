@@ -3,6 +3,7 @@
 
 
     <router-view />
+     
 
     <Footer v-if="!$route.meta.hideFooter" />
 
@@ -13,6 +14,7 @@
 <script setup>
 
 import Footer from './components/Footer.vue'
+
 
 
 </script>
