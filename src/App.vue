@@ -2,8 +2,8 @@
   <div class="app">
 
 
-    <!-- <router-view /> -->
-     <AddPortifolioComponent />
+    <router-view />
+     
 
     <Footer v-if="!$route.meta.hideFooter" />
 
@@ -14,7 +14,7 @@
 <script setup>
 
 import Footer from './components/Footer.vue'
-import AddPortifolioComponent from './components/AddPortifolioComponent.vue'
+
 
 
 </script>
