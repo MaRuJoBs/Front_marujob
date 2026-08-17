@@ -133,66 +133,87 @@ const projetosFiltrados = computed(() => {
     </section>
 
     <!-- Grid -->
-    <section class="grid">
+<section class="grid">
 
-      <router-link
-        v-for="projeto in projetosFiltrados"
-        :key="projeto.id"
-        :to="`/portfolio/${projeto.id}`"
-        class="card"
+  <router-link
+    v-for="projeto in projetosFiltrados"
+    :key="projeto.id"
+    :to="`/portfolio/${projeto.id}`"
+    class="card"
+  >
+
+    <div class="imagem">
+
+      <img
+        v-if="projeto.imagem"
+        :src="projeto.imagem"
       >
 
-        <div class="imagem">
-
-          <img
-            v-if="projeto.imagem"
-            :src="projeto.imagem"
-          >
-
-          <FontAwesomeIcon
-            v-else
-            :icon="['fas', 'image']"
-            class="img-icon"
-          />
-
-        </div>
-
-        <div class="conteudo">
-
-          <h4>{{ projeto.titulo }}</h4>
-
-          <p>{{ projeto.categoria }}</p>
-
-          <div class="tags">
-
-            <span
-              v-for="tag in projeto.tags"
-              :key="tag"
-            >
-              {{ tag }}
-            </span>
-
-          </div>
-
-        </div>
-
-      </router-link>
-
-    </section>
-
-    <!-- Botão flutuante -->
-    <router-link
-      to="/portfolio/adicionar"
-      class="btn-add"
-    >
-
       <FontAwesomeIcon
-        :icon="['fas', 'plus']"
+        v-else
+        :icon="['fas', 'image']"
+        class="img-icon"
       />
 
-    </router-link>
+    </div>
+
+    <div class="conteudo">
+
+      <h4>{{ projeto.titulo }}</h4>
+
+      <p>{{ projeto.categoria }}</p>
+
+      <div class="tags">
+
+        <span
+          v-for="tag in projeto.tags"
+          :key="tag"
+        >
+          {{ tag }}
+        </span>
+
+      </div>
+
+    </div>
+
+  </router-link>
+
+</section>
 
   </div>
+<!-- FOOTER -->
+<footer class="footer">
+
+  <router-link to="/home" class="footer-item">
+    <FontAwesomeIcon :icon="['fas', 'house']" />
+    <span>Início</span>
+  </router-link>
+
+  <router-link to="/freelances" class="footer-item">
+    <FontAwesomeIcon :icon="['fas', 'briefcase']" />
+    <span>Freelances</span>
+  </router-link>
+
+  <!-- BOTÃO + CENTRAL -->
+  <router-link
+    to="/portfolio/adicionar"
+    class="btn-add"
+  >
+    <FontAwesomeIcon :icon="['fas', 'plus']" />
+  </router-link>
+
+  <router-link to="/mensagens" class="footer-item">
+    <FontAwesomeIcon :icon="['fas', 'comment']" />
+    <span>Mensagens</span>
+  </router-link>
+
+  <router-link to="/perfil" class="footer-item">
+    <FontAwesomeIcon :icon="['fas', 'user']" />
+    <span>Perfil</span>
+  </router-link>
+
+</footer>
+  
 </template>
 
 <style scoped>
@@ -204,11 +225,14 @@ const projetosFiltrados = computed(() => {
 
 .portfolio {
   min-height: 100vh;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
   background: #e8e1f2;
   padding-bottom: 120px;
 }
 
-/* Header */
+/* HEADER */
 
 .header {
   background: linear-gradient(135deg, #5b3cc4, #7a3ff2);
@@ -251,7 +275,7 @@ const projetosFiltrados = computed(() => {
   font-size: 14px;
 }
 
-/* Pesquisa */
+/* PESQUISA */
 
 .pesquisa {
   display: flex;
@@ -268,7 +292,7 @@ const projetosFiltrados = computed(() => {
   align-items: center;
   padding: 0 15px;
   height: 50px;
-  box-shadow: 0 4px 10px rgba(0,0,0,.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
 }
 
 .input-busca input {
@@ -293,14 +317,9 @@ const projetosFiltrados = computed(() => {
   color: white;
   font-size: 18px;
   cursor: pointer;
-  transition: .3s;
 }
 
-.filtro:hover {
-  background: #4c2fb2;
-}
-
-/* Título */
+/* TÍTULO */
 
 .titulo {
   margin: 30px 20px 20px;
@@ -319,7 +338,7 @@ const projetosFiltrados = computed(() => {
   font-size: 14px;
 }
 
-/* Grid */
+/* GRID */
 
 .grid {
   padding: 0 18px;
@@ -333,7 +352,7 @@ const projetosFiltrados = computed(() => {
   background: white;
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .08);
   transition: .25s;
 }
 
@@ -392,36 +411,94 @@ const projetosFiltrados = computed(() => {
   font-weight: 600;
 }
 
-/* Botão flutuante */
+/* FOOTER */
+
+.footer {
+  position: fixed;
+  width: 100%;
+  max-width: 420px;
+  height: 85px;
+
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+
+  background: #eee8f8;
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+
+  padding: 8px 15px 5px;
+
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px;
+
+  box-shadow: 0 -5px 20px rgba(0, 0, 0, .08);
+
+  z-index: 1000;
+}
+
+/* ITENS */
+
+.footer-item {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  color: #8775b5;
+  text-decoration: none;
+  font-size: 22px;
+}
+
+.footer-item span {
+  font-size: 12px;
+}
+
+.footer-item:hover {
+  color: #5b3cc4;
+}
+
+/* BOTÃO + */
 
 .btn-add {
-  position: fixed;
-  bottom: 100px;
-  right: 25px;
-  width: 65px;
-  height: 65px;
+  position: absolute;
+  left: 50%;
+  top: -38px;
+  transform: translateX(-50%);
+
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
+
   background: #5b3cc4;
   color: white;
+
   display: flex;
-  justify-content: center;
   align-items: center;
-  font-size: 28px;
+  justify-content: center;
+
+  font-size: 34px;
   text-decoration: none;
-  box-shadow: 0 8px 20px rgba(91,60,196,.4);
+
+  border: 6px solid #e8e1f2;
+  box-shadow: 0 7px 18px rgba(91, 60, 196, .35);
+
+  z-index: 1001;
   transition: .25s;
-  z-index: 999;
 }
 
 .btn-add:hover {
-  transform: scale(1.08);
+  transform: translateX(-50%) scale(1.08);
   background: #4928b0;
 }
 
-/* Responsivo */
+/* RESPONSIVO */
 
 @media (max-width: 390px) {
-
   .grid {
     gap: 14px;
   }
@@ -441,14 +518,11 @@ const projetosFiltrados = computed(() => {
   .titulo h3 {
     font-size: 20px;
   }
-
 }
 
 @media (max-width: 340px) {
-
   .grid {
     grid-template-columns: 1fr;
   }
-
 }
 </style>
