@@ -113,14 +113,21 @@ const getImageUrl = (path) => {
 
     
     <section class="box">
-      <div class="superior-port">
-        <div class="titulo">
-          <i class="fa-regular fa-folder-open"></i>
-          <h3>Portfólio</h3>
-        </div>
 
-        <button>Ver todos ></button>
+  <div class="superior-port">
+
+    <router-link to="/portfolio" class="titulo-link">
+      <div class="titulo">
+        <i class="fa-regular fa-folder-open"></i>
+        <h3>Portfólio</h3>
       </div>
+    </router-link>
+
+    <router-link to="/portfolio" class="ver-todos">
+      Ver todos >
+    </router-link>
+
+  </div>
 
       <div class="portfolio">
         <div class="portfolio-card">
@@ -435,5 +442,15 @@ const getImageUrl = (path) => {
   display: block;
   margin-bottom: 100px;
 
+}
+.titulo-link {
+  text-decoration: none;
+}
+
+.ver-todos {
+  text-decoration: none;
+  color: #7a3ff2;
+  font-size: 12px;
+  font-weight: 600;
 }
 </style>

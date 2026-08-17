@@ -7,11 +7,6 @@ import router from './router'
 
 import { library } from '@fortawesome/fontawesome-svg-core'
 
-
-
-
-
-
 import {
   faHouse,
   faBriefcase,
@@ -22,8 +17,15 @@ import {
   faEnvelope,
   faLock,
   faShieldHalved,
-  faPeopleGroup,
-  faBuilding
+  faPlus,
+  faMagnifyingGlass,
+  faSliders,
+  faLocationDot,
+  faArrowLeft,
+  faImage,
+  faCamera,
+  faPen,
+  faPhone
 } from '@fortawesome/free-solid-svg-icons'
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -43,8 +45,15 @@ library.add(
   faEnvelope,
   faLock,
   faShieldHalved,
-  faPeopleGroup,
-  faBuilding
+  faPlus,
+  faMagnifyingGlass,
+  faSliders,
+  faLocationDot,
+  faArrowLeft,
+  faImage,
+  faCamera,
+  faPen,
+  faPhone
 )
 
 app.component('FontAwesomeIcon', FontAwesomeIcon)

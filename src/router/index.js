@@ -69,6 +69,22 @@ const router = createRouter({
     name: 'oportunidade',
     component: () => import('../components/OportunidadeDetalheComponent.vue')
     },
+    {
+  path: '/portfolio',
+  name: 'portfolio',
+  component: () => import('@/views/PortfolioView.vue')
+    },
+    {
+  path: '/portfolio/adicionar',
+  name: 'portfolioAdicionar',
+  component: () => import('@/views/PortfolioAdicionarView.vue')
+    },
+    {
+  path: '/portfolio/:id',
+  name: 'portfolioDetalhe',
+  component: () => import('@/views/PortfolioDetalheView.vue')
+    },
+    
   ],
 })
 
