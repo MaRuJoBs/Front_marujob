@@ -4,7 +4,7 @@
 
     <router-view />
 
-    <FooterEmpresaComponent v-if="!$route.meta.hideFooter" />
+    <Footer v-if="!$route.meta.hideFooter" />
 
 
   </div>
