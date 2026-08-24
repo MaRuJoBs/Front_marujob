@@ -1,273 +1,509 @@
 <script setup>
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faArrowLeft,
+  faHeart,
+  faCircleInfo,
+  faLocationDot,
+  faClock,
+  faWallet,
+  faListCheck,
+  faCheck,
+  faMessage,
+  faPaperPlane
+} from '@fortawesome/free-solid-svg-icons'
 
 const route = useRoute()
+const router = useRouter()
+
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+
 const job = ref(null)
-// const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
-const isFavorite = ref(false);
+const isFavorite = ref(false)
 
 function favoritar() {
-  isFavorite.value = !isFavorite.value;
+  isFavorite.value = !isFavorite.value
 }
+
+function voltar() {
+  router.back()
+}
+
 onMounted(async () => {
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/freelances/${route.params.id}/`)
+    const res = await fetch(
+      `${API_URL}/api/freelances/${route.params.id}/`
+    )
+
     job.value = await res.json()
   } catch (error) {
-    console.log(error)
+    console.error('Erro ao buscar oportunidade:', error)
   }
 })
 </script>
 
 <template>
-  <section class="fundo">
-    <div class="header">
-      <button class="btn-voltar">
-        <span class="fa-solid fa-arrow-left"></span>
+  <main class="oportunidade">
+    <header class="topo">
+      <button class="botao-icone" @click="voltar">
+        <FontAwesomeIcon :icon="faArrowLeft" />
       </button>
 
-      <div class="titulo">
-        <h1>{{ job?.titulo }}</h1>
-<p>{{ job?.tag }}</p>
-      </div>
-
-      
-      <button class="btn-favorito" @click="favoritar">
-        <i
-          :class="isFavorite ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"
-        ></i>
+      <button
+        class="botao-icone favorito"
+        :class="{ ativo: isFavorite }"
+        @click="favoritar"
+      >
+        <FontAwesomeIcon :icon="faHeart" />
       </button>
-    </div>
+    </header>
 
-   
-    <div class="card">
-      <div class="sup-card">
-      <p>!</p>
-      <h2>Sobre a oportunidade</h2>
-      </div>
-      <p>{{ job?.descricao }}</p>
-    </div>
+    <section class="cabecalho">
+      <span class="categoria">
+        {{ job?.tag || 'Freelance' }}
+      </span>
 
-  
-    <div class="card">
-      <div class="sup-card">
-        <p>!</p>
-        <h2>Informações Principais</h2>
-      </div>
+      <h1>{{ job?.titulo }}</h1>
+    </section>
 
-      <div class="info">
-        <p><span class="fa-solid fa-location-dot"></span>Centro, SP</p>
-<p><span class="fa-regular fa-clock"></span> {{ job?.tempo }} horas</p>
+    <section class="resumo">
+      <div class="resumo-item">
+        <FontAwesomeIcon :icon="faClock" />
+
+        <div>
+          <span>Duração</span>
+          <strong>{{ job?.tempo }} horas</strong>
+        </div>
       </div>
 
-      <div class="price">R${{ job?.preco }}</div>
-    </div>
+      <div class="linha"></div>
 
+      <div class="resumo-item">
+        <FontAwesomeIcon :icon="faWallet" />
 
-    <div class="card">
-      <div class="sup-card">
-        <p>!</p>
+        <div>
+          <span>Pagamento</span>
+          <strong>R$ {{ job?.preco }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="titulo-card">
+        <div class="icone-card">
+          <FontAwesomeIcon :icon="faCircleInfo" />
+        </div>
+
+        <h2>Sobre a oportunidade</h2>
+      </div>
+
+      <p class="texto">
+        {{ job?.descricao }}
+      </p>
+    </section>
+
+    <section class="card informacoes-card">
+      <div class="titulo-simples">
+        <span>DETALHES</span>
+        <h2>Informações</h2>
+      </div>
+
+      <div class="lista-info">
+        <div class="info-item">
+          <div class="info-icone">
+            <FontAwesomeIcon :icon="faLocationDot" />
+          </div>
+
+          <div>
+            <span>Localização</span>
+            <strong>Centro, SP</strong>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-icone">
+            <FontAwesomeIcon :icon="faClock" />
+          </div>
+
+          <div>
+            <span>Tempo estimado</span>
+            <strong>{{ job?.tempo }} horas</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="titulo-card">
+        <div class="icone-card">
+          <FontAwesomeIcon :icon="faListCheck" />
+        </div>
+
         <h2>Atividades</h2>
       </div>
 
-      <ul>
-        <li>Criação de artes para redes-sociais, e-mail marketing.</li>
+      <ul class="lista">
+        <li>Criação de artes para redes sociais e e-mail marketing.</li>
         <li>Edição de imagens e tratamento de fotos.</li>
         <li>Apoio na identidade visual de campanhas.</li>
         <li>Organização e atualização de arquivos de design.</li>
       </ul>
-    </div>
+    </section>
 
+    <section class="card">
+      <div class="titulo-card">
+        <div class="icone-card">
+          <FontAwesomeIcon :icon="faCheck" />
+        </div>
 
-    <div class="card">
-      <div class="sup-card">
-        <p>!</p>
         <h2>Requisitos</h2>
       </div>
 
-      <ul>
+      <ul class="lista">
         <li>Conhecimento em Photoshop, Illustrator e/ou Canva.</li>
         <li>Noções de identidade visual e diagramação.</li>
         <li>Portfólio será um diferencial.</li>
       </ul>
-    </div>
+    </section>
 
+    <section class="contato">
+      <div class="contato-icone">
+        <FontAwesomeIcon :icon="faMessage" />
+      </div>
 
-    <div class="mensagem">
-      <h3>Dúvidas?</h3>
-      <p>Fale com o recrutador</p>
+      <div class="contato-texto">
+        <h3>Ficou com alguma dúvida?</h3>
+        <p>Entre em contato com o recrutador.</p>
+      </div>
 
-      <button class="btn-mensagem">
-        <i class="fa-regular fa-message"></i>
-        Enviar Mensagem
+      <button class="btn-contato">
+        Conversar
       </button>
-    </div>
+    </section>
 
-    <div class="candidatar">
-      <button>Quero me candidatar</button>
-    </div>
-
-  </section>
+    <button class="btn-candidatar">
+      <FontAwesomeIcon :icon="faPaperPlane" />
+      Quero me candidatar
+    </button>
+  </main>
 </template>
 
-
 <style scoped>
-.sup-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.sup-card p {
-  font-size: 20px;
-  color: #ee0303;
-  font-weight: bold;
-  border-radius: 100%;
-  border: 2px solid #ff0000;
-  padding: 0px 10px;
-}
-.fundo {
+.oportunidade {
   min-height: 100vh;
-  padding: 20px;
-  padding-bottom: 100px;
-  background: linear-gradient(180deg, #f5f1ff 0%, #f8f6ff 100%);
-  font-family: Arial, sans-serif;
-  max-width: 420px;
-  margin: 0 auto;
+  padding: 18px 18px 100px;
+  background: #eee8fa;
+  box-sizing: border-box;
 }
 
-.header {
+.topo {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.botao-icone {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  color: #5b3cc4;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(72, 48, 120, 0.08);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.botao-icone:active {
+  transform: scale(0.95);
+}
+
+.favorito {
+  color: #817a91;
+}
+
+.favorito.ativo {
+  color: #e74865;
+  background: #fff1f4;
+}
+
+.cabecalho {
   margin-bottom: 20px;
 }
 
-.btn-voltar,
-.btn-favorito {
-  background: none;
-  border: none;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.btn-voltar {
-  color: #5d45b6;
-}
-
-.btn-favorito {
-  color: red;
-}
-
-.titulo {
-  text-align: center;
-}
-
-.titulo h1 {
-  margin: 0;
-  font-size: 22px;
-  width: 280px;
-  
-  color: #4f389e;
-}
-
-.titulo p {
-  margin: 0;
-  color: #8f8f8f;
-}
-
-
-.card {
-  background: white;
+.categoria {
+  display: inline-block;
+  background: #e4dcf7;
+  color: #5b3cc4;
+  padding: 6px 12px;
   border-radius: 20px;
-  padding: 0 18px 18px 18px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.card h2 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  color: #4f389e;
-  font-size: 18px;
-  margin-top: 13px
-}
-
-.card p,
-.card li {
-  color: #333;
-  line-height: 1.4;
-}
-
-.card ul {
-  padding-left: 18px;
-}
-
-
-.info p {
-  color: #7a63c8;
-  margin: 12px 0;
-}
-
-.price {
-  width: fit-content;
-  margin-left: auto;
-  padding: 10px 18px;
-  border-radius: 12px;
-  border: 1px solid #d6d6d6;
-  color: #4f389e;
-  font-weight: bold;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-}
-
-
-.mensagem {
-  text-align: center;
-  margin-top: 50px;
-}
-
-.mensagem h3 {
-  margin-bottom: 4px;
-  color: #4f389e;
-}
-
-.mensagem p {
-  color: #888;
+  font-size: 12px;
+  font-weight: 700;
   margin-bottom: 10px;
 }
 
-.btn-mensagem {
-  background: white;
-  border: 1px solid #d8d8d8;
+.cabecalho h1 {
+  margin: 0;
+  color: #49357b;
+  font-size: 27px;
+  line-height: 1.15;
+  letter-spacing: -0.4px;
+}
+
+.resumo {
+  background: linear-gradient(135deg, #5b3cc4, #7554dc);
   border-radius: 20px;
-  padding: 8px 25px;
-  color: #4f389e;
-  font-weight: 600;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin-bottom: 18px;
+  box-shadow: 0 8px 20px rgba(91, 60, 196, 0.22);
+}
+
+.resumo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+
+.resumo-item > svg {
+  font-size: 22px;
+}
+
+.resumo-item div {
+  display: flex;
+  flex-direction: column;
+}
+
+.resumo-item span {
+  font-size: 10px;
+  opacity: 0.75;
+}
+
+.resumo-item strong {
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.linha {
+  width: 1px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(72, 48, 120, 0.07);
+}
+
+.titulo-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.icone-card {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: #f0ebfa;
+  color: #5b3cc4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.titulo-card h2 {
+  margin: 0;
+  color: #49357b;
+  font-size: 16px;
+}
+
+.titulo-simples {
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eeeaf4;
+}
+
+.titulo-simples span {
+  display: block;
+  margin-bottom: 3px;
+  color: #a29bad;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.titulo-simples h2 {
+  margin: 0;
+  color: #49357b;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.texto {
+  margin: 0;
+  color: #696273;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.lista-info {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px;
+  border-radius: 13px;
+  transition: 0.2s ease;
+}
+
+.info-item:hover {
+  background: #faf8fd;
+}
+
+.info-icone {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #f0ebfa;
+  color: #5b3cc4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-item > div:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item span {
+  color: #9a94a5;
+  font-size: 10px;
+}
+
+.info-item strong {
+  margin-top: 2px;
+  color: #49357b;
+  font-size: 13px;
+}
+
+.lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lista li {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 12px;
+  color: #696273;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lista li:last-child {
+  margin-bottom: 0;
+}
+
+.lista li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 1px;
+  color: #5b3cc4;
+  font-weight: bold;
+}
+
+.contato {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: #e4dcf7;
+  border-radius: 18px;
+  padding: 14px;
+  margin: 20px 0;
+}
+
+.contato-icone {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 13px;
+  background: #5b3cc4;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contato-texto {
+  flex: 1;
+}
+
+.contato h3 {
+  margin: 0;
+  color: #49357b;
+  font-size: 13px;
+}
+
+.contato p {
+  margin: 3px 0 0;
+  color: #817a91;
+  font-size: 10px;
+}
+
+.btn-contato {
+  border: none;
+  background: white;
+  color: #5b3cc4;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-
-.candidatar {
-  position: fixed;
-  bottom: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 40px);
-  max-width: 380px;
-}
-
-.candidatar button {
+.btn-candidatar {
   width: 100%;
   border: none;
-  background: #6548c7;
+  border-radius: 15px;
+  padding: 15px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, #5b3cc4, #7554dc);
   color: white;
-  padding: 14px;
-  border-radius: 14px;
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-shadow: 0 7px 18px rgba(91, 60, 196, 0.25);
   cursor: pointer;
-}  
+  transition: 0.2s ease;
+}
+
+.btn-candidatar:active {
+  transform: scale(0.98);
+}
 </style>
