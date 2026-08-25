@@ -5,33 +5,39 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 <template>
   <footer class="footer">
 
-    <router-link to="/home" class="item">
+    <router-link to="" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'house']" />
       </span>
       <p>Início</p>
     </router-link>
 
-    <router-link to="/freelances" class="item">
+    <router-link to="" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'briefcase']" />
       </span>
-      <p>Freelances</p>
+      <p>Vagas Disponiveis</p>
     </router-link>
 
+    <router-link to="" class="item">
+        <span class="icon">
+            <FontAwesomeIcon :icon="['fas', 'people-group']" />
+        </span>
+        <p>Freelancers</p>
+    </router-link>
     
-    <router-link to="/mensagens" class="item">
+    <router-link to="" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'message']" />
       </span>
       <p>Mensagens</p>
     </router-link>
 
-    <router-link to="/perfil" class="item">
+    <router-link to="" class="item">
       <span class="icon">
-        <FontAwesomeIcon :icon="['fas', 'user']" />
+        <FontAwesomeIcon :icon="['fas', 'building']" />
       </span>
-      <p>Perfil</p>
+      <p>Empresa</p>
     </router-link>
 
   </footer>

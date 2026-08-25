@@ -2,25 +2,29 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const user = ref(null)
 const email = ref('')
 
 onMounted(async () => {
   try {
-    const response = await axios.get('http://127.0.0.1:8000/api/usuarios/me/', {
+    const response = await axios.get(`${API_URL}/api/usuarios/me/`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
     })
+
+
     console.log('USER:', response.data)
-  console.log('IMAGE PATH:', response.data.profile_image)
-  console.log('FINAL URL:', getImageUrl(response.data.profile_image))
+    console.log('IMAGE PATH:', response.data.profile_image)
+    console.log('FINAL URL:', getImageUrl(response.data.profile_image))
+
+
     user.value = response.data
     email.value = response.data.email
-  } catch (error) {
-    console.error('Erro ao buscar usuário:', error)
+  } catch (erro) {
+    console.error('Erro ao buscar usuário:', erro)
   }
-  
 })
 
 const getImageUrl = (path) => {
@@ -28,50 +32,45 @@ const getImageUrl = (path) => {
 
   if (path.startsWith('http')) return path
 
-  return `http://127.0.0.1:8000${path}`
+  return `${API_URL}${path}`
 }
 </script>
 <template>
-  <div class="profile-page">
-    <!-- HEADER -->
-    <section class="profile-header">
-      <div class="overlay"></div>
+
+  <div class="perfil">
+    <section class="header-perfil">
+      <div class="separacao"></div>
 
       <div class="profile-content">
-        <div class="avatar-box">
-          <img
-            v-if="user && user.profile_image"
-            :src="getImageUrl(user.profile_image)"
-            class="avatar"
-          />
-
+        <div class="img-usu">
+          <img v-if="user && user.profile_image" :src="getImageUrl(user.profile_image)"class="avatar"/>
           <div v-else class="avatar"></div>
 
-          <button class="camera-btn">
+          <button class="icone">
             <i class="fa-solid fa-camera"></i>
           </button>
         </div>
 
-        <div class="user-info">
+        <div class="info">
           <h2>{{ user?.name }}</h2>
           <span>Designer Gráfico</span>
 
-          <div class="location">
-            <i class="fa-solid fa-location-dot"></i>
+          <div class="loc">
+            <i class="fa-solid fa-loc-dot"></i>
             <p>São Paulo, SP</p>
           </div>
         </div>
       </div>
 
-      <!-- STATS -->
-      <div class="stats">
+   
+      <div class="status">
         <div class="card">
           <i class="fa-regular fa-folder"></i>
           <h3>24</h3>
           <p>Projetos</p>
         </div>
 
-        <div class="card active">
+        <div class="card ativo">
           <i class="fa-solid fa-star"></i>
           <h3>4,9</h3>
           <p>Avaliação</p>
@@ -85,9 +84,9 @@ const getImageUrl = (path) => {
       </div>
     </section>
 
-    <!-- SOBRE -->
-    <section class="section-box">
-      <div class="section-title">
+ 
+    <section class="box">
+      <div class="titulo">
         <i class="fa-regular fa-user"></i>
         <h3>Sobre</h3>
       </div>
@@ -97,14 +96,14 @@ const getImageUrl = (path) => {
       </p>
     </section>
 
-    <!-- HABILIDADES -->
-    <section class="section-box">
-      <div class="section-title">
+
+    <section class="box">
+      <div class="titulo">
         <i class="fa-regular fa-folder"></i>
         <h3>Habilidades</h3>
       </div>
 
-      <div class="skills">
+      <div class="hab">
         <span>Design</span>
         <span>UI/UX</span>
         <span>Branding</span>
@@ -112,16 +111,23 @@ const getImageUrl = (path) => {
       </div>
     </section>
 
-    <!-- PORTFÓLIO -->
-    <section class="section-box">
-      <div class="portfolio-header">
-        <div class="section-title">
-          <i class="fa-regular fa-folder-open"></i>
-          <h3>Portfólio</h3>
-        </div>
+    
+    <section class="box">
 
-        <button>Ver todos ></button>
+  <div class="superior-port">
+
+    <router-link to="/portfolio" class="titulo-link">
+      <div class="titulo">
+        <i class="fa-regular fa-folder-open"></i>
+        <h3>Portfólio</h3>
       </div>
+    </router-link>
+
+    <router-link to="/portfolio" class="ver-todos">
+      Ver todos >
+    </router-link>
+
+  </div>
 
       <div class="portfolio">
         <div class="portfolio-card">
@@ -144,10 +150,10 @@ const getImageUrl = (path) => {
       </div>
     </section>
 
-    <!-- CONTATO -->
-    <div class="contact-grid">
-      <section class="contact-card">
-        <div class="section-title">
+
+    <div class="last-info">
+      <section class="last-card">
+        <div class="titulo">
           <i class="fa-regular fa-envelope"></i>
           <h3>E-mail</h3>
         </div>
@@ -155,8 +161,8 @@ const getImageUrl = (path) => {
         <p>{{ email }}</p>
       </section>
 
-      <section class="contact-card">
-        <div class="section-title">
+      <section class="last-card">
+        <div class="titulo">
           <i class="fa-solid fa-phone"></i>
           <h3>Telefone</h3>
         </div>
@@ -165,8 +171,8 @@ const getImageUrl = (path) => {
       </section>
     </div>
 
-    <!-- BOTÃO -->
-    <button class="edit-btn">Editar Perfil</button>
+    
+    <button class="btn-editar">Editar Perfil</button>
   </div>
 </template>
 
@@ -178,30 +184,27 @@ const getImageUrl = (path) => {
   font-family: sans-serif;
 }
 
-.profile-page {
+.perfil {
   background: #e8e1f2;
   min-height: 100vh;
   padding-bottom: 40px;
 }
 
-/* HEADER */
 
-.profile-header {
+.header-perfil {
   position: relative;
   border-bottom-left-radius: 40px;
   border-bottom-right-radius: 40px;
 
   background-image: url('/src/assets/images/perfil.png');
-
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-
   padding: 40px 50px 120px;
   overflow: hidden;
 }
 
-.overlay {
+.separacao {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.2);
@@ -216,7 +219,7 @@ const getImageUrl = (path) => {
   z-index: 2;
 }
 
-.avatar-box {
+.img-usu {
   position: relative;
 }
 
@@ -227,7 +230,7 @@ const getImageUrl = (path) => {
   border-radius: 50%;
 }
 
-.camera-btn {
+.icone {
   position: absolute;
   bottom: 0;
   right: 0;
@@ -240,7 +243,7 @@ const getImageUrl = (path) => {
   cursor: pointer;
 }
 
-.user-info {
+.info {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -250,32 +253,34 @@ const getImageUrl = (path) => {
   text-align: center;
 }
 
-.user-info h2 {
+.info h2 {
   color: white;
   font-size: 24px;
   font-weight: 700;
 }
 
-.user-info span {
+.info span {
   color: #ece2ff;
   font-size: 14px;
 }
 
-.location {
+.loc {
   justify-content: center;
 }
 
-/* STATS */
 
-.stats {
+.status {
   position: absolute;
   left: 50%;
   bottom: 10px;
   transform: translateX(-50%);
   width: 92%;
   display: flex;
+
+
   gap: 10px;
   z-index: 3;
+
 }
 
 .card {
@@ -288,7 +293,7 @@ const getImageUrl = (path) => {
   color: #5e4d77;
 }
 
-.card.active {
+.card.ativo {
   background: rgba(255, 255, 255, 0.9);
 }
 
@@ -302,18 +307,20 @@ const getImageUrl = (path) => {
 
 .card p {
   font-size: 12px;
+
+
 }
 
-/* SECTION */
 
-.section-box {
+
+.box {
   background: #f5f2fb;
   margin: 25px 14px 10px 14px;
   padding: 16px;
   border-radius: 18px;
 }
 
-.section-title {
+.titulo {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -321,26 +328,26 @@ const getImageUrl = (path) => {
   margin-bottom: 12px;
 }
 
-.section-title h3 {
+.titulo h3 {
   font-weight: 650;
   font-size: 16px;
 }
 
-.section-box p {
+.box p {
   color: #513f7c;
   font-size: 14px;
   line-height: 1.5;
 }
 
-/* SKILLS */
 
-.skills {
+
+.hab {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.skills span {
+.hab span {
   background: #aba6b5;
   color: #49357b;
   padding: 6px 14px;
@@ -349,15 +356,15 @@ const getImageUrl = (path) => {
   font-weight: 650;
 }
 
-/* PORTFOLIO */
 
-.portfolio-header {
+
+.superior-port {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.portfolio-header button {
+.superior-port button {
   border: none;
   background: none;
   color: #7a3ff2;
@@ -386,10 +393,12 @@ const getImageUrl = (path) => {
   background: #aaa;
   border-radius: 12px;
   margin-bottom: 8px;
+
 }
 
 .portfolio-card h4 {
   font-size: 13px;
+
   color: #444;
 }
 
@@ -398,38 +407,50 @@ const getImageUrl = (path) => {
   color: #777;
 }
 
-/* CONTACT */
 
-.contact-grid {
+
+.last-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   padding: 0 16px;
 }
 
-.contact-card {
+.last-card {
   background: #f5f2fb;
   border-radius: 18px;
   padding: 16px;
 }
 
-.contact-card p {
+.last-card p {
   font-size: 13px;
   color: #666;
 }
 
-/* BUTTON */
-.edit-btn {
+
+.btn-editar {
   width: 80%;
   margin: 24px auto;
   padding: 14px;
   border: none;
   border-radius: 16px;
+
   background: #7a3ff2;
   color: white;
   font-size: 15px;
   font-weight: 700;
   display: block;
   margin-bottom: 100px;
+
+}
+.titulo-link {
+  text-decoration: none;
+}
+
+.ver-todos {
+  text-decoration: none;
+  color: #7a3ff2;
+  font-size: 12px;
+  font-weight: 600;
 }
 </style>

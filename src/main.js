@@ -16,7 +16,16 @@ import {
   faTrash,
   faEnvelope,
   faLock,
-  faShieldHalved
+  faShieldHalved,
+  faPlus,
+  faMagnifyingGlass,
+  faSliders,
+  faLocationDot,
+  faArrowLeft,
+  faImage,
+  faCamera,
+  faPen,
+  faPhone
 } from '@fortawesome/free-solid-svg-icons'
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -36,7 +45,16 @@ library.add(
   faTrash,
   faEnvelope,
   faLock,
-  faShieldHalved
+  faShieldHalved,
+  faPlus,
+  faMagnifyingGlass,
+  faSliders,
+  faLocationDot,
+  faArrowLeft,
+  faImage,
+  faCamera,
+  faPen,
+  faPhone
 )
 
 app.component('FontAwesomeIcon', FontAwesomeIcon)

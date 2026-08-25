@@ -6,8 +6,7 @@
 
 <script setup>
 import OportunidadeComponent from '@/components/OportunidadeComponent.vue';
-
-</script>
+const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
 
 <style scoped>
 .page {

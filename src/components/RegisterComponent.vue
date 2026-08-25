@@ -1,13 +1,14 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { registrar, login as fazerLogin } from '@/services/authService'
 
 const router = useRouter()
 const name = ref('')
 const email = ref('')
 const senha = ref('')
-const fileInput = ref(null)
+const loading = ref(false)
+const arquivoImp = ref(null)
 const imagem = ref(null)
 const preview = ref(null)
 
@@ -36,6 +37,8 @@ const criarConta = async () => {
 
   if (erros.value.length > 0) return
 
+  loading.value = true
+
   try {
     const formData = new FormData()
 
@@ -47,38 +50,40 @@ const criarConta = async () => {
       formData.append('profile_image', imagem.value)
     }
 
-    await axios.post('http://127.0.0.1:8000/api/registro/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
+    for (const [key, value] of formData.entries()) {
+  console.log(key, value)
+}
 
-    const loginResponse = await axios.post('http://127.0.0.1:8000/api/token/', {
-      email: email.value,
-      password: senha.value,
-    })
+  localStorage.removeItem('token')
+  localStorage.removeItem('refresh')
 
-    localStorage.setItem('token', loginResponse.data.access)
-    localStorage.setItem('refresh', loginResponse.data.refresh)
+    await registrar(formData)
+
+    const loginResponse = await fazerLogin(email.value, senha.value)
+    //automatico
+
+    localStorage.setItem('token', loginResponse.access)
+    localStorage.setItem('refresh', loginResponse.refresh)
 
     router.push('/home')
-
   } catch (error) {
     const data = error.response?.data
     if (data) {
-    if (data.email) {
-      erros.value.push('Este email já está em uso')
-    } else if (data.detail) {
-      erros.value.push(data.detail)
+      if (data.email) {
+        erros.value.push('Este email já está em uso')
+      } else if (data.detail) {
+        erros.value.push(data.detail)
+      } else {
+        erros.value.push('Erro ao criar conta')
+      }
     } else {
-      erros.value.push('Erro ao criar conta')
+      erros.value.push('Erro de conexão com o servidor')
     }
-  } else {
-    erros.value.push('Erro de conexão com o servidor')
-  }
+  } finally {
+    loading.value = false
   }
 }
-// estilização da pagina de registro, ainda não finalizada
+
 
 function handleImageChange(event) {
   const file = event.target.files[0]
@@ -92,15 +97,16 @@ function handleImageChange(event) {
 <template>
   <div class="container">
     <div class="top">
-      <button class="back-button">←</button>
+      <router-link to="/">
+        <button class="btn-voltar">←</button>
+      </router-link>
 
-      <div class="photo-section">
-        <div class="photo-box" @click="fileInput.click()">
-          <input type="file" @change="handleImageChange" hidden ref="fileInput" />
+      <div class="div-foto">
+        <div class="photo-box" @click="arquivoImp.click()">
+          <input type="file" @change="handleImageChange" hidden ref="arquivoImp" />
           <img v-if="preview" :src="preview" class="preview-img" />
           <div v-else class="placeholder">
             <span>👤</span>
-            <span class="plus">+</span>
           </div>
         </div>
 
@@ -112,62 +118,62 @@ function handleImageChange(event) {
 
     <p class="subtitle">Junte-se à nossa plataforma e mostre seu trabalho para o mundo.</p>
 
-    <div class="card">
-      <div class="field">
+    <div class="form">
+      <div class="card">
         <label>Nome completo</label>
 
-        <div class="input-box">
+        <div class="box">
           <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
           <input v-model="name" type="text" placeholder="Digite seu nome completo..." />
         </div>
       </div>
 
-      <div class="field">
+      <div class="card">
         <label>E-mail</label>
 
-        <div class="input-box">
+        <div class="box">
           <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
           <input v-model="email" type="email" placeholder="Digite seu e-mail..." />
         </div>
       </div>
 
-      <div class="field">
+      <div class="card">
         <label>Senha</label>
 
-        <div class="input-box">
+        <div class="box">
           <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
           <input v-model="senha" type="password" placeholder="Crie sua senha..." />
         </div>
       </div>
 
-      <div class="field">
+      <div class="card">
         <label>Confirmar senha</label>
 
-        <div class="input-box">
+        <div class="box">
           <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
           <input v-model="confirmarSenha" type="password" placeholder="Confirme sua senha..." />
         </div>
       </div>
 
-      <div class="password-box">
-        <p class="password-title">
+      <div class="box-senha">
+        <p class="title">
           <FontAwesomeIcon :icon="['fas', 'shield-halved']" class="icon" />
           Sua senha deve conter:
         </p>
 
-        <div class="rules">
+        <div class="infos">
           <span>○ +7 Caracteres</span>
           <span>○ +5 letras</span>
           <span>○ +2 números</span>
         </div>
       </div>
 
-      <button class="create-account" @click="criarConta">Criar conta</button>
+      <button class="criarConta" @click="criarConta" :disabled="loading">
+        {{ loading ? 'Criando conta...' : 'Criar conta' }}
+      </button>
       <div v-if="tentouEnviar && erros.length" class="error-box">
-  <p v-for="(erro, index) in erros" :key="index">
-    • {{ erro }}
-  </p>
-</div>
+        <p v-for="(erro, index) in erros" :key="index">• {{ erro }}</p>
+      </div>
 
       <div class="login">
         Já tem uma conta?
@@ -201,7 +207,7 @@ function handleImageChange(event) {
   min-height: 100vh;
   background: #f4f4f4;
   padding: 30px;
-  padding-bottom: 120px; /* 👈 ESSENCIAL */
+  padding-bottom: 120px;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -211,7 +217,7 @@ function handleImageChange(event) {
   align-items: flex-start;
 }
 
-.back-button {
+.btn-voltar {
   width: 45px;
   height: 45px;
   border: none;
@@ -222,7 +228,7 @@ function handleImageChange(event) {
   cursor: pointer;
 }
 
-.photo-section {
+.div-foto {
   text-align: center;
 }
 
@@ -233,6 +239,7 @@ function handleImageChange(event) {
   background: #ece5f7;
   display: flex;
   justify-content: center;
+
   align-items: center;
   position: relative;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
@@ -243,16 +250,10 @@ function handleImageChange(event) {
   color: #6d4dc2;
 }
 
-.plus {
-  position: absolute;
-  right: 15px;
-  bottom: 15px;
-  font-size: 28px !important;
-}
-
-.photo-section p {
+.div-foto p {
   margin-top: 8px;
   font-size: 12px;
+
   color: #666;
 }
 
@@ -267,24 +268,25 @@ h1 {
   max-width: 260px;
 }
 
-.card {
+.form {
   background: #e8dcf3;
   border-radius: 20px;
   padding: 25px;
 }
 
-.field {
+.card {
   margin-bottom: 20px;
 }
 
-.field label {
+.card label {
   display: block;
+
   margin-bottom: 8px;
   color: #2e1a74;
   font-weight: 600;
 }
 
-.field input {
+.card input {
   width: 100%;
   height: 42px;
   border: none;
@@ -293,27 +295,28 @@ h1 {
   padding: 0 12px;
 }
 
-.password-box {
+.box-senha {
   background: #d9d1e7;
   border-radius: 12px;
   padding: 15px;
   margin-top: 15px;
 }
 
-.password-box p {
+.box-senha p {
   color: #2e1a74;
   font-weight: 600;
   margin-bottom: 10px;
 }
 
-.rules {
+.infos {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
+
   color: #666;
 }
 
-.create-account {
+.criarConta {
   width: 100%;
   height: 50px;
   margin-top: 30px;
@@ -338,8 +341,7 @@ h1 {
   font-weight: bold;
 }
 
-/* NOVOS ESTILOS PARA O TÍTULO DE REQUISITOS DE SENHA */
-.password-title {
+.title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -348,15 +350,15 @@ h1 {
   margin-bottom: 10px;
 }
 
-.password-title .icon {
+.title .icon {
   color: #6d4dc2;
   font-size: 16px;
 }
 
-/* NOVOS ESTILOS PARA OS CAMPOS DE INPUT */
-.input-box {
+.box {
   display: flex;
   align-items: center;
+
   background: #d6d6d6;
   border-radius: 10px;
   padding: 0 12px;
@@ -364,13 +366,13 @@ h1 {
   gap: 10px;
 }
 
-.input-box .icon {
+.box .icon {
   color: #6d4dc2;
   font-size: 18px;
   min-width: 20px;
 }
 
-.input-box input {
+.box input {
   border: none;
   outline: none;
   background: transparent;
@@ -379,7 +381,7 @@ h1 {
   color: #333;
 }
 
-.input-box input::placeholder {
+.box input::placeholder {
   color: #888;
 }
 </style>
