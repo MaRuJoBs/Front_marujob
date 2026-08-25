@@ -1,27 +1,35 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import Filtros from '@/components/Filtros.vue'
 
 const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 
-
 const jobs = ref([])
-const page = ref(1)
-const temProximaPagina = ref(false)
+const jobsExibidos = ref([])
 const favoritos = ref([])
+const pesquisa = ref('')
 
 const buscarFreelances = async () => {
   try {
     let url = `${API_URL}/api/freelances/?page=1`
 
     while (url) {
+      console.log('BUSCANDO:', url)
+
       const res = await fetch(url)
       const data = await res.json()
 
-      jobs.value.push(...data.results)
+      console.log('RESULTADOS DESTA PÁGINA:', data.results.length)
+      console.log('PRÓXIMA PÁGINA:', data.next)
 
-      url = data.next 
+      jobs.value.push(...data.results)
+      jobsExibidos.value = jobs.value
+
+      url = data.next
     }
+
+    console.log('TOTAL DE JOBS:', jobs.value.length)
 
   } catch (error) {
     console.error('Erro ao buscar freelances:', error)
@@ -47,6 +55,13 @@ const toggleFavorito = (job) => {
 
   localStorage.setItem('favoritos', JSON.stringify(favoritos.value))
 }
+
+const atualizarJobs = (resultado) => {
+  jobsExibidos.value = resultado
+}
+const limparFiltros = () => {
+  jobsExibidos.value = jobs.value
+}
 </script>
 
 
@@ -54,11 +69,19 @@ const toggleFavorito = (job) => {
   <div class="body">
 
     <div class="nav">
-      <input type="text" placeholder="Buscar oportunidades..." />
-      <button>
-        <span class="fa-solid fa-filter"></span> Filtros
-      </button>
-    </div>
+  <input
+  v-model="pesquisa"
+  type="text"
+  placeholder="Buscar oportunidades..."
+/>
+
+  <Filtros
+  :jobs="jobs"
+  :pesquisa="pesquisa"
+  @aplicar-filtros="atualizarJobs"
+  @limpar-filtros="limparFiltros"
+/>
+</div>
 
     
     <div class="filtro">
@@ -72,7 +95,7 @@ const toggleFavorito = (job) => {
     
     <section
   class="vaga"
-  v-for="job in jobs"
+  v-for="job in jobsExibidos"
   :key="job.id"
 >
   <div class="vaga-superior">
