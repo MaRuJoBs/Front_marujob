@@ -4,11 +4,6 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 </script>
 <template>
   <main class="home":style="{backgroundImage: `url('${fundoEmpresa}')`,}">
-    <!-- Header -->
-    <header class="hero">
-      <img :src="logoMaruJob" alt="MaRuJob" class="logo" />
-    </header>
-
     <!-- Welcome -->
     <section class="welcome">
       <h2>Bem-vindo, Nome da Empresa!</h2>
@@ -125,17 +120,15 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   background-repeat: no-repeat;
   background-position: top center;
 
-  /* Ajuste o tamanho da imagem */
+ 
   background-size: cover;
-
-  /* Faz a imagem acompanhar a rolagem */
   background-attachment: scroll;
 
-  padding-bottom: 30px;
+  padding-bottom: 100px;
 }
 
 
-/* HERO */
+
 
 .hero {
   height: 70px;
@@ -153,7 +146,7 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   object-fit: contain;
   position: relative;
   top: -10px;
-  /* sobe a logo */
+
   z-index: 2;
 }
 
@@ -177,7 +170,7 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   z-index: 2;
 }
 
-/* WELCOME */
+
 
 .welcome {
   padding: 20px;
@@ -222,7 +215,7 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   font-size: 22px;
 }
 
-/* SECTION */
+
 
 .section {
   padding: 0 20px;
@@ -251,7 +244,6 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   font-size: 13px;
 }
 
-/* JOB CARD */
 
 .job-card {
   background: #f6effd;
@@ -318,7 +310,7 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   font-weight: 600;
 }
 
-/* TAGS */
+
 
 .categories {
   display: flex;
@@ -349,7 +341,7 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   color: white;
 }
 
-/* FREELANCERS */
+
 
 .freelancers {
   margin-top: 16px;

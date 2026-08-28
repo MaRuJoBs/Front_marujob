@@ -10,6 +10,7 @@ const senha = ref('')
 const error = ref('')
 const carregando = ref(false)
 
+
 const login = async () => {
   carregando.value = true
 
@@ -22,13 +23,41 @@ const login = async () => {
     localStorage.setItem('token', response.access)
     localStorage.setItem('refresh', response.refresh)
 
-    router.push('/home')
+    // Busca os dados do usuário logado
+    const usuarioResponse = await fetch(
+      'https://marujob.class.fabricadesoftware.ifc.edu.br/api/usuarios/me/',
+      {
+        headers: {
+          Authorization: `Bearer ${response.access}`
+        }
+      }
+    )
+
+    const usuario = await usuarioResponse.json()
+
+    console.log('USUÁRIO LOGADO:', usuario)
+    console.log('GRUPOS:', usuario.groups)
+
+    // Verifica o grupo do usuário
+    const ehEmpresa = usuario.groups?.some(
+      grupo => grupo.name === 'Empresa'
+    )
+
+    if (ehEmpresa) {
+      router.push('/homeEmpresa')
+    } else {
+      router.push('/home')
+    }
+
   } catch (erro) {
+    console.error('ERRO NO LOGIN:', erro)
     error.value = 'E-mail ou senha inválidos.'
   } finally {
     carregando.value = false
   }
 }
+
+
 </script>
 
 <template>
