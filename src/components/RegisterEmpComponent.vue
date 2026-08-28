@@ -48,6 +48,7 @@ const criarConta = async () => {
     formData.append('name', name.value)
     formData.append('email', email.value)
     formData.append('password', senha.value)
+    formData.append('tipo', 'empresa')
 
     if (imagem.value) {
       formData.append('profile_image', imagem.value)
@@ -61,7 +62,7 @@ const criarConta = async () => {
     localStorage.setItem('token', loginResponse.access)
     localStorage.setItem('refresh', loginResponse.refresh)
 
-    router.push('/home')
+    router.push('/homeEmpresa')
   } catch (error) {
     const data = error.response?.data
 

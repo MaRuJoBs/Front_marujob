@@ -45,6 +45,7 @@ const criarConta = async () => {
     formData.append('name', name.value)
     formData.append('email', email.value)
     formData.append('password', senha.value)
+    formData.append('tipo', 'usuario')
 
     if (imagem.value) {
       formData.append('profile_image', imagem.value)
