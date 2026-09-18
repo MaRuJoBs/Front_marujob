@@ -88,7 +88,7 @@
     <!-- Botões -->
     <section class="acoes">
 
-      <button class="editar">
+      <button class="editar" @click="editarProjeto">
 
         <FontAwesomeIcon
           :icon="['fas', 'pen']"
@@ -98,7 +98,7 @@
 
       </button>
 
-      <button class="excluir">
+      <button class="excluir" @click="excluirProjeto">
 
         <FontAwesomeIcon
           :icon="['fas', 'trash']"
@@ -113,29 +113,77 @@
   </div>
 </template>
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
 
 const projeto = ref({
-  id: 1,
-
-  titulo: 'Landing Page Restaurante',
-
-  categoria: 'Website',
-
-  descricao:
-    'Este projeto foi desenvolvido para um restaurante com o objetivo de apresentar o cardápio, informações de contato e sistema de reservas. O layout foi pensado para oferecer uma ótima experiência tanto em computadores quanto em dispositivos móveis.',
-
-  link: 'https://meusite.com',
-
+  id: Number(route.params.id),
+  titulo: '',
+  categoria: '',
+  descricao: '',
+  link: '',
   imagem: null,
-
-  tags: [
-    'Vue.js',
-    'HTML',
-    'CSS',
-    'JavaScript'
-  ]
+  tags: []
 })
+
+const projetosPadrao = [
+  { id: 1, titulo: 'Landing Page Restaurante', categoria: 'Website', descricao: '', link: '', imagem: null, tags: ['Vue', 'CSS'] },
+  { id: 2, titulo: 'Sistema Escolar', categoria: 'Aplicativo', descricao: '', link: '', imagem: null, tags: ['Vue', 'JavaScript'] },
+  { id: 3, titulo: 'Dashboard Financeiro', categoria: 'Dashboard', descricao: '', link: '', imagem: null, tags: ['ChartJS', 'Vue'] },
+  { id: 4, titulo: 'Identidade Visual', categoria: 'Branding', descricao: '', link: '', imagem: null, tags: ['Photoshop', 'Illustrator'] },
+  { id: 5, titulo: 'Loja Virtual', categoria: 'E-commerce', descricao: '', link: '', imagem: null, tags: ['Vue', 'Firebase'] },
+  { id: 6, titulo: 'Aplicativo Fitness', categoria: 'Mobile', descricao: '', link: '', imagem: null, tags: ['UI', 'Figma'] }
+]
+
+onMounted(() => {
+  const salvos = localStorage.getItem('portfolioProjetos')
+  let projetos = projetosPadrao
+
+  if (salvos) {
+    try {
+      projetos = JSON.parse(salvos)
+    } catch {
+      localStorage.removeItem('portfolioProjetos')
+    }
+  }
+
+  const encontrado = projetos.find((item) => item.id === Number(route.params.id))
+
+  if (!encontrado) {
+    router.push('/portfolio')
+    return
+  }
+
+  projeto.value = encontrado
+})
+
+const editarProjeto = () => {
+  router.push(`/portfolio/${projeto.value.id}/editar`)
+}
+
+const excluirProjeto = () => {
+  const confirmar = confirm('Deseja excluir este portfólio?')
+
+  if (!confirmar) return
+
+  const salvos = localStorage.getItem('portfolioProjetos')
+  let projetos = projetosPadrao
+
+  if (salvos) {
+    try {
+      projetos = JSON.parse(salvos)
+    } catch {
+      projetos = projetosPadrao
+    }
+  }
+
+  projetos = projetos.filter((item) => item.id !== projeto.value.id)
+  localStorage.setItem('portfolioProjetos', JSON.stringify(projetos))
+  router.push('/portfolio')
+}
 </script>
 
 <style scoped>

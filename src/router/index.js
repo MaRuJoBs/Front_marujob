@@ -88,6 +88,12 @@ const router = createRouter({
   component: () => import('@/views/PortfolioAdicionarView.vue')
     },
     {
+  path: '/portfolio/:id/editar',
+  name: 'portfolioEditar',
+  component: () => import('@/views/PortfolioEditarView.vue'),
+  meta: { hideFooter: true }
+    },
+    {
   path: '/portfolio/:id',
   name: 'portfolioDetalhe',
   component: () => import('@/views/PortfolioDetalheView.vue')

@@ -1,13 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 const pesquisa = ref('')
 
-const projetos = ref([
+const projetosPadrao = [
   {
     id: 1,
     titulo: 'Landing Page Restaurante',
     categoria: 'Website',
+    descricao: '',
+    link: '',
     imagem: null,
     tags: ['Vue', 'CSS']
   },
@@ -15,6 +17,8 @@ const projetos = ref([
     id: 2,
     titulo: 'Sistema Escolar',
     categoria: 'Aplicativo',
+    descricao: '',
+    link: '',
     imagem: null,
     tags: ['Vue', 'JavaScript']
   },
@@ -22,6 +26,8 @@ const projetos = ref([
     id: 3,
     titulo: 'Dashboard Financeiro',
     categoria: 'Dashboard',
+    descricao: '',
+    link: '',
     imagem: null,
     tags: ['ChartJS', 'Vue']
   },
@@ -29,6 +35,8 @@ const projetos = ref([
     id: 4,
     titulo: 'Identidade Visual',
     categoria: 'Branding',
+    descricao: '',
+    link: '',
     imagem: null,
     tags: ['Photoshop', 'Illustrator']
   },
@@ -36,6 +44,8 @@ const projetos = ref([
     id: 5,
     titulo: 'Loja Virtual',
     categoria: 'E-commerce',
+    descricao: '',
+    link: '',
     imagem: null,
     tags: ['Vue', 'Firebase']
   },
@@ -43,10 +53,29 @@ const projetos = ref([
     id: 6,
     titulo: 'Aplicativo Fitness',
     categoria: 'Mobile',
+    descricao: '',
+    link: '',
     imagem: null,
     tags: ['UI', 'Figma']
   }
-])
+]
+
+const projetos = ref([])
+
+onMounted(() => {
+  const salvos = localStorage.getItem('portfolioProjetos')
+
+  if (salvos) {
+    try {
+      projetos.value = JSON.parse(salvos)
+      return
+    } catch {
+      localStorage.removeItem('portfolioProjetos')
+    }
+  }
+
+  projetos.value = projetosPadrao
+})
 
 const projetosFiltrados = computed(() => {
   if (!pesquisa.value.trim()) {
