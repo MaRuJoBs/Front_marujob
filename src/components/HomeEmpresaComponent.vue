@@ -1,9 +1,38 @@
 <script setup>
-import logoMaruJob from '@/assets/images/logoempresa.png'
+import { ref, onMounted } from 'vue'
+// import logoMaruJob from '@/assets/images/logoempresa.png'
 import fundoEmpresa from '@/assets/images/fundoempresa.png'
+
+const mostrarAvisoSenha = ref(false)
+
+onMounted(() => {
+  mostrarAvisoSenha.value =
+    localStorage.getItem('precisa_definir_senha') === 'true'
+})
 </script>
 <template>
   <main class="home":style="{backgroundImage: `url('${fundoEmpresa}')`,}">
+    <div v-if="mostrarAvisoSenha" class="aviso-senha">
+  <button class="fechar-aviso" @click="mostrarAvisoSenha = false">
+    ×
+  </button>
+
+  <div class="aviso-conteudo">
+    <strong>Crie uma senha para sua conta</strong>
+
+    <span>
+      Sua conta Google ainda não possui uma senha. Você pode criar uma
+      para também entrar usando seu e-mail e senha.
+    </span>
+
+    <button
+      class="btn-criar-senha"
+      @click="$router.push('/definir-senha')"
+    >
+      Criar senha
+    </button>
+  </div>
+</div>
     <!-- Welcome -->
     <section class="welcome">
       <h2>Bem-vindo, Nome da Empresa!</h2>
@@ -113,6 +142,75 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 </template>
 
 <style scoped>
+/* Aviso para criar senha */
+.aviso-senha {
+  position: fixed;
+  top: 10px;
+
+  width: calc(100% - 40px);
+  max-width: 420px;
+
+  left: 50%;
+  transform: translateX(-50%);
+
+  padding: 18px;
+
+  background: #efe5fa;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+
+  z-index: 1000;
+}
+
+.fechar-aviso {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+
+  border: none;
+  background: transparent;
+
+  color: #74688f;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.aviso-conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  padding-right: 20px;
+}
+
+.aviso-conteudo strong {
+  color: #5e3ea7;
+  font-size: 16px;
+}
+
+.aviso-conteudo span {
+  color: #74688f;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.btn-criar-senha {
+  width: fit-content;
+
+  margin-top: 5px;
+  padding: 9px 16px;
+
+  border: none;
+  border-radius: 20px;
+
+  background: #7854d7;
+  color: white;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
 .home {
   min-height: 100vh;
   width: 100%;
@@ -120,13 +218,13 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   background-repeat: no-repeat;
   background-position: top center;
 
- 
+  margin-top: -17px;
+
   background-size: cover;
   background-attachment: scroll;
 
   padding-bottom: 100px;
 }
-
 
 
 
@@ -158,7 +256,6 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
   height: 350px;
 
   border-radius: 50%;
-
   background: rgba(255, 255, 255, 0.1);
 
   bottom: -250px;
@@ -190,9 +287,7 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 
 .new-job {
   margin-top: 20px;
-
   background-color: #4687ab;
-
   border: none;
 
   color: white;
@@ -247,13 +342,9 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 
 .job-card {
   background: #f6effd;
-
   border-radius: 18px;
-
   padding: 16px;
-
   margin-top: 12px;
-
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
@@ -296,17 +387,11 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 
 .details-btn {
   margin-left: auto;
-
   border: none;
-
   background: #7854d7;
-
   color: white;
-
   padding: 8px 16px;
-
   border-radius: 20px;
-
   font-weight: 600;
 }
 
@@ -315,24 +400,17 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 .categories {
   display: flex;
   gap: 8px;
-
   overflow-x: auto;
-
   margin-top: 14px;
   padding-bottom: 5px;
 }
 
 .categories button {
   border: none;
-
   background: white;
-
   color: #75658f;
-
   padding: 8px 14px;
-
   border-radius: 20px;
-
   white-space: nowrap;
 }
 
@@ -345,33 +423,24 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 
 .freelancers {
   margin-top: 16px;
-
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-
   gap: 12px;
 }
 
 .freelancer-card {
   background: #f6effd;
-
   border-radius: 18px;
-
   padding: 16px;
-
   text-align: center;
-
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .avatar {
   width: 90px;
   height: 90px;
-
   border-radius: 50%;
-
   background: #d8d8d8;
-
   margin: 0 auto 12px;
 }
 
@@ -393,17 +462,11 @@ import fundoEmpresa from '@/assets/images/fundoempresa.png'
 
 .freelancer-card button {
   width: 100%;
-
   border: none;
-
   background: #7854d7;
-
   color: white;
-
   padding: 10px;
-
   border-radius: 20px;
-
   font-weight: 600;
 }
 </style>

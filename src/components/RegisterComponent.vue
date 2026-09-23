@@ -1,8 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { registrar, login as fazerLogin } from '@/services/authService'
+import { registrar, login as fazerLogin, loginComGoogle } from '@/services/authService'
+import { configurarGoogle } from '@/utils/googleAuth'
 
+const googleLoading = ref(false)
+const googleButton = ref(null)
 const router = useRouter()
 const name = ref('')
 const email = ref('')
@@ -15,6 +18,45 @@ const preview = ref(null)
 const confirmarSenha = ref('')
 const erros = ref([])
 const tentouEnviar = ref(false)
+
+
+onMounted(async () => {
+  try {
+    await configurarGoogle(googleButton.value, async (response) => {
+      googleLoading.value = true
+      erros.value = []
+
+      try {
+        const data = await loginComGoogle(
+  response.credential,
+  'usuario',
+  true
+)
+
+        localStorage.setItem('token', data.access)
+        localStorage.setItem('refresh', data.refresh)
+
+        router.push('/home')
+      } catch (error) {
+        console.error('ERRO GOOGLE COMPLETO:', error.response?.data)
+console.error('STATUS:', error.response?.status)
+console.error('ERRO:', error)
+
+        const data = error.response?.data
+
+        if (data?.error) {
+          erros.value.push(data.error)
+        } else {
+          erros.value.push('Erro ao entrar com o Google')
+        }
+      } finally {
+        googleLoading.value = false
+      }
+    })
+  } catch (error) {
+    console.error('Não foi possível carregar o Google:', error)
+  }
+})
 
 const criarConta = async () => {
   tentouEnviar.value = true
@@ -52,11 +94,11 @@ const criarConta = async () => {
     }
 
     for (const [key, value] of formData.entries()) {
-  console.log(key, value)
-}
+      console.log(key, value)
+    }
 
-  localStorage.removeItem('token')
-  localStorage.removeItem('refresh')
+    localStorage.removeItem('token')
+    localStorage.removeItem('refresh')
 
     await registrar(formData)
 
@@ -84,7 +126,6 @@ const criarConta = async () => {
     loading.value = false
   }
 }
-
 
 function handleImageChange(event) {
   const file = event.target.files[0]
@@ -172,7 +213,7 @@ function handleImageChange(event) {
       <button class="criarConta" @click="criarConta" :disabled="loading">
         {{ loading ? 'Criando conta...' : 'Criar conta' }}
       </button>
-      <div v-if="tentouEnviar && erros.length" class="error-box">
+      <div v-if="erros.length" class="error-box">
         <p v-for="(erro, index) in erros" :key="index">• {{ erro }}</p>
       </div>
 
@@ -180,11 +221,44 @@ function handleImageChange(event) {
         Já tem uma conta?
         <router-link to="/"><span>Entrar</span></router-link>
       </div>
+      <div class="ou">
+        <span></span>
+        <p>ou</p>
+        <span></span>
+      </div>
+
+<div class="google-login">
+  <div ref="googleButton"></div>
+</div>
     </div>
   </div>
+  
 </template>
 
 <style scoped>
+.google-login {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+.ou {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.ou span {
+  flex: 1;
+  height: 1px;
+  background: #c5b9d5;
+}
+
+.ou p {
+  margin: 0;
+  color: #777;
+  font-size: 13px;
+}
 .error-box {
   margin-top: 15px;
   background: #ffe6e6;

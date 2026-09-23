@@ -9,6 +9,7 @@ const temProximaPagina = ref(false)
 const totalFreelances = ref(0)
 const slideAtual = ref(0)
 const slideContainer = ref(null)
+const mostrarAvisoSenha = ref(false)
 
 const buscarJobs = async () => {
   try {
@@ -26,6 +27,9 @@ const buscarJobs = async () => {
 
 onMounted(() => {
   buscarJobs()
+
+  mostrarAvisoSenha.value =
+    localStorage.getItem('precisa_definir_senha') === 'true'
 })
 
 const trabalhosMaisPagam = computed(() => {
@@ -66,6 +70,23 @@ const atualizarSlide = () => {
 
 <template>
   <main class="home">
+    <div v-if="mostrarAvisoSenha" class="aviso-senha">
+  <button class="fechar-aviso" @click="mostrarAvisoSenha = false">
+    ×
+  </button>
+
+  <div class="aviso-conteudo">
+    <strong>Crie uma senha para sua conta</strong>
+    <span>
+      Sua conta Google ainda não possui uma senha. Você pode criar uma
+      para também entrar usando seu e-mail e senha.
+    </span>
+
+    <button class="btn-criar-senha" @click="$router.push('/definir-senha')">
+  Criar senha
+</button>
+  </div>
+</div>
     <section class="principais">
       <h2>Principais</h2>
 
@@ -169,6 +190,56 @@ const atualizarSlide = () => {
 </template>
 
 <style scoped>
+.aviso-senha {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 14px rgba(72, 48, 120, 0.12);
+}
+
+.aviso-conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 25px;
+}
+
+.aviso-conteudo strong {
+  color: #49357b;
+  font-size: 15px;
+}
+
+.aviso-conteudo span {
+  color: #817a91;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.btn-criar-senha {
+  width: fit-content;
+  border: none;
+  background: #5b3cc4;
+  color: white;
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fechar-aviso {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: none;
+  color: #817a91;
+  font-size: 22px;
+  cursor: pointer;
+}
 main {
   background: #eee8fa;
   border-radius: 42px 42px 0 0;

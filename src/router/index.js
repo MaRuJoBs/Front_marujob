@@ -10,6 +10,8 @@ import FavoritosView from '../views/FavoritosView.vue'
 import RegisterComponent from '@/components/RegisterComponent.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterEmpComponent from '@/components/RegisterEmpComponent.vue'
+import DefinirSenhaView from '../views/DefinirSenhaView.vue'
+import TrocarSenhaView from '@/views/TrocarSenhaView.vue'
 
 
 
@@ -47,6 +49,18 @@ const router = createRouter({
       name: 'registerEmpresa',
       component: RegisterEmpComponent,
       meta: { hideFooter: true }
+    },
+
+    {
+      path: '/definir-senha',
+      name: 'definir-senha',
+      component: DefinirSenhaView,
+    },
+
+    {
+      path: '/trocar-senha',
+      name: 'trocar-senha',
+      component: () => import('../views/TrocarSenhaView.vue'),
     },
 
     {
@@ -89,10 +103,10 @@ const router = createRouter({
     },
     {
   path: '/portfolio/:id/editar',
-  name: 'portfolioEditar',
-  component: () => import('@/views/PortfolioEditarView.vue'),
-  meta: { hideFooter: true }
-    },
+
+  component: () => import('@/components/PortfolioAdicionarComponent.vue')
+},
+
     {
   path: '/portfolio/:id',
   name: 'portfolioDetalhe',

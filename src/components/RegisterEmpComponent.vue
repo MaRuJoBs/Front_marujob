@@ -1,10 +1,13 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { registrar, login as fazerLogin } from '@/services/authService'
+import { registrar, login as fazerLogin, loginComGoogle } from '@/services/authService'
+import { configurarGoogle } from '@/utils/googleAuth'
 
 
 const router = useRouter()
+const googleLoading = ref(false)
+const googleButton = ref(null)
 const name = ref('')
 const email = ref('')
 const senha = ref('')
@@ -17,6 +20,46 @@ const erros = ref([])
 const tentouEnviar = ref(false)
 
 const loading = ref(false);
+
+onMounted(async () => {
+  try {
+    await configurarGoogle(googleButton.value, async (response) => {
+      googleLoading.value = true
+      erros.value = []
+      tentouEnviar.value = true
+
+      try {
+        const data = await loginComGoogle(
+          response.credential,
+          'empresa',
+          true
+        )
+
+        localStorage.setItem('token', data.access)
+        localStorage.setItem('refresh', data.refresh)
+
+        router.push('/homeEmpresa')
+      } catch (error) {
+        console.error('Erro no Google:', error)
+
+        const data = error.response?.data
+
+        if (data?.email) {
+          erros.value.push('Este email já está cadastrado')
+        } else if (data?.detail) {
+          erros.value.push(data.detail)
+        } else {
+          erros.value.push('Erro ao cadastrar com o Google')
+        }
+      } finally {
+        googleLoading.value = false
+      }
+    })
+  } catch (error) {
+    console.error('Não foi possível carregar o Google:', error)
+  }
+})
+
 
 const criarConta = async () => {
   tentouEnviar.value = true
@@ -182,11 +225,44 @@ function handleImageChange(event) {
         Já tem uma conta?
         <router-link to="/"><span>Entrar</span></router-link>
       </div>
+      <div class="ou">
+  <span></span>
+  <p>ou</p>
+  <span></span>
+</div>
+
+<div class="google-login">
+  <div ref="googleButton"></div>
+</div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.google-login {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.ou {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.ou span {
+  flex: 1;
+  height: 1px;
+  background: #c5b9d5;
+}
+
+.ou p {
+  margin: 0;
+  color: #777;
+  font-size: 13px;
+}
 .box-erro {
   margin-top: 15px;
   background: #ffe6e6;
