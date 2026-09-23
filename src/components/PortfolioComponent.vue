@@ -1,13 +1,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+
 import api from '@/services/api'
 import FiltrosPortifolio from './FiltrosPortifolio.vue'
+
 
 const pesquisa = ref('')
 const projetos = ref([])
 const usuario = ref(null)
 const projetosExibidos = ref([])
-
 
 const carregarUsuario = async () => {
   try {
@@ -26,6 +27,7 @@ const carregarProjetos = async () => {
 
     projetos.value = response.data.results || response.data
     projetosExibidos.value = projetos.value
+
 
     console.log('PORTFÓLIOS:', projetos.value)
   } catch (error) {

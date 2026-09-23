@@ -103,8 +103,10 @@ const router = createRouter({
     },
     {
   path: '/portfolio/:id/editar',
+
   component: () => import('@/components/PortfolioAdicionarComponent.vue')
 },
+
     {
   path: '/portfolio/:id',
   name: 'portfolioDetalhe',

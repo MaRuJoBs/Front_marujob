@@ -100,6 +100,7 @@ onMounted(() => {
 
     <!-- Botões -->
     <section class="acoes">
+
       <button
   class="editar"
   @click="router.push(`/portfolio/${projeto.id}/editar`)"
@@ -123,6 +124,7 @@ onMounted(() => {
   class="modal-overlay"
 >
   <div class="modal">
+
 
     <h3>Excluir projeto?</h3>
 
@@ -152,6 +154,7 @@ onMounted(() => {
   </div>
 
 </template>
+
 
 <style scoped>
 * {
