@@ -1,219 +1,178 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import api from '@/services/api'
+import FiltrosPortifolio from './FiltrosPortifolio.vue'
 
 const pesquisa = ref('')
+const projetos = ref([])
+const usuario = ref(null)
+const projetosExibidos = ref([])
 
-const projetos = ref([
-  {
-    id: 1,
-    titulo: 'Landing Page Restaurante',
-    categoria: 'Website',
-    imagem: null,
-    tags: ['Vue', 'CSS']
-  },
-  {
-    id: 2,
-    titulo: 'Sistema Escolar',
-    categoria: 'Aplicativo',
-    imagem: null,
-    tags: ['Vue', 'JavaScript']
-  },
-  {
-    id: 3,
-    titulo: 'Dashboard Financeiro',
-    categoria: 'Dashboard',
-    imagem: null,
-    tags: ['ChartJS', 'Vue']
-  },
-  {
-    id: 4,
-    titulo: 'Identidade Visual',
-    categoria: 'Branding',
-    imagem: null,
-    tags: ['Photoshop', 'Illustrator']
-  },
-  {
-    id: 5,
-    titulo: 'Loja Virtual',
-    categoria: 'E-commerce',
-    imagem: null,
-    tags: ['Vue', 'Firebase']
-  },
-  {
-    id: 6,
-    titulo: 'Aplicativo Fitness',
-    categoria: 'Mobile',
-    imagem: null,
-    tags: ['UI', 'Figma']
+
+const carregarUsuario = async () => {
+  try {
+    const response = await api.get('usuarios/me/')
+    usuario.value = response.data
+
+    console.log('USUÁRIO:', usuario.value)
+  } catch (error) {
+    console.error('ERRO AO BUSCAR USUÁRIO:', error)
   }
-])
+}
 
-const projetosFiltrados = computed(() => {
-  if (!pesquisa.value.trim()) {
-    return projetos.value
+const carregarProjetos = async () => {
+  try {
+    const response = await api.get('portfolios/')
+
+    projetos.value = response.data.results || response.data
+    projetosExibidos.value = projetos.value
+
+    console.log('PORTFÓLIOS:', projetos.value)
+  } catch (error) {
+    console.error('ERRO AO BUSCAR PORTFÓLIOS:', error)
+  }
+}
+
+const aplicarFiltros = (resultado) => {
+  projetosExibidos.value = resultado
+}
+
+const limparFiltros = () => {
+  projetosExibidos.value = projetos.value
+}
+
+const projetosPesquisados = computed(() => {
+  const termo = pesquisa.value.toLowerCase().trim()
+
+  if (!termo) {
+    return projetosExibidos.value
   }
 
-  return projetos.value.filter((projeto) => {
+  return projetosExibidos.value.filter((projeto) => {
+    const titulo = String(projeto.titulo || '').toLowerCase()
+    const categoria = String(projeto.categoria || '').toLowerCase()
+    const tags = (projeto.tags || []).map(tag =>
+      String(tag).toLowerCase()
+    )
+
     return (
-      projeto.titulo
-        .toLowerCase()
-        .includes(pesquisa.value.toLowerCase()) ||
-
-      projeto.categoria
-        .toLowerCase()
-        .includes(pesquisa.value.toLowerCase()) ||
-
-      projeto.tags.some(tag =>
-        tag
-          .toLowerCase()
-          .includes(pesquisa.value.toLowerCase())
-      )
+      titulo.includes(termo) ||
+      categoria.includes(termo) ||
+      tags.some(tag => tag.includes(termo))
     )
   })
 })
+
+onMounted(() => {
+  carregarProjetos()
+  carregarUsuario()
+})
+
+
 </script>
 
 <template>
   <div class="portfolio">
-
     <!-- Cabeçalho -->
     <section class="header">
-
       <div class="perfil">
+        <div class="avatar">
+          <img v-if="usuario?.profile_image" :src="usuario.profile_image" alt="Foto de perfil" />
 
-        <div class="avatar"></div>
+          <FontAwesomeIcon v-else :icon="['fas', 'user']" />
+        </div>
 
         <div class="dados">
-          <h2>Breno Silva</h2>
+          <h2>{{ usuario?.name || 'Usuário' }}</h2>
           <p>Desenvolvedor Full Stack</p>
+          <!--Trocar pra informacao do usuario, quando disponivel em PerfilComponent-->
 
           <div class="localizacao">
             <FontAwesomeIcon :icon="['fas', 'location-dot']" />
             <span>Joinville - SC</span>
           </div>
         </div>
-
       </div>
-
     </section>
 
     <!-- Barra de pesquisa -->
     <section class="pesquisa">
-
       <div class="input-busca">
+        <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" class="icone" />
 
-        <FontAwesomeIcon
-          :icon="['fas', 'magnifying-glass']"
-          class="icone"
-        />
-
-        <input
-          type="text"
-          v-model="pesquisa"
-          placeholder="Pesquisar projeto..."
-        >
-
+        <input type="text" v-model="pesquisa" placeholder="Pesquisar projeto..." />
       </div>
 
-      <button class="filtro">
-
-        <FontAwesomeIcon :icon="['fas', 'sliders']" />
-
-      </button>
-
+      <FiltrosPortifolio
+      :projetos="projetos"
+      :pesquisa="pesquisa"
+      @aplicar-filtros="aplicarFiltros"
+      @limpar-filtros="limparFiltros"
+      />
     </section>
 
     <!-- Título -->
     <section class="titulo">
-
       <h3>Meus Projetos</h3>
 
-      <span>{{ projetosFiltrados.length }} projetos</span>
-
+      <span>{{ projetosPesquisados.length }} projetos</span>
     </section>
 
     <!-- Grid -->
-<section class="grid">
-
-  <router-link
-    v-for="projeto in projetosFiltrados"
-    :key="projeto.id"
-    :to="`/portfolio/${projeto.id}`"
-    class="card"
-  >
-
-    <div class="imagem">
-
-      <img
-        v-if="projeto.imagem"
-        :src="projeto.imagem"
+    <section class="grid">
+      <router-link
+        v-for="projeto in projetosPesquisados"
+        :key="projeto.id"
+        :to="`/portfolio/${projeto.id}`"
+        class="card"
       >
+        <div class="imagem">
+          <img v-if="projeto.imagem" :src="projeto.imagem" />
 
-      <FontAwesomeIcon
-        v-else
-        :icon="['fas', 'image']"
-        class="img-icon"
-      />
+          <FontAwesomeIcon v-else :icon="['fas', 'image']" class="img-icon" />
+        </div>
 
-    </div>
+        <div class="conteudo">
+          <h4>{{ projeto.titulo }}</h4>
 
-    <div class="conteudo">
+          <p>{{ projeto.categoria }}</p>
 
-      <h4>{{ projeto.titulo }}</h4>
-
-      <p>{{ projeto.categoria }}</p>
-
-      <div class="tags">
-
-        <span
-          v-for="tag in projeto.tags"
-          :key="tag"
-        >
-          {{ tag }}
-        </span>
-
-      </div>
-
-    </div>
-
-  </router-link>
-
-</section>
-
+          <div class="tags">
+            <span v-for="tag in projeto.tags" :key="tag">
+              {{ tag }}
+            </span>
+          </div>
+        </div>
+      </router-link>
+    </section>
   </div>
-<!-- FOOTER -->
-<footer class="footer">
+  <!-- FOOTER -->
+  <footer class="footer">
+    <router-link to="/home" class="footer-item">
+      <FontAwesomeIcon :icon="['fas', 'house']" />
+      <span>Início</span>
+    </router-link>
 
-  <router-link to="/home" class="footer-item">
-    <FontAwesomeIcon :icon="['fas', 'house']" />
-    <span>Início</span>
-  </router-link>
+    <router-link to="/freelances" class="footer-item">
+      <FontAwesomeIcon :icon="['fas', 'briefcase']" />
+      <span>Freelances</span>
+    </router-link>
 
-  <router-link to="/freelances" class="footer-item">
-    <FontAwesomeIcon :icon="['fas', 'briefcase']" />
-    <span>Freelances</span>
-  </router-link>
+    <!-- BOTÃO + CENTRAL -->
+    <router-link to="/portfolio/adicionar" class="btn-add">
+      <FontAwesomeIcon :icon="['fas', 'plus']" />
+    </router-link>
 
-  <!-- BOTÃO + CENTRAL -->
-  <router-link
-    to="/portfolio/adicionar"
-    class="btn-add"
-  >
-    <FontAwesomeIcon :icon="['fas', 'plus']" />
-  </router-link>
+    <router-link to="/mensagens" class="footer-item">
+      <FontAwesomeIcon :icon="['fas', 'comment']" />
+      <span>Mensagens</span>
+    </router-link>
 
-  <router-link to="/mensagens" class="footer-item">
-    <FontAwesomeIcon :icon="['fas', 'comment']" />
-    <span>Mensagens</span>
-  </router-link>
-
-  <router-link to="/perfil" class="footer-item">
-    <FontAwesomeIcon :icon="['fas', 'user']" />
-    <span>Perfil</span>
-  </router-link>
-
-</footer>
-  
+    <router-link to="/perfil" class="footer-item">
+      <FontAwesomeIcon :icon="['fas', 'user']" />
+      <span>Perfil</span>
+    </router-link>
+  </footer>
 </template>
 
 <style scoped>
@@ -253,6 +212,18 @@ const projetosFiltrados = computed(() => {
   border-radius: 50%;
   background: #d9d9d9;
   border: 3px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #8a7fb4;
+  font-size: 32px;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .dados h2 {
@@ -308,16 +279,7 @@ const projetosFiltrados = computed(() => {
   color: #888;
 }
 
-.filtro {
-  width: 50px;
-  height: 50px;
-  border: none;
-  border-radius: 15px;
-  background: #5b3cc4;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-}
+
 
 /* TÍTULO */
 
@@ -352,8 +314,8 @@ const projetosFiltrados = computed(() => {
   background: white;
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .08);
-  transition: .25s;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  transition: 0.25s;
 }
 
 .card:hover {
@@ -434,7 +396,7 @@ const projetosFiltrados = computed(() => {
   border-top-left-radius: 30px;
   border-top-right-radius: 30px;
 
-  box-shadow: 0 -5px 20px rgba(0, 0, 0, .08);
+  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.08);
 
   z-index: 1000;
 }
@@ -485,10 +447,10 @@ const projetosFiltrados = computed(() => {
   text-decoration: none;
 
   border: 6px solid #e8e1f2;
-  box-shadow: 0 7px 18px rgba(91, 60, 196, .35);
+  box-shadow: 0 7px 18px rgba(91, 60, 196, 0.35);
 
   z-index: 1001;
-  transition: .25s;
+  transition: 0.25s;
 }
 
 .btn-add:hover {

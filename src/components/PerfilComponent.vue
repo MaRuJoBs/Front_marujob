@@ -1,24 +1,18 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import { useRouter } from 'vue-router'
+import api from '@/services/api'
 
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 const user = ref(null)
 const email = ref('')
+const router = useRouter()
 
 onMounted(async () => {
   try {
-    const response = await axios.get(`${API_URL}/api/usuarios/me/`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    })
-
+    const response = await api.get('usuarios/me/')
 
     console.log('USER:', response.data)
     console.log('IMAGE PATH:', response.data.profile_image)
-    console.log('FINAL URL:', getImageUrl(response.data.profile_image))
-
 
     user.value = response.data
     email.value = response.data.email
@@ -32,7 +26,15 @@ const getImageUrl = (path) => {
 
   if (path.startsWith('http')) return path
 
-  return `${API_URL}${path}`
+  return `${api.defaults.baseURL.replace('/api/', '')}${path}`
+}
+
+const logout = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('refresh')
+  localStorage.removeItem('precisa_definir_senha')
+
+  router.push('/')
 }
 </script>
 <template>
@@ -43,8 +45,14 @@ const getImageUrl = (path) => {
 
       <div class="profile-content">
         <div class="img-usu">
-          <img v-if="user && user.profile_image" :src="getImageUrl(user.profile_image)"class="avatar"/>
-          <div v-else class="avatar"></div>
+          <img
+  v-if="user?.profile_image"
+  :src="getImageUrl(user.profile_image)"
+  class="avatar"
+  alt="Foto de perfil"
+/>
+
+<div v-else class="avatar"></div>
 
           <button class="icone">
             <i class="fa-solid fa-camera"></i>
@@ -173,6 +181,27 @@ const getImageUrl = (path) => {
 
     
     <button class="btn-editar">Editar Perfil</button>
+    <section class="configuracoes">
+  <h3>Configurações da conta</h3>
+
+  <button class="config-item" @click="router.push('/trocar-senha')">
+  <div>
+    <i class="fa-solid fa-lock"></i>
+    <span>Alterar senha</span>
+  </div>
+
+  <i class="fa-solid fa-chevron-right"></i>
+</button>
+
+  <button class="config-item sair" @click="logout">
+    <div>
+      <i class="fa-solid fa-right-from-bracket"></i>
+      <span>Sair da conta</span>
+    </div>
+
+    <i class="fa-solid fa-chevron-right"></i>
+  </button>
+</section>
   </div>
 </template>
 
@@ -452,5 +481,58 @@ const getImageUrl = (path) => {
   color: #7a3ff2;
   font-size: 12px;
   font-weight: 600;
+}
+.configuracoes {
+  background: #f5f2fb;
+  margin: 0 14px 30px;
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.configuracoes h3 {
+  color: #513f7c;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.config-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 14px 4px;
+
+  border: none;
+  border-bottom: 1px solid #ddd6e8;
+  background: transparent;
+
+  color: #513f7c;
+  font-size: 14px;
+
+  cursor: pointer;
+}
+
+.config-item:last-child {
+  border-bottom: none;
+}
+
+.config-item div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.config-item > i {
+  font-size: 12px;
+  color: #9185a5;
+}
+
+.config-item.sair {
+  color: #d14b5b;
+}
+
+.config-item.sair > div > i {
+  color: #d14b5b;
 }
 </style>

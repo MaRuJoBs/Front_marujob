@@ -1,7 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { login as fazerLogin } from '@/services/authService'
+import { login as fazerLogin, loginComGoogle } from '@/services/authService'
+import { configurarGoogle } from '@/utils/googleAuth'
+import { onMounted } from 'vue'
+import api from '@/services/api'
 
 const router = useRouter()
 
@@ -9,46 +12,33 @@ const email = ref('')
 const senha = ref('')
 const error = ref('')
 const carregando = ref(false)
-
+const googleButton = ref(null)
+const googleLoading = ref(false)
 
 const login = async () => {
   carregando.value = true
 
   try {
-    const response = await fazerLogin(
-      email.value,
-      senha.value
-    )
+    const response = await fazerLogin(email.value, senha.value)
 
     localStorage.setItem('token', response.access)
     localStorage.setItem('refresh', response.refresh)
 
-    // Busca os dados do usuário logado
-    const usuarioResponse = await fetch(
-      'https://marujob.class.fabricadesoftware.ifc.edu.br/api/usuarios/me/',
-      {
-        headers: {
-          Authorization: `Bearer ${response.access}`
-        }
-      }
-    )
+    const usuarioResponse = await api.get('usuarios/me/')
+    const usuario = usuarioResponse.data
 
-    const usuario = await usuarioResponse.json()
 
     console.log('USUÁRIO LOGADO:', usuario)
     console.log('GRUPOS:', usuario.groups)
 
     // Verifica o grupo do usuário
-    const ehEmpresa = usuario.groups?.some(
-      grupo => grupo.name === 'Empresa'
-    )
+    const ehEmpresa = usuario.groups?.some((grupo) => grupo.name === 'Empresa')
 
     if (ehEmpresa) {
       router.push('/homeEmpresa')
     } else {
       router.push('/home')
     }
-
   } catch (erro) {
     console.error('ERRO NO LOGIN:', erro)
     error.value = 'E-mail ou senha inválidos.'
@@ -57,19 +47,59 @@ const login = async () => {
   }
 }
 
+onMounted(async () => {
+  try {
+    await configurarGoogle(googleButton.value, async (response) => {
+      googleLoading.value = true
+      error.value = ''
 
+      try {
+        const data = await loginComGoogle(response.credential, null, false)
+
+        localStorage.setItem('token', data.access)
+        localStorage.setItem('refresh', data.refresh)
+
+        localStorage.setItem('precisa_definir_senha', data.precisa_definir_senha ? 'true' : 'false')
+
+        const usuario = data.user
+
+        const ehEmpresa = usuario.groups?.some((grupo) => grupo.name === 'Empresa')
+
+        if (ehEmpresa) {
+          router.push('/homeEmpresa')
+        } else {
+          router.push('/home')
+        }
+      } catch (erro) {
+        console.error('ERRO NO LOGIN GOOGLE:', erro)
+        console.error('RESPOSTA:', erro.response?.data)
+
+        const data = erro.response?.data
+
+        if (data?.detail) {
+          error.value = data.detail
+        } else {
+          error.value = 'Não foi possível entrar com o Google.'
+        }
+      } finally {
+        googleLoading.value = false
+      }
+    })
+  } catch (erro) {
+    console.error('Não foi possível carregar o Google:', erro)
+  }
+})
 </script>
 
 <template>
   <div class="paginaLogin">
     <div class="content">
       <div class="header">
-      <img src="@/assets/images/logo.png" class="logo-top" />
-      <img src="@/assets/images/slogan.png" class="slogan" />
+        <img src="@/assets/images/logo.png" class="logo-top" />
+        <img src="@/assets/images/slogan.png" class="slogan" />
       </div>
 
       <div class="info">
-
         <div class="text">
           <h1>Entrar</h1>
           <p>Acesse sua conta e continue conectado ao que importa</p>
@@ -80,7 +110,6 @@ const login = async () => {
             <i class="mdi mdi-account"></i>
           </div>
         </div>
-
       </div>
 
       <div class="form-card">
@@ -106,13 +135,17 @@ const login = async () => {
         <p v-if="error" class="error-message">
           {{ error }}
         </p>
-        
 
         <div class="forgot">Esqueceu sua senha?</div>
 
         <button class="btn-login" @click="login" :disabled="carregando">
           {{ carregando ? 'Entrando...' : 'Entrar' }}
         </button>
+        <div class="ou">
+          <span>ou</span>
+        </div>
+
+        <div ref="googleButton" class="google-button"></div>
 
         <div class="register">
           Não tem uma conta?
@@ -136,7 +169,7 @@ const login = async () => {
   padding: 0;
   box-sizing: border-box;
 }
-.header{
+.header {
   display: flex;
   justify-content: center;
   height: 150px;
@@ -172,8 +205,6 @@ const login = async () => {
   position: relative;
   z-index: 2;
 }
-
-
 
 .info {
   display: flex;
@@ -301,5 +332,19 @@ const login = async () => {
 .register span {
   color: #4f2ba5;
   font-weight: 700;
+}
+
+.ou {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 18px 0;
+  color: #777;
+  font-size: 12px;
+}
+
+.google-button {
+  display: flex;
+  justify-content: center;
 }
 </style>

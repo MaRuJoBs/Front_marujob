@@ -1,15 +1,23 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'https://marujob.class.fabricadesoftware.ifc.edu.br/api/',
+  baseURL: 'http://127.0.0.1:8000/api/',
 })
-
-
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
 
-  if (token) {
+  const rotasPublicas = [
+    'token/',
+    'auth/google/',
+    'registro/',
+  ]
+
+  const rotaPublica = rotasPublicas.some(
+    rota => config.url?.includes(rota)
+  )
+
+  if (token && !rotaPublica) {
     config.headers.Authorization = `Bearer ${token}`
   }
 

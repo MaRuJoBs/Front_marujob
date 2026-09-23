@@ -1,20 +1,25 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import api from '@/services/api'
 
+const route = useRoute()
 const router = useRouter()
 
-// Campos do formulário
+const editando = ref(false)
+
 const titulo = ref('')
 const categoria = ref('')
 const descricao = ref('')
 const link = ref('')
+const mostrarSucesso = ref(false)
+const salvando = ref(false)
 
-// Upload da imagem (apenas front)
+
 const imagem = ref(null)
 const preview = ref('')
 
-// Lista de categorias
+
 const categorias = [
   'Website',
   'Aplicativo',
@@ -25,7 +30,7 @@ const categorias = [
   'Design Gráfico'
 ]
 
-// Tags
+
 const tags = ref([
   'Vue.js',
   'Figma',
@@ -35,15 +40,14 @@ const tags = ref([
 
 const novaTag = ref('')
 
-// Referência do input file
 const inputImagem = ref(null)
 
-// Abrir seletor de imagem
+
 const abrirUpload = () => {
   inputImagem.value.click()
 }
 
-// Selecionar imagem
+
 const selecionarImagem = (event) => {
   const file = event.target.files[0]
 
@@ -54,7 +58,7 @@ const selecionarImagem = (event) => {
   preview.value = URL.createObjectURL(file)
 }
 
-// Adicionar tag
+
 const adicionarTag = () => {
   const texto = novaTag.value.trim()
 
@@ -67,7 +71,6 @@ const adicionarTag = () => {
   novaTag.value = ''
 }
 
-// Adicionar pressionando Enter
 const enterTag = (event) => {
   if (event.key === 'Enter') {
     event.preventDefault()
@@ -75,54 +78,111 @@ const enterTag = (event) => {
   }
 }
 
-// Remover tag
+
 const removerTag = (index) => {
   tags.value.splice(index, 1)
 }
 
-// Salvar (somente front)
-const salvarProjeto = () => {
-  const projeto = {
-    titulo: titulo.value,
-    categoria: categoria.value,
-    descricao: descricao.value,
-    link: link.value,
-    tags: tags.value,
-    imagem: preview.value
+const carregarProjeto = async () => {
+  try {
+    const response = await api.get(`portfolios/${route.params.id}/`)
+
+    titulo.value = response.data.titulo
+    categoria.value = response.data.categoria
+    descricao.value = response.data.descricao
+    link.value = response.data.link || ''
+    tags.value = response.data.tags || []
+
+    if (response.data.imagem) {
+      preview.value = response.data.imagem
+    }
+
+  } catch (error) {
+    console.error('ERRO AO CARREGAR PORTFÓLIO:', error)
   }
+}
+const salvarProjeto = async () => {
+  if (salvando.value) return
 
-  console.log('Projeto criado:')
-  console.log(projeto)
+  try {
+    salvando.value = true
 
-  alert('Projeto salvo! (somente front-end)')
+    const formData = new FormData()
 
-  router.push('/portfolio')
+    formData.append('titulo', titulo.value)
+    formData.append('categoria', categoria.value)
+    formData.append('descricao', descricao.value)
+    formData.append('link', link.value)
+    formData.append('tags', JSON.stringify(tags.value))
+
+    // Só envia imagem se o usuário escolheu uma nova
+    if (imagem.value) {
+      formData.append('imagem', imagem.value)
+    }
+
+    if (editando.value) {
+      await api.patch(
+        `portfolios/${route.params.id}/`,
+        formData
+      )
+    } else {
+      await api.post(
+        'portfolios/',
+        formData
+      )
+    }
+
+    mostrarSucesso.value = true
+
+    setTimeout(() => {
+      router.push('/portfolio')
+    }, 1500)
+
+  } catch (error) {
+    console.error('ERRO AO SALVAR PORTFÓLIO:', error)
+    console.error('RESPOSTA DO SERVIDOR:', error.response?.data)
+  } finally {
+    salvando.value = false
+  }
 }
 
-// Cancelar
 const cancelar = () => {
   router.push('/portfolio')
 }
+
+onMounted(() => {
+  if (route.params.id) {
+    editando.value = true
+    carregarProjeto()
+  }
+})
 </script>
 
 <template>
   <div class="portfolio-add">
+    <div
+  v-if="mostrarSucesso"
+  class="toast-sucesso"
+>
+  <FontAwesomeIcon :icon="['fas', 'check']" />
+  Projeto salvo com sucesso!
+</div>
 
-    <!-- Cabeçalho -->
     <section class="header">
 
       <router-link to="/portfolio" class="voltar">
         <FontAwesomeIcon :icon="['fas', 'arrow-left']" />
       </router-link>
 
-      <h2>Adicionar Portfólio</h2>
+      <h2>
+  {{ editando ? 'Editar Portfólio' : 'Adicionar Portfólio' }}
+</h2>
 
     </section>
 
-    <!-- Formulário -->
+
     <section class="formulario">
 
-      <!-- Upload -->
       <div class="upload">
 
         <div class="preview">
@@ -280,12 +340,13 @@ const cancelar = () => {
         </button>
 
         <button
-          class="salvar"
-          type="button"
-          @click="salvarProjeto"
-        >
-          Salvar Projeto
-        </button>
+  class="salvar"
+  type="button"
+  @click="salvarProjeto"
+  :disabled="salvando"
+>
+  {{ salvando ? 'Salvando...' : (editando ? 'Salvar Alterações' : 'Salvar Projeto') }}
+</button>
 
       </div>
 
@@ -511,6 +572,31 @@ const cancelar = () => {
   background: #4f30b7;
 }
 
+
+
+.toast-sucesso {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  background: #5b3cc4;
+  color: white;
+
+  padding: 14px 20px;
+  border-radius: 14px;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+
+  z-index: 2000;
+}
 @media (max-width: 420px) {
 
   .preview {
