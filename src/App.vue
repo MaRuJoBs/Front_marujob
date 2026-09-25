@@ -1,11 +1,11 @@
 <script setup>
 import Footer from './components/Footer.vue'
+import Freelancemp from './components/FreenlaceempComponent.vue'
 </script>
 
 <template>
   <div class="app">
-    <router-view />
-
+    <Freelancemp />
     <Footer v-if="!$route.meta.hideFooter" />
   </div>
 </template>
