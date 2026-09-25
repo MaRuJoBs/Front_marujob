@@ -1,11 +1,11 @@
 <script setup>
 import Footer from './components/Footer.vue'
+import Vagasemp from './components/VagasempComponent.vue'
 </script>
 
 <template>
   <div class="app">
-    <router-view />
-
+    <Vagasemp />
     <Footer v-if="!$route.meta.hideFooter" />
   </div>
 </template>
