@@ -85,6 +85,7 @@ const buscarVagas = async () => {
       url = data.next
     }
 
+
     vagas.value = todas.length ? todas : vagasMock
   } catch (error) {
     console.error('Erro ao carregar vagas:', error)
