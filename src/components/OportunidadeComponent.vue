@@ -1,9 +1,8 @@
-<script setup>
+ <script setup>
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import Filtros from '@/components/Filtros.vue'
-
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+import api from '@/services/api'
 
 const jobs = ref([])
 const jobsExibidos = ref([])
@@ -12,19 +11,20 @@ const pesquisa = ref('')
 
 const buscarFreelances = async () => {
   try {
-    let url = `${API_URL}/api/freelances/?page=1`
+    let url = 'freelances/?page=1'
+
+    jobs.value = []
 
     while (url) {
       console.log('BUSCANDO:', url)
 
-      const res = await fetch(url)
-      const data = await res.json()
+      const { data } = await api.get(url)
 
       console.log('RESULTADOS DESTA PÁGINA:', data.results.length)
       console.log('PRÓXIMA PÁGINA:', data.next)
 
       jobs.value.push(...data.results)
-      jobsExibidos.value = jobs.value
+      jobsExibidos.value = [...jobs.value]
 
       url = data.next
     }
@@ -35,8 +35,10 @@ const buscarFreelances = async () => {
     console.error('Erro ao buscar freelances:', error)
   }
 }
+
 onMounted(() => {
   const salvos = localStorage.getItem('favoritos')
+
   if (salvos) {
     favoritos.value = JSON.parse(salvos)
   }
@@ -59,6 +61,7 @@ const toggleFavorito = (job) => {
 const atualizarJobs = (resultado) => {
   jobsExibidos.value = resultado
 }
+
 const limparFiltros = () => {
   jobsExibidos.value = jobs.value
 }

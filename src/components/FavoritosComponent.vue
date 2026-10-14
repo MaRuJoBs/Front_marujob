@@ -1,8 +1,7 @@
-<script setup>
+ <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
-
+import api from '@/services/api'
 
 const jobs = ref([])
 const favoritos = ref([])
@@ -21,11 +20,15 @@ onMounted(async () => {
   const salvos = localStorage.getItem('favoritos')
   favoritos.value = salvos ? JSON.parse(salvos) : []
 
-  const res = await fetch('http://127.0.0.1:8000/api/freelances/')
-  const data = await res.json()
+  try {
+    const { data } = await api.get('freelances/')
 
-  jobs.value = data.results
+    jobs.value = data.results
+  } catch (error) {
+    console.error('Erro ao buscar freelances:', error)
+  }
 })
+
 const favoritosFiltrados = computed(() =>
   jobs.value.filter(job => favoritos.value.includes(job.id))
 )

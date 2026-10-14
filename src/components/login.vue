@@ -1,9 +1,8 @@
-<script setup>
-import { ref } from 'vue'
+ <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { login as fazerLogin, loginComGoogle } from '@/services/authService'
 import { configurarGoogle } from '@/utils/googleAuth'
-import { onMounted } from 'vue'
 import api from '@/services/api'
 
 const router = useRouter()
@@ -17,6 +16,7 @@ const googleLoading = ref(false)
 
 const login = async () => {
   carregando.value = true
+  error.value = ''
 
   try {
     const response = await fazerLogin(email.value, senha.value)
@@ -27,12 +27,12 @@ const login = async () => {
     const usuarioResponse = await api.get('usuarios/me/')
     const usuario = usuarioResponse.data
 
-
     console.log('USUÁRIO LOGADO:', usuario)
     console.log('GRUPOS:', usuario.groups)
 
-    // Verifica o grupo do usuário
-    const ehEmpresa = usuario.groups?.some((grupo) => grupo.name === 'Empresa')
+    const ehEmpresa = usuario.groups?.some(
+      (grupo) => grupo.name === 'Empresa'
+    )
 
     if (ehEmpresa) {
       router.push('/homeEmpresa')
@@ -54,16 +54,25 @@ onMounted(async () => {
       error.value = ''
 
       try {
-        const data = await loginComGoogle(response.credential, null, false)
+        const data = await loginComGoogle(
+          response.credential,
+          null,
+          false
+        )
 
         localStorage.setItem('token', data.access)
         localStorage.setItem('refresh', data.refresh)
 
-        localStorage.setItem('precisa_definir_senha', data.precisa_definir_senha ? 'true' : 'false')
+        localStorage.setItem(
+          'precisa_definir_senha',
+          data.precisa_definir_senha ? 'true' : 'false'
+        )
 
         const usuario = data.user
 
-        const ehEmpresa = usuario.groups?.some((grupo) => grupo.name === 'Empresa')
+        const ehEmpresa = usuario.groups?.some(
+          (grupo) => grupo.name === 'Empresa'
+        )
 
         if (ehEmpresa) {
           router.push('/homeEmpresa')
