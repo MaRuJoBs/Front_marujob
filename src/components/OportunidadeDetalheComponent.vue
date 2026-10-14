@@ -1,4 +1,4 @@
-<script setup>
+ <script setup>
 import { useRoute, useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -14,11 +14,10 @@ import {
   faMessage,
   faPaperPlane
 } from '@fortawesome/free-solid-svg-icons'
+import api from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
-
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 
 const job = ref(null)
 const isFavorite = ref(false)
@@ -33,11 +32,11 @@ function voltar() {
 
 onMounted(async () => {
   try {
-    const res = await fetch(
-      `${API_URL}/api/freelances/${route.params.id}/`
+    const { data } = await api.get(
+      `freelances/${route.params.id}/`
     )
 
-    job.value = await res.json()
+    job.value = data
   } catch (error) {
     console.error('Erro ao buscar oportunidade:', error)
   }

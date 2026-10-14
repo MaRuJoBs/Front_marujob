@@ -1,7 +1,6 @@
-<script setup>
+ <script setup>
 import { ref, onMounted, computed } from 'vue'
-
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+import api from '@/services/api'
 
 const jobs = ref([])
 const page = ref(1)
@@ -13,8 +12,7 @@ const mostrarAvisoSenha = ref(false)
 
 const buscarJobs = async () => {
   try {
-    const res = await fetch(`${API_URL}/api/freelances/?page=${page.value}`)
-    const data = await res.json()
+    const { data } = await api.get(`freelances/?page=${page.value}`)
 
     jobs.value = [...jobs.value, ...data.results]
     totalFreelances.value = data.count
@@ -62,6 +60,8 @@ const atualizarSlide = () => {
   if (!slideContainer.value) return
 
   const largura = slideContainer.value.clientWidth
+  if (!largura) return
+
   slideAtual.value = Math.round(
     slideContainer.value.scrollLeft / largura
   )
