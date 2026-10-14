@@ -1,10 +1,11 @@
 <script setup>
 import Footer from './components/Footer.vue'
+import perfilemp from './components/PerfilempComponent.vue'
 </script>
 
 <template>
   <div class="app">
-    <router-view />
+    <perfilemp />
 
     <Footer v-if="!$route.meta.hideFooter" />
   </div>

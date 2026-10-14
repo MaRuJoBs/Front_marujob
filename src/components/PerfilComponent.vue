@@ -16,7 +16,7 @@ onMounted(async () => {
 
 
     console.log('USER:', response.data)
-    console.log('IMAGE PATH:', response.data.profile_image)
+    console.log('IMAGE PPerfilComponent.vueATH:', response.data.profile_image)
     console.log('FINAL URL:', getImageUrl(response.data.profile_image))
 
 
