@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import HomeEmpresaView from '../views/HomeEmpresaView.vue'
 import PerfilView from '../views/PerfilView.vue'
+import EditarPerfilView from '../views/EditarPerfilView.vue'
 import FreelancesView from '../views/FreelancesView.vue'
 import MensagensView from '../views/MensagensView.vue'
 
@@ -79,6 +80,12 @@ const router = createRouter({
       path: '/perfil',
       name: 'perfil',
       component: PerfilView,
+    },
+
+    {
+    path: '/editar-perfil',
+    name: 'editar-perfil',
+    component: EditarPerfilView,
     },
 
     {
