@@ -6,18 +6,27 @@ import api from '@/services/api'
 const user = ref(null)
 const email = ref('')
 const router = useRouter()
+const portfolio = ref([])
 
 onMounted(async () => {
   try {
-    const response = await api.get('usuarios/me/')
+    const responseUser = await api.get('usuarios/me/')
 
-    console.log('USER:', response.data)
-    console.log('IMAGE PATH:', response.data.profile_image)
+    console.log('USER:', responseUser.data)
+    console.log('IMAGE PATH:', responseUser.data.profile_image)
 
-    user.value = response.data
-    email.value = response.data.email
+    user.value = responseUser.data
+    email.value = responseUser.data.email
+
+    const responsePortfolio = await api.get('portfolios/')
+
+    
+    console.log('RESPOSTA COMPLETA PORTFÓLIO:', responsePortfolio)
+    console.log('DADOS DO PORTFÓLIO:', responsePortfolio.data)
+
+    portfolio.value = responsePortfolio.data.results
   } catch (erro) {
-    console.error('Erro ao buscar usuário:', erro)
+    console.error('Erro ao buscar dados do perfil:', erro)
   }
 })
 
@@ -38,7 +47,6 @@ const logout = () => {
 }
 </script>
 <template>
-
   <div class="perfil">
     <section class="header-perfil">
       <div class="separacao"></div>
@@ -46,13 +54,13 @@ const logout = () => {
       <div class="profile-content">
         <div class="img-usu">
           <img
-  v-if="user?.profile_image"
-  :src="getImageUrl(user.profile_image)"
-  class="avatar"
-  alt="Foto de perfil"
-/>
+            v-if="user?.profile_image"
+            :src="getImageUrl(user.profile_image)"
+            class="avatar"
+            alt="Foto de perfil"
+          />
 
-<div v-else class="avatar"></div>
+          <div v-else class="avatar"></div>
 
           <button class="icone">
             <i class="fa-solid fa-camera"></i>
@@ -61,49 +69,40 @@ const logout = () => {
 
         <div class="info">
           <h2>{{ user?.name }}</h2>
-          <span>Designer Gráfico</span>
-
+          <span>{{ user?.profissao || 'Profissão não informada' }}</span>
           <div class="loc">
             <i class="fa-solid fa-loc-dot"></i>
-            <p>São Paulo, SP</p>
+            <p>{{ user?.localizacao || 'Localização não informada' }}</p>
           </div>
         </div>
       </div>
 
-   
       <div class="status">
         <div class="card">
           <i class="fa-regular fa-folder"></i>
-          <h3>24</h3>
-          <p>Projetos</p>
+          <h3>{{ portfolio.length }}</h3>
+<p>Projetos</p>
         </div>
 
-        <div class="card ativo">
-          <i class="fa-solid fa-star"></i>
-          <h3>4,9</h3>
-          <p>Avaliação</p>
-        </div>
+        
 
         <div class="card">
           <i class="fa-regular fa-clock"></i>
-          <h3>118</h3>
+          <h3>falta alterar</h3>
           <p>Horas</p>
         </div>
       </div>
     </section>
 
- 
     <section class="box">
       <div class="titulo">
         <i class="fa-regular fa-user"></i>
         <h3>Sobre</h3>
       </div>
       <p>
-        Designer gráfico apaixonado por criar marcas e identidades visuais únicas. Transformo ideias
-        em designs memoráveis.
-      </p>
+  {{ user?.sobre || 'Nenhuma informação adicionada.' }}
+</p>
     </section>
-
 
     <section class="box">
       <div class="titulo">
@@ -112,52 +111,51 @@ const logout = () => {
       </div>
 
       <div class="hab">
-        <span>Design</span>
-        <span>UI/UX</span>
-        <span>Branding</span>
-        <span>Photoshop</span>
-      </div>
+  <span
+    v-for="habilidade in user?.habilidades || []"
+    :key="habilidade"
+  >
+    {{ habilidade }}
+  </span>
+
+  <span v-if="!user?.habilidades?.length">
+    Nenhuma habilidade adicionada.
+  </span>
+</div>
     </section>
 
-    
     <section class="box">
+      <div class="superior-port">
+        <router-link to="/portfolio" class="titulo-link">
+          <div class="titulo">
+            <i class="fa-regular fa-folder-open"></i>
+            <h3>Portfólio</h3>
+          </div>
+        </router-link>
 
-  <div class="superior-port">
-
-    <router-link to="/portfolio" class="titulo-link">
-      <div class="titulo">
-        <i class="fa-regular fa-folder-open"></i>
-        <h3>Portfólio</h3>
+        <router-link to="/portfolio" class="ver-todos"> Ver todos > </router-link>
       </div>
-    </router-link>
-
-    <router-link to="/portfolio" class="ver-todos">
-      Ver todos >
-    </router-link>
-
-  </div>
 
       <div class="portfolio">
-        <div class="portfolio-card">
-          <div class="portfolio-image"></div>
-          <h4>Branding Minimalista</h4>
-          <p>Identidade Visual</p>
+        <div v-for="item in portfolio" :key="item.id" class="portfolio-card">
+          <img
+            v-if="item.imagem"
+            :src="getImageUrl(item.imagem)"
+            class="portfolio-image"
+            :alt="item.titulo"
+          />
+
+          <div v-else class="portfolio-image"></div>
+
+          <h4>{{ item.titulo }}</h4>
+          <p>{{ item.categoria }}</p>
         </div>
 
-        <div class="portfolio-card">
-          <div class="portfolio-image"></div>
-          <h4>UI Mobile</h4>
-          <p>Aplicativo</p>
-        </div>
-
-        <div class="portfolio-card">
-          <div class="portfolio-image"></div>
-          <h4>Social Media</h4>
-          <p>Marketing</p>
-        </div>
+        <p v-if="portfolio.length === 0" class="sem-portfolio">
+          Você ainda não possui projetos no portfólio.
+        </p>
       </div>
     </section>
-
 
     <div class="last-info">
       <section class="last-card">
@@ -175,33 +173,34 @@ const logout = () => {
           <h3>Telefone</h3>
         </div>
 
-        <p>(11) 99999-9999</p>
+        <p>{{ user?.telefone || 'Telefone não informado' }}</p>
       </section>
     </div>
 
-    
-    <button class="btn-editar">Editar Perfil</button>
-    <section class="configuracoes">
-  <h3>Configurações da conta</h3>
-
-  <button class="config-item" @click="router.push('/trocar-senha')">
-  <div>
-    <i class="fa-solid fa-lock"></i>
-    <span>Alterar senha</span>
-  </div>
-
-  <i class="fa-solid fa-chevron-right"></i>
+    <button class="btn-editar" @click="router.push('/editar-perfil')">
+  Editar Perfil
 </button>
+    <section class="configuracoes">
+      <h3>Configurações da conta</h3>
 
-  <button class="config-item sair" @click="logout">
-    <div>
-      <i class="fa-solid fa-right-from-bracket"></i>
-      <span>Sair da conta</span>
-    </div>
+      <button class="config-item" @click="router.push('/trocar-senha')">
+        <div>
+          <i class="fa-solid fa-lock"></i>
+          <span>Alterar senha</span>
+        </div>
 
-    <i class="fa-solid fa-chevron-right"></i>
-  </button>
-</section>
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+
+      <button class="config-item sair" @click="logout">
+        <div>
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Sair da conta</span>
+        </div>
+
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </section>
   </div>
 </template>
 
@@ -218,7 +217,6 @@ const logout = () => {
   min-height: 100vh;
   padding-bottom: 40px;
 }
-
 
 .header-perfil {
   position: relative;
@@ -297,7 +295,6 @@ const logout = () => {
   justify-content: center;
 }
 
-
 .status {
   position: absolute;
   left: 50%;
@@ -306,10 +303,8 @@ const logout = () => {
   width: 92%;
   display: flex;
 
-
   gap: 10px;
   z-index: 3;
-
 }
 
 .card {
@@ -336,11 +331,7 @@ const logout = () => {
 
 .card p {
   font-size: 12px;
-
-
 }
-
-
 
 .box {
   background: #f5f2fb;
@@ -368,8 +359,6 @@ const logout = () => {
   line-height: 1.5;
 }
 
-
-
 .hab {
   display: flex;
   flex-wrap: wrap;
@@ -384,8 +373,6 @@ const logout = () => {
   font-size: 13px;
   font-weight: 650;
 }
-
-
 
 .superior-port {
   display: flex;
@@ -422,7 +409,6 @@ const logout = () => {
   background: #aaa;
   border-radius: 12px;
   margin-bottom: 8px;
-
 }
 
 .portfolio-card h4 {
@@ -435,8 +421,6 @@ const logout = () => {
   font-size: 11px;
   color: #777;
 }
-
-
 
 .last-info {
   display: grid;
@@ -456,7 +440,6 @@ const logout = () => {
   color: #666;
 }
 
-
 .btn-editar {
   width: 80%;
   margin: 24px auto;
@@ -470,7 +453,6 @@ const logout = () => {
   font-weight: 700;
   display: block;
   margin-bottom: 100px;
-
 }
 .titulo-link {
   text-decoration: none;
