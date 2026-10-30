@@ -1,508 +1,352 @@
- <script setup>
-import { useRoute, useRouter } from 'vue-router'
-import { ref, onMounted } from 'vue'
+<script setup>
+import { useRoute, RouterLink } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faArrowLeft,
   faHeart,
-  faCircleInfo,
-  faLocationDot,
   faClock,
   faWallet,
-  faListCheck,
-  faCheck,
-  faMessage,
-  faPaperPlane
+  faFileLines,
+  faRectangleList,
+  faPaperPlane,
+  faTag,
 } from '@fortawesome/free-solid-svg-icons'
-import api from '@/services/api'
-
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
+import { obterOportunidade } from '@/services/freelanceService'
+import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
 const route = useRoute()
-const router = useRouter()
-
 const job = ref(null)
-const isFavorite = ref(false)
-
+const { favoritos, erroFavorito, toggleFavorito } = useFavoritosLocais()
+const isFavorite = computed(() => job.value && favoritos.value.includes(job.value.id))
+const carregando = ref(false)
+const erro = ref('')
+let controlador
+let revisao = 0
 function favoritar() {
-  isFavorite.value = !isFavorite.value
+  if (job.value) toggleFavorito(job.value)
 }
-
-function voltar() {
-  router.back()
-}
-
-onMounted(async () => {
+async function carregar() {
+  const atual = ++revisao
+  controlador?.abort()
+  controlador = new AbortController()
+  carregando.value = true
+  job.value = null
+  erro.value = ''
   try {
-    const { data } = await api.get(
-      `freelances/${route.params.id}/`
-    )
-
-    job.value = data
-  } catch (error) {
-    console.error('Erro ao buscar oportunidade:', error)
+    const data = await obterOportunidade(route.params.id, controlador.signal)
+    if (atual === revisao) job.value = data
+  } catch (e) {
+    if (atual === revisao) erro.value = erroOportunidades(e, true)
+  } finally {
+    if (atual === revisao) carregando.value = false
   }
+}
+watch(() => route.params.id, carregar, { immediate: true })
+onBeforeUnmount(() => {
+  ++revisao
+  controlador?.abort()
 })
 </script>
-
 <template>
   <main class="oportunidade">
     <header class="topo">
-      <button class="botao-icone" @click="voltar">
-        <FontAwesomeIcon :icon="faArrowLeft" />
-      </button>
-
+      <RouterLink class="botao-icone" to="/freelances" aria-label="Voltar à listagem"
+        ><FontAwesomeIcon :icon="faArrowLeft"
+      /></RouterLink>
+      <div class="cabecalho">
+        <h1>{{ job?.titulo || (carregando ? 'Carregando...' : 'Oportunidade') }}</h1>
+        <p v-if="job?.tag">{{ job.tag }}</p>
+      </div>
       <button
+        v-if="job"
         class="botao-icone favorito"
         :class="{ ativo: isFavorite }"
+        :aria-label="isFavorite ? 'Remover dos favoritos' : 'Salvar nos favoritos'"
+        :aria-pressed="Boolean(isFavorite)"
         @click="favoritar"
       >
         <FontAwesomeIcon :icon="faHeart" />
       </button>
+      <span v-else aria-hidden="true"></span>
     </header>
-
-    <section class="cabecalho">
-      <span class="categoria">
-        {{ job?.tag || 'Freelance' }}
-      </span>
-
-      <h1>{{ job?.titulo }}</h1>
-    </section>
-
-    <section class="resumo">
-      <div class="resumo-item">
-        <FontAwesomeIcon :icon="faClock" />
-
-        <div>
-          <span>Duração</span>
-          <strong>{{ job?.tempo }} horas</strong>
-        </div>
-      </div>
-
-      <div class="linha"></div>
-
-      <div class="resumo-item">
-        <FontAwesomeIcon :icon="faWallet" />
-
-        <div>
-          <span>Pagamento</span>
-          <strong>R$ {{ job?.preco }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="titulo-card">
-        <div class="icone-card">
-          <FontAwesomeIcon :icon="faCircleInfo" />
-        </div>
-
-        <h2>Sobre a oportunidade</h2>
-      </div>
-
-      <p class="texto">
-        {{ job?.descricao }}
-      </p>
-    </section>
-
-    <section class="card informacoes-card">
-      <div class="titulo-simples">
-        <span>DETALHES</span>
-        <h2>Informações</h2>
-      </div>
-
-      <div class="lista-info">
-        <div class="info-item">
-          <div class="info-icone">
-            <FontAwesomeIcon :icon="faLocationDot" />
+    <p v-if="erroFavorito" class="estado" role="alert">{{ erroFavorito }}</p>
+    <p v-if="carregando" class="estado" role="status">Carregando oportunidade...</p>
+    <div v-else-if="erro" class="estado" role="alert">
+      <p>{{ erro }}</p>
+      <button class="btn-candidatar" @click="carregar">Tentar novamente</button>
+    </div>
+    <template v-else-if="job">
+      <div class="blocos">
+        <section v-if="job.descricao" class="card sobre">
+          <div class="icone-card"><FontAwesomeIcon :icon="faFileLines" aria-hidden="true" /></div>
+          <div class="conteudo-card">
+            <h2>Sobre a oportunidade</h2>
+            <p class="texto">{{ job.descricao }}</p>
           </div>
-
-          <div>
-            <span>Localização</span>
-            <strong>Centro, SP</strong>
+        </section>
+        <section class="card informacoes-card">
+          <div class="icone-card">
+            <FontAwesomeIcon :icon="faRectangleList" aria-hidden="true" />
           </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-icone">
-            <FontAwesomeIcon :icon="faClock" />
+          <div class="conteudo-card">
+            <h2>Informações Principais</h2>
+            <dl class="lista-info">
+              <div v-if="job.tag" class="info-item">
+                <dt>
+                  <FontAwesomeIcon :icon="faTag" aria-hidden="true" /><span class="sr-only"
+                    >Tag</span
+                  >
+                </dt>
+                <dd>{{ job.tag }}</dd>
+              </div>
+              <div v-if="job.tempo != null && job.tempo !== ''" class="info-item">
+                <dt>
+                  <FontAwesomeIcon :icon="faClock" aria-hidden="true" /><span class="sr-only"
+                    >Tempo informado</span
+                  >
+                </dt>
+                <dd>Tempo informado: {{ job.tempo }}</dd>
+              </div>
+            </dl>
+            <div class="valor">
+              <span class="sr-only">Preço informado: </span
+              ><span class="preco"
+                ><FontAwesomeIcon :icon="faWallet" aria-hidden="true" />
+                {{ formatarPreco(job.preco) }}</span
+              >
+            </div>
           </div>
-
-          <div>
-            <span>Tempo estimado</span>
-            <strong>{{ job?.tempo }} horas</strong>
-          </div>
-        </div>
+        </section>
       </div>
-    </section>
-
-    <section class="card">
-      <div class="titulo-card">
-        <div class="icone-card">
-          <FontAwesomeIcon :icon="faListCheck" />
-        </div>
-
-        <h2>Atividades</h2>
-      </div>
-
-      <ul class="lista">
-        <li>Criação de artes para redes sociais e e-mail marketing.</li>
-        <li>Edição de imagens e tratamento de fotos.</li>
-        <li>Apoio na identidade visual de campanhas.</li>
-        <li>Organização e atualização de arquivos de design.</li>
-      </ul>
-    </section>
-
-    <section class="card">
-      <div class="titulo-card">
-        <div class="icone-card">
-          <FontAwesomeIcon :icon="faCheck" />
-        </div>
-
-        <h2>Requisitos</h2>
-      </div>
-
-      <ul class="lista">
-        <li>Conhecimento em Photoshop, Illustrator e/ou Canva.</li>
-        <li>Noções de identidade visual e diagramação.</li>
-        <li>Portfólio será um diferencial.</li>
-      </ul>
-    </section>
-
-    <section class="contato">
-      <div class="contato-icone">
-        <FontAwesomeIcon :icon="faMessage" />
-      </div>
-
-      <div class="contato-texto">
-        <h3>Ficou com alguma dúvida?</h3>
-        <p>Entre em contato com o recrutador.</p>
-      </div>
-
-      <button class="btn-contato">
-        Conversar
-      </button>
-    </section>
-
-    <button class="btn-candidatar">
-      <FontAwesomeIcon :icon="faPaperPlane" />
-      Quero me candidatar
-    </button>
+      <section class="acoes" aria-label="Candidatura">
+        <button class="btn-candidatar" aria-describedby="candidatura-ajuda">
+          <FontAwesomeIcon :icon="faPaperPlane" aria-hidden="true" /> Quero me candidatar
+        </button>
+        <p id="candidatura-ajuda" class="ajuda">
+          Candidatura ainda não disponível nesta interface.
+        </p>
+      </section>
+    </template>
   </main>
 </template>
-
 <style scoped>
 .oportunidade {
-  min-height: 100vh;
-  padding: 18px 18px 100px;
-  background: #eee8fa;
-  box-sizing: border-box;
+  --roxo: #7150a6;
+  --texto: #533581;
+  --secundario: #796197;
+  min-height: 100dvh;
+  padding: 16px 16px calc(112px + env(safe-area-inset-bottom));
+  background: #f5f0fc;
+  color: var(--texto);
+  font-family: Arial, sans-serif;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
-
 .topo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: start;
+  gap: 8px;
+  margin: 0 -4px 22px;
 }
-
 .botao-icone {
-  width: 44px;
-  height: 44px;
-  border: none;
-  border-radius: 14px;
-  background: #fff;
-  color: #5b3cc4;
-  font-size: 17px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 14px rgba(72, 48, 120, 0.08);
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  min-height: 44px;
+  text-decoration: none;
+  border: 0;
+  background: transparent;
+  color: #8261b0;
+  font-size: 20px;
   cursor: pointer;
-  transition: 0.2s ease;
 }
-
-.botao-icone:active {
-  transform: scale(0.95);
-}
-
-.favorito {
-  color: #817a91;
-}
-
-.favorito.ativo {
-  color: #e74865;
-  background: #fff1f4;
-}
-
 .cabecalho {
-  margin-bottom: 20px;
+  min-width: 0;
+  padding-top: 7px;
+  text-align: center;
 }
-
-.categoria {
-  display: inline-block;
-  background: #e4dcf7;
-  color: #5b3cc4;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
 .cabecalho h1 {
   margin: 0;
-  color: #49357b;
-  font-size: 27px;
-  line-height: 1.15;
-  letter-spacing: -0.4px;
-}
-
-.resumo {
-  background: linear-gradient(135deg, #5b3cc4, #7554dc);
-  border-radius: 20px;
-  padding: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  margin-bottom: 18px;
-  box-shadow: 0 8px 20px rgba(91, 60, 196, 0.22);
-}
-
-.resumo-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
-}
-
-.resumo-item > svg {
-  font-size: 22px;
-}
-
-.resumo-item div {
-  display: flex;
-  flex-direction: column;
-}
-
-.resumo-item span {
-  font-size: 10px;
-  opacity: 0.75;
-}
-
-.resumo-item strong {
-  margin-top: 2px;
-  font-size: 14px;
-}
-
-.linha {
-  width: 1px;
-  height: 38px;
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.card {
-  background: #fff;
-  border-radius: 20px;
-  padding: 18px;
-  margin-bottom: 14px;
-  box-shadow: 0 4px 14px rgba(72, 48, 120, 0.07);
-}
-
-.titulo-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 13px;
-}
-
-.icone-card {
-  width: 34px;
-  height: 34px;
-  border-radius: 11px;
-  background: #f0ebfa;
-  color: #5b3cc4;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.titulo-card h2 {
-  margin: 0;
-  color: #49357b;
+  color: #533581;
   font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
 }
-
-.titulo-simples {
-  margin-bottom: 15px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #eeeaf4;
+.cabecalho p {
+  color: #80639f;
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
 }
-
-.titulo-simples span {
-  display: block;
-  margin-bottom: 3px;
-  color: #a29bad;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1px;
+.favorito {
+  color: #b4acbc;
 }
-
-.titulo-simples h2 {
-  margin: 0;
-  color: #49357b;
-  font-size: 18px;
-  font-weight: 700;
+.favorito.ativo {
+  color: #e72343;
 }
-
+.blocos {
+  display: grid;
+  gap: 12px;
+}
+.card {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 10px;
+  padding: 16px 12px;
+  border: 1px solid #f0e9f7;
+  border-radius: 13px;
+  background: #fdfbff;
+}
+.sobre {
+  min-height: 124px;
+}
+.icone-card {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #eee6f8;
+  color: #7c58aa;
+  font-size: 13px;
+}
+.conteudo-card {
+  min-width: 0;
+  padding-top: 3px;
+}
+h2 {
+  margin: 0 0 10px;
+  color: #59398d;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
 .texto {
   margin: 0;
-  color: #696273;
-  font-size: 13px;
-  line-height: 1.65;
+  color: #514363;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
-
-.lista-info {
+.informacoes-card .conteudo-card {
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  min-height: 120px;
 }
-
+.lista-info {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
 .info-item {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px;
-  border-radius: 13px;
-  transition: 0.2s ease;
-}
-
-.info-item:hover {
-  background: #faf8fd;
-}
-
-.info-icone {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: #f0ebfa;
-  color: #5b3cc4;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.info-item > div:last-child {
-  display: flex;
-  flex-direction: column;
-}
-
-.info-item span {
-  color: #9a94a5;
-  font-size: 10px;
-}
-
-.info-item strong {
-  margin-top: 2px;
-  color: #49357b;
-  font-size: 13px;
-}
-
-.lista {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.lista li {
-  position: relative;
-  padding-left: 24px;
-  margin-bottom: 12px;
-  color: #696273;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.lista li:last-child {
-  margin-bottom: 0;
-}
-
-.lista li::before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  top: 1px;
-  color: #5b3cc4;
-  font-weight: bold;
-}
-
-.contato {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  background: #e4dcf7;
-  border-radius: 18px;
-  padding: 14px;
-  margin: 20px 0;
-}
-
-.contato-icone {
-  width: 42px;
-  height: 42px;
-  min-width: 42px;
-  border-radius: 13px;
-  background: #5b3cc4;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.contato-texto {
-  flex: 1;
-}
-
-.contato h3 {
-  margin: 0;
-  color: #49357b;
-  font-size: 13px;
-}
-
-.contato p {
-  margin: 3px 0 0;
-  color: #817a91;
-  font-size: 10px;
-}
-
-.btn-contato {
-  border: none;
-  background: white;
-  color: #5b3cc4;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.btn-candidatar {
-  width: 100%;
-  border: none;
-  border-radius: 15px;
-  padding: 15px;
-  margin-top: 10px;
-  background: linear-gradient(135deg, #5b3cc4, #7554dc);
-  color: white;
+  align-items: start;
+  gap: 8px;
+  color: #80619f;
   font-size: 14px;
-  font-weight: 700;
+  line-height: 1.45;
+}
+.info-item dt {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  box-shadow: 0 7px 18px rgba(91, 60, 196, 0.25);
-  cursor: pointer;
-  transition: 0.2s ease;
+  width: 15px;
+  padding-top: 3px;
+  flex-shrink: 0;
+  color: #8f6bb6;
 }
-
-.btn-candidatar:active {
-  transform: scale(0.98);
+.info-item dd {
+  margin: 0;
+}
+.valor {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  margin-top: auto;
+}
+.preco {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  background: #fff;
+  border: 1px solid #ddd0e9;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px #4d356714;
+  color: #5c3a8b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.preco svg {
+  font-size: 11px;
+  color: #9478b3;
+}
+.acoes {
+  margin-top: 24px;
+  padding: 0 4px;
+}
+.btn-candidatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 24px;
+  padding: 10px 14px;
+  background: var(--roxo);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.btn-candidatar svg {
+  font-size: 13px;
+}
+.ajuda {
+  margin: 10px 12px 0;
+  color: #79658c;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+.estado {
+  padding: 20px;
+  border: 1px solid #ded1ea;
+  border-radius: 13px;
+  background: #fdfbff;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.estado p {
+  margin: 0 0 14px;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #68449b;
+  outline-offset: 3px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+@media (min-width: 375px) {
+  .oportunidade {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .card {
+    padding: 16px 14px;
+  }
 }
 </style>
