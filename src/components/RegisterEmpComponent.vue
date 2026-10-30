@@ -1,141 +1,28 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { registrar, login as fazerLogin, loginComGoogle } from '@/services/authService'
-import { configurarGoogle } from '@/utils/googleAuth'
+import { ref } from 'vue'
+import { useCadastro } from '@/composables/useCadastro'
 
-
-const router = useRouter()
-const googleLoading = ref(false)
-const googleButton = ref(null)
-const name = ref('')
-const email = ref('')
-const senha = ref('')
 const arquivoIMP = ref(null)
-const imagem = ref(null)
-const preview = ref(null)
-
-const confirmarSenha = ref('')
-const erros = ref([])
-const tentouEnviar = ref(false)
-
-const loading = ref(false);
-
-onMounted(async () => {
-  try {
-    await configurarGoogle(googleButton.value, async (response) => {
-      googleLoading.value = true
-      erros.value = []
-      tentouEnviar.value = true
-
-      try {
-        const data = await loginComGoogle(
-          response.credential,
-          'empresa',
-          true
-        )
-
-        localStorage.setItem('token', data.access)
-        localStorage.setItem('refresh', data.refresh)
-
-        router.push('/homeEmpresa')
-      } catch (error) {
-        console.error('Erro no Google:', error)
-
-        const data = error.response?.data
-
-        if (data?.email) {
-          erros.value.push('Este email já está cadastrado')
-        } else if (data?.detail) {
-          erros.value.push(data.detail)
-        } else {
-          erros.value.push('Erro ao cadastrar com o Google')
-        }
-      } finally {
-        googleLoading.value = false
-      }
-    })
-  } catch (error) {
-    console.error('Não foi possível carregar o Google:', error)
-  }
-})
-
-
-const criarConta = async () => {
-  tentouEnviar.value = true
-  erros.value = []
-
-  if (!name.value) {
-    erros.value.push('Nome é obrigatório')
-  }
-
-  if (!email.value) {
-    erros.value.push('Email é obrigatório')
-  }
-
-  if (senha.value.length < 8) {
-    erros.value.push('A senha deve ter no mínimo 8 caracteres')
-  }
-
-  if (senha.value !== confirmarSenha.value) {
-    erros.value.push('As senhas não coincidem')
-  }
-
-  if (erros.value.length > 0) return
-
-  loading.value = true
-
-  try {
-    const formData = new FormData()
-
-    formData.append('name', name.value)
-    formData.append('email', email.value)
-    formData.append('password', senha.value)
-    formData.append('tipo', 'empresa')
-
-    if (imagem.value) {
-      formData.append('profile_image', imagem.value)
-    }
-
-    await registrar(formData)
-
-    const loginResponse = await fazerLogin(email.value, senha.value)
-    //automatico
-
-    localStorage.setItem('token', loginResponse.access)
-    localStorage.setItem('refresh', loginResponse.refresh)
-
-    router.push('/homeEmpresa')
-  } catch (error) {
-    const data = error.response?.data
-
-    if (data) {
-      if (data.email) {
-        erros.value.push('Este email já está em uso')
-      } else if (data.detail) {
-        erros.value.push(data.detail)
-      } else {
-        erros.value.push('Erro ao criar conta')
-      }
-    } else {
-      erros.value.push('Erro de conexão com o servidor')
-    }
-
-  } finally {
-    loading.value = false
-
-  }
-}
-
-function handleImageChange(event) {
-  const file = event.target.files[0]
-  if (!file) return
-
-  imagem.value = file
-  preview.value = URL.createObjectURL(file)
-}
+const {
+  name,
+  email,
+  senha,
+  confirmarSenha,
+  loading,
+  preview,
+  erros,
+  contaCriada,
+  ocupado,
+  criarConta,
+  handleImageChange,
+  googleButton,
+  googleLoading,
+  googleErro,
+  googlePronto,
+  googleInicializando,
+  carregarGoogle,
+} = useCadastro('empresa')
 </script>
-
 
 <template>
   <div class="container">
@@ -146,11 +33,17 @@ function handleImageChange(event) {
 
       <div class="div-foto">
         <div class="photo-box" @click="arquivoIMP.click()">
-          <input type="file" @change="handleImageChange" hidden ref="arquivoIMP" />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            :disabled="ocupado || contaCriada"
+            @change="handleImageChange"
+            hidden
+            ref="arquivoIMP"
+          />
           <img v-if="preview" :src="preview" class="preview-img" />
           <div v-else class="placeholder">
             <span>👤</span>
-            
           </div>
         </div>
 
@@ -162,13 +55,20 @@ function handleImageChange(event) {
 
     <p class="subtitle">Junte-se à nossa plataforma e impulsione sua empresa.</p>
 
-    <div class="form">
+    <form class="form" @submit.prevent="criarConta" :aria-busy="ocupado">
       <div class="card">
         <label>Nome da empresa</label>
 
         <div class="box">
           <FontAwesomeIcon :icon="['fas', 'building']" class="icon" />
-          <input v-model="name" type="text" placeholder="Digite o nome da sua empresa..." />
+          <input
+            v-model="name"
+            type="text"
+            autocomplete="name"
+            required
+            :disabled="ocupado || contaCriada"
+            placeholder="Digite o nome da sua empresa..."
+          />
         </div>
       </div>
 
@@ -177,7 +77,14 @@ function handleImageChange(event) {
 
         <div class="box">
           <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
-          <input v-model="email" type="email" placeholder="Digite seu e-mail corporativo..." />
+          <input
+            v-model="email"
+            type="email"
+            autocomplete="email"
+            required
+            :disabled="ocupado || contaCriada"
+            placeholder="Digite seu e-mail corporativo..."
+          />
         </div>
       </div>
 
@@ -186,7 +93,15 @@ function handleImageChange(event) {
 
         <div class="box">
           <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
-          <input v-model="senha" type="password" placeholder="Crie sua senha..." />
+          <input
+            v-model="senha"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+            :disabled="ocupado || contaCriada"
+            placeholder="Crie sua senha..."
+          />
         </div>
       </div>
 
@@ -195,7 +110,15 @@ function handleImageChange(event) {
 
         <div class="box">
           <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
-          <input v-model="confirmarSenha" type="password" placeholder="Confirme sua senha..." />
+          <input
+            v-model="confirmarSenha"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+            :disabled="ocupado || contaCriada"
+            placeholder="Confirme sua senha..."
+          />
         </div>
       </div>
 
@@ -206,39 +129,67 @@ function handleImageChange(event) {
         </p>
 
         <div class="infos">
-          <span>○ +7 Caracteres</span>
-          <span>○ +5 letras</span>
-          <span>○ +2 números</span>
+          <span>Pelo menos 8 caracteres.</span>
         </div>
       </div>
 
-      <button class="criarConta" @click="criarConta" :disabled="loading">
+      <button v-if="!contaCriada" class="criarConta" type="submit" :disabled="ocupado">
         {{ loading ? 'Criando conta...' : 'Criar conta' }}
       </button>
-<div v-if="tentouEnviar && erros.length" class="box-erro">
-  <p v-for="(erro, index) in erros" :key="index">
-    • {{ erro }}
-  </p>
-</div>
+      <div v-if="erros.length" class="box-erro" role="alert">
+        <p v-for="(erro, index) in erros" :key="index">• {{ erro }}</p>
+      </div>
 
       <div class="login">
         Já tem uma conta?
         <router-link to="/"><span>Entrar</span></router-link>
       </div>
       <div class="ou">
-  <span></span>
-  <p>ou</p>
-  <span></span>
-</div>
+        <span></span>
+        <p>ou</p>
+        <span></span>
+      </div>
 
-<div class="google-login">
-  <div ref="googleButton"></div>
-</div>
-    </div>
+      <div class="google-login" :inert="ocupado">
+        <button
+          v-if="!googlePronto"
+          class="google-fallback"
+          type="button"
+          :disabled="googleInicializando || ocupado"
+          @click="carregarGoogle"
+        >
+          {{
+            googleInicializando
+              ? 'Carregando Google...'
+              : googleErro
+                ? 'Tentar Google novamente'
+                : 'Entrar com Google'
+          }}
+        </button>
+        <div ref="googleButton"></div>
+      </div>
+      <p v-if="googleLoading" role="status">Entrando com Google...</p>
+      <p v-else-if="!googlePronto && !googleErro" role="status">Carregando acesso com Google...</p>
+      <p v-if="googleErro" role="status">{{ googleErro }}</p>
+    </form>
   </div>
 </template>
 
 <style scoped>
+.google-fallback {
+  width: 300px;
+  max-width: 100%;
+  min-height: 40px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  background: white;
+  color: #5f6368;
+  font-size: 14px;
+}
+button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
 .google-login {
   display: flex;
   justify-content: center;
@@ -286,7 +237,7 @@ function handleImageChange(event) {
   min-height: 100vh;
   background: #f4f4f4;
   padding: 30px;
-  padding-bottom: 120px; 
+  padding-bottom: 120px;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -305,17 +256,14 @@ function handleImageChange(event) {
   color: #5b38b0;
   font-size: 20px;
   cursor: pointer;
-
-
 }
 
 .div-foto {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    margin-bottom: 30px;
-  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  margin-bottom: 30px;
 }
 
 .photo-box {
@@ -336,9 +284,7 @@ function handleImageChange(event) {
   color: #6d4dc2;
 }
 
-
 .div-foto p {
-
   margin-top: 8px;
   font-size: 12px;
   color: #666;
@@ -373,8 +319,6 @@ h1 {
   font-weight: 600;
 }
 
-
-
 .card input {
   width: 100%;
   height: 42px;
@@ -395,10 +339,7 @@ h1 {
   color: #2e1a74;
   font-weight: 600;
   margin-bottom: 10px;
-
 }
-
-
 
 .infos {
   display: flex;
@@ -433,14 +374,12 @@ h1 {
   font-weight: bold;
 }
 
-
 .title {
   display: flex;
   align-items: center;
   gap: 8px;
   color: #2e1a74;
   font-weight: 600;
-
 
   margin-bottom: 10px;
 }
@@ -449,7 +388,6 @@ h1 {
   color: #6d4dc2;
   font-size: 16px;
 }
-
 
 .box {
   display: flex;
@@ -464,7 +402,6 @@ h1 {
 .box .icon {
   color: #6d4dc2;
   font-size: 18px;
-
 
   min-width: 20px;
 }

@@ -1,139 +1,27 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { registrar, login as fazerLogin, loginComGoogle } from '@/services/authService'
-import { configurarGoogle } from '@/utils/googleAuth'
+import { ref } from 'vue'
+import { useCadastro } from '@/composables/useCadastro'
 
-const googleLoading = ref(false)
-const googleButton = ref(null)
-const router = useRouter()
-const name = ref('')
-const email = ref('')
-const senha = ref('')
-const loading = ref(false)
 const arquivoImp = ref(null)
-const imagem = ref(null)
-const preview = ref(null)
-
-const confirmarSenha = ref('')
-const erros = ref([])
-const tentouEnviar = ref(false)
-
-
-onMounted(async () => {
-  try {
-    await configurarGoogle(googleButton.value, async (response) => {
-      googleLoading.value = true
-      erros.value = []
-
-      try {
-        const data = await loginComGoogle(
-  response.credential,
-  'usuario',
-  true
-)
-
-        localStorage.setItem('token', data.access)
-        localStorage.setItem('refresh', data.refresh)
-
-        router.push('/home')
-      } catch (error) {
-        console.error('ERRO GOOGLE COMPLETO:', error.response?.data)
-console.error('STATUS:', error.response?.status)
-console.error('ERRO:', error)
-
-        const data = error.response?.data
-
-        if (data?.error) {
-          erros.value.push(data.error)
-        } else {
-          erros.value.push('Erro ao entrar com o Google')
-        }
-      } finally {
-        googleLoading.value = false
-      }
-    })
-  } catch (error) {
-    console.error('Não foi possível carregar o Google:', error)
-  }
-})
-
-const criarConta = async () => {
-  tentouEnviar.value = true
-  erros.value = []
-  if (!name.value) {
-    erros.value.push('Nome é obrigatório')
-  }
-
-  if (!email.value) {
-    erros.value.push('Email é obrigatório')
-  }
-
-  if (senha.value.length < 8) {
-    erros.value.push('A senha deve ter no mínimo 8 caracteres')
-  }
-
-  if (senha.value !== confirmarSenha.value) {
-    erros.value.push('As senhas não coincidem')
-  }
-
-  if (erros.value.length > 0) return
-
-  loading.value = true
-
-  try {
-    const formData = new FormData()
-
-    formData.append('name', name.value)
-    formData.append('email', email.value)
-    formData.append('password', senha.value)
-    formData.append('tipo', 'usuario')
-
-    if (imagem.value) {
-      formData.append('profile_image', imagem.value)
-    }
-
-    for (const [key, value] of formData.entries()) {
-      console.log(key, value)
-    }
-
-    localStorage.removeItem('token')
-    localStorage.removeItem('refresh')
-
-    await registrar(formData)
-
-    const loginResponse = await fazerLogin(email.value, senha.value)
-    //automatico
-
-    localStorage.setItem('token', loginResponse.access)
-    localStorage.setItem('refresh', loginResponse.refresh)
-
-    router.push('/home')
-  } catch (error) {
-    const data = error.response?.data
-    if (data) {
-      if (data.email) {
-        erros.value.push('Este email já está em uso')
-      } else if (data.detail) {
-        erros.value.push(data.detail)
-      } else {
-        erros.value.push('Erro ao criar conta')
-      }
-    } else {
-      erros.value.push('Erro de conexão com o servidor')
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-function handleImageChange(event) {
-  const file = event.target.files[0]
-  if (!file) return
-
-  imagem.value = file
-  preview.value = URL.createObjectURL(file)
-}
+const {
+  name,
+  email,
+  senha,
+  confirmarSenha,
+  loading,
+  preview,
+  erros,
+  contaCriada,
+  ocupado,
+  criarConta,
+  handleImageChange,
+  googleButton,
+  googleLoading,
+  googleErro,
+  googlePronto,
+  googleInicializando,
+  carregarGoogle,
+} = useCadastro('usuario')
 </script>
 
 <template>
@@ -145,7 +33,14 @@ function handleImageChange(event) {
 
       <div class="div-foto">
         <div class="photo-box" @click="arquivoImp.click()">
-          <input type="file" @change="handleImageChange" hidden ref="arquivoImp" />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            :disabled="ocupado || contaCriada"
+            @change="handleImageChange"
+            hidden
+            ref="arquivoImp"
+          />
           <img v-if="preview" :src="preview" class="preview-img" />
           <div v-else class="placeholder">
             <span>👤</span>
@@ -160,13 +55,20 @@ function handleImageChange(event) {
 
     <p class="subtitle">Junte-se à nossa plataforma e mostre seu trabalho para o mundo.</p>
 
-    <div class="form">
+    <form class="form" @submit.prevent="criarConta" :aria-busy="ocupado">
       <div class="card">
         <label>Nome completo</label>
 
         <div class="box">
           <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
-          <input v-model="name" type="text" placeholder="Digite seu nome completo..." />
+          <input
+            v-model="name"
+            type="text"
+            autocomplete="name"
+            required
+            :disabled="ocupado || contaCriada"
+            placeholder="Digite seu nome completo..."
+          />
         </div>
       </div>
 
@@ -175,7 +77,14 @@ function handleImageChange(event) {
 
         <div class="box">
           <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
-          <input v-model="email" type="email" placeholder="Digite seu e-mail..." />
+          <input
+            v-model="email"
+            type="email"
+            autocomplete="email"
+            required
+            :disabled="ocupado || contaCriada"
+            placeholder="Digite seu e-mail..."
+          />
         </div>
       </div>
 
@@ -184,7 +93,15 @@ function handleImageChange(event) {
 
         <div class="box">
           <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
-          <input v-model="senha" type="password" placeholder="Crie sua senha..." />
+          <input
+            v-model="senha"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+            :disabled="ocupado || contaCriada"
+            placeholder="Crie sua senha..."
+          />
         </div>
       </div>
 
@@ -193,7 +110,15 @@ function handleImageChange(event) {
 
         <div class="box">
           <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
-          <input v-model="confirmarSenha" type="password" placeholder="Confirme sua senha..." />
+          <input
+            v-model="confirmarSenha"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            required
+            :disabled="ocupado || contaCriada"
+            placeholder="Confirme sua senha..."
+          />
         </div>
       </div>
 
@@ -204,16 +129,14 @@ function handleImageChange(event) {
         </p>
 
         <div class="infos">
-          <span>○ +7 Caracteres</span>
-          <span>○ +5 letras</span>
-          <span>○ +2 números</span>
+          <span>Pelo menos 8 caracteres.</span>
         </div>
       </div>
 
-      <button class="criarConta" @click="criarConta" :disabled="loading">
+      <button v-if="!contaCriada" class="criarConta" type="submit" :disabled="ocupado">
         {{ loading ? 'Criando conta...' : 'Criar conta' }}
       </button>
-      <div v-if="erros.length" class="error-box">
+      <div v-if="erros.length" class="error-box" role="alert">
         <p v-for="(erro, index) in erros" :key="index">• {{ erro }}</p>
       </div>
 
@@ -227,15 +150,46 @@ function handleImageChange(event) {
         <span></span>
       </div>
 
-<div class="google-login">
-  <div ref="googleButton"></div>
-</div>
-    </div>
+      <div class="google-login" :inert="ocupado">
+        <button
+          v-if="!googlePronto"
+          class="google-fallback"
+          type="button"
+          :disabled="googleInicializando || ocupado"
+          @click="carregarGoogle"
+        >
+          {{
+            googleInicializando
+              ? 'Carregando Google...'
+              : googleErro
+                ? 'Tentar Google novamente'
+                : 'Entrar com Google'
+          }}
+        </button>
+        <div ref="googleButton"></div>
+      </div>
+      <p v-if="googleLoading" role="status">Entrando com Google...</p>
+      <p v-else-if="!googlePronto && !googleErro" role="status">Carregando acesso com Google...</p>
+      <p v-if="googleErro" role="status">{{ googleErro }}</p>
+    </form>
   </div>
-  
 </template>
 
 <style scoped>
+.google-fallback {
+  width: 300px;
+  max-width: 100%;
+  min-height: 40px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  background: white;
+  color: #5f6368;
+  font-size: 14px;
+}
+button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
 .google-login {
   display: flex;
   justify-content: center;

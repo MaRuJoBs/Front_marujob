@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
+import { definirSenha as salvarSenha, paginaInicial } from '@/services/authService'
+import { mensagensErro } from '@/utils/authErrors'
 
 const router = useRouter()
 
@@ -11,6 +12,7 @@ const erro = ref('')
 const carregando = ref(false)
 
 const definirSenha = async () => {
+  if (carregando.value) return
   erro.value = ''
 
   if (senha.value.length < 8) {
@@ -26,19 +28,10 @@ const definirSenha = async () => {
   carregando.value = true
 
   try {
-    await api.post('auth/definir-senha/', {
-      senha: senha.value,
-    })
-
-    localStorage.setItem('precisa_definir_senha', 'false')
-
-    router.push('/home')
+    await salvarSenha(senha.value)
+    await router.replace(paginaInicial())
   } catch (error) {
-    console.error('ERRO AO DEFINIR SENHA:', error)
-
-    erro.value =
-      error.response?.data?.detail ||
-      'Não foi possível definir a senha.'
+    erro.value = mensagensErro(error, 'Não foi possível definir a senha.').join(' ')
   } finally {
     carregando.value = false
   }
@@ -47,13 +40,10 @@ const definirSenha = async () => {
 
 <template>
   <div class="pagina-senha">
-    <div class="card-senha">
+    <form class="card-senha" @submit.prevent="definirSenha" :aria-busy="carregando">
       <h1>Criar senha</h1>
 
-      <p>
-        Crie uma senha para também poder entrar no Marujobs
-        usando seu e-mail.
-      </p>
+      <p>Crie uma senha para também poder entrar no Marujobs usando seu e-mail.</p>
 
       <div class="campo">
         <label>Nova senha</label>
@@ -61,6 +51,10 @@ const definirSenha = async () => {
         <input
           v-model="senha"
           type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+          :disabled="carregando"
           placeholder="Digite sua senha..."
         />
       </div>
@@ -71,21 +65,30 @@ const definirSenha = async () => {
         <input
           v-model="confirmarSenha"
           type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+          :disabled="carregando"
           placeholder="Digite novamente..."
         />
       </div>
 
-      <p v-if="erro" class="erro">
+      <p v-if="erro" class="erro" role="alert">
         {{ erro }}
       </p>
 
-      <button
-        @click="definirSenha"
-        :disabled="carregando"
-      >
+      <button type="submit" :disabled="carregando">
         {{ carregando ? 'Salvando...' : 'Criar senha' }}
       </button>
-    </div>
+      <button
+        class="voltar"
+        type="button"
+        :disabled="carregando"
+        @click="router.replace(paginaInicial())"
+      >
+        Voltar ao início
+      </button>
+    </form>
   </div>
 </template>
 

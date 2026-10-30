@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
+import { logout as encerrarSessao } from '@/services/authService'
 
 const user = ref(null)
 const email = ref('')
@@ -20,7 +21,6 @@ onMounted(async () => {
 
     const responsePortfolio = await api.get('portfolios/')
 
-    
     console.log('RESPOSTA COMPLETA PORTFÓLIO:', responsePortfolio)
     console.log('DADOS DO PORTFÓLIO:', responsePortfolio.data)
 
@@ -39,11 +39,8 @@ const getImageUrl = (path) => {
 }
 
 const logout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('refresh')
-  localStorage.removeItem('precisa_definir_senha')
-
-  router.push('/')
+  encerrarSessao()
+  router.replace('/')
 }
 </script>
 <template>
@@ -81,10 +78,8 @@ const logout = () => {
         <div class="card">
           <i class="fa-regular fa-folder"></i>
           <h3>{{ portfolio.length }}</h3>
-<p>Projetos</p>
+          <p>Projetos</p>
         </div>
-
-        
 
         <div class="card">
           <i class="fa-regular fa-clock"></i>
@@ -100,8 +95,8 @@ const logout = () => {
         <h3>Sobre</h3>
       </div>
       <p>
-  {{ user?.sobre || 'Nenhuma informação adicionada.' }}
-</p>
+        {{ user?.sobre || 'Nenhuma informação adicionada.' }}
+      </p>
     </section>
 
     <section class="box">
@@ -111,17 +106,12 @@ const logout = () => {
       </div>
 
       <div class="hab">
-  <span
-    v-for="habilidade in user?.habilidades || []"
-    :key="habilidade"
-  >
-    {{ habilidade }}
-  </span>
+        <span v-for="habilidade in user?.habilidades || []" :key="habilidade">
+          {{ habilidade }}
+        </span>
 
-  <span v-if="!user?.habilidades?.length">
-    Nenhuma habilidade adicionada.
-  </span>
-</div>
+        <span v-if="!user?.habilidades?.length"> Nenhuma habilidade adicionada. </span>
+      </div>
     </section>
 
     <section class="box">
@@ -177,9 +167,7 @@ const logout = () => {
       </section>
     </div>
 
-    <button class="btn-editar" @click="router.push('/editar-perfil')">
-  Editar Perfil
-</button>
+    <button class="btn-editar" @click="router.push('/editar-perfil')">Editar Perfil</button>
     <section class="configuracoes">
       <h3>Configurações da conta</h3>
 

@@ -1,12 +1,17 @@
 <script setup>
 import Footer from './components/Footer.vue'
+import FooterEmpresa from './components/FooterEmpresaComponent.vue'
+import { sessao } from './services/authService'
 </script>
 
 <template>
   <div class="app">
     <router-view />
 
-    <Footer v-if="!$route.meta.hideFooter" />
+    <template v-if="!$route.meta.hideFooter && sessao.usuario">
+      <FooterEmpresa v-if="sessao.tipo === 'empresa'" />
+      <Footer v-else />
+    </template>
   </div>
 </template>
 
