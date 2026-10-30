@@ -1,119 +1,108 @@
 import axios from 'axios'
+import {
+  limparSessao,
+  obterAccessToken,
+  obterRefreshToken,
+  sessao,
+  tokenValido,
+} from './authSession.js'
 
-const BASE_URL = import.meta.env.VITE_API_URL
+const baseURL = `${(import.meta.env.VITE_API_URL || '/api/').replace(/\/+$/, '')}/`
+const api = axios.create({ baseURL, timeout: 15000 })
+// Sem interceptors: a renovação nunca renova a si mesma.
+const authApi = axios.create({ baseURL, timeout: 15000 })
+let renovacao = null
 
-const api = axios.create({
-  baseURL: BASE_URL,
-})
+const rotasPublicas = new Set(['token', 'token/refresh', 'token/verify', 'auth/google', 'registro'])
 
-// Axios separado para renovar o token,
-// evitando que a renovação entre em um loop.
-const authApi = axios.create({
-  baseURL: BASE_URL,
-})
-
-// Guarda uma renovação em andamento.
-// Assim, várias requisições não tentam renovar
-// o mesmo token ao mesmo tempo.
-let refreshPromise = null
-
-const limparTokens = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('refresh')
+function rotaPublica(config) {
+  if (config.skipAuth) return true
+  const origem = globalThis.location?.origin || 'http://localhost'
+  const base = new URL(baseURL, origem)
+  const url = new URL(config.url || '', base)
+  if (url.origin !== base.origin) return true
+  const caminho = url.pathname.startsWith(base.pathname)
+    ? url.pathname.slice(base.pathname.length)
+    : url.pathname.replace(/^\/+/, '')
+  return rotasPublicas.has(caminho.replace(/\/+$/, ''))
 }
 
-const rotaEhPublica = (url = '') => {
-  const caminho = new URL(url, BASE_URL).pathname
-    .replace(/^\/api\//, '')
-    .replace(/^\/+/, '')
-
-  return [
-    'token/',
-    'token/refresh/',
-    'token/verify/',
-    'auth/google/',
-    'registro/',
-  ].includes(caminho)
-}
-
-// Adiciona o access token às requisições privadas.
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-
-  if (token && !rotaEhPublica(config.url)) {
-    config.headers.Authorization = `Bearer ${token}`
+export function renovarAccessToken() {
+  const refresh = obterRefreshToken()
+  const revisao = sessao.revisao
+  if (!refresh) {
+    limparSessao()
+    return Promise.reject(new Error('Sua sessão expirou. Entre novamente.'))
   }
+  if (renovacao?.revisao === revisao) return renovacao.promise
 
+  const atual = { revisao }
+  atual.promise = authApi
+    .post('token/refresh/', { refresh })
+    .then(({ data }) => {
+      // Uma resposta antiga não pode reabrir uma sessão após logout ou outro login.
+      if (sessao.revisao !== revisao || obterRefreshToken() !== refresh) {
+        throw new Error('A sessão foi encerrada ou substituída.')
+      }
+      if (!tokenValido(data.access) || (data.refresh !== undefined && !tokenValido(data.refresh))) {
+        limparSessao()
+        throw new Error('O servidor retornou tokens inválidos.')
+      }
+      localStorage.setItem('token', data.access)
+      if (data.refresh) localStorage.setItem('refresh', data.refresh)
+      return data.access
+    })
+    .catch((error) => {
+      if (sessao.revisao === revisao && [400, 401, 403].includes(error.response?.status)) {
+        limparSessao()
+      }
+      // Falhas de rede e de servidor não significam que o refresh foi revogado.
+      throw error
+    })
+    .finally(() => {
+      if (renovacao === atual) renovacao = null
+    })
+  renovacao = atual
+  return atual.promise
+}
+
+api.interceptors.request.use((config) => {
+  if (rotaPublica(config)) {
+    delete config.headers.Authorization
+    return config
+  }
+  // Não repete uma operação de uma conta na sessão de outra conta.
+  if (config._retry && config._authRevision !== sessao.revisao) {
+    return Promise.reject(new axios.CanceledError('A sessão foi substituída.'))
+  }
+  config._authRevision = sessao.revisao
+  config._accessToken = obterAccessToken()
+  if (config._accessToken) config.headers.Authorization = `Bearer ${config._accessToken}`
+  else delete config.headers.Authorization
   return config
 })
 
-// Renova o access token quando ele expirar.
 api.interceptors.response.use(
   (response) => response,
-
   async (error) => {
-    const originalRequest = error.config
-
-    if (!originalRequest) {
-      return Promise.reject(error)
+    const original = error.config
+    if (!original || error.response?.status !== 401 || rotaPublica(original)) throw error
+    if (original._authRevision !== sessao.revisao) throw error
+    if (original._retry) {
+      limparSessao()
+      throw error
     }
-
-    const status = error.response?.status
-
-    // Só tenta renovar em caso de 401,
-    // em rotas privadas e uma única vez.
-    if (
-      status !== 401 ||
-      originalRequest._retry ||
-      rotaEhPublica(originalRequest.url)
-    ) {
-      return Promise.reject(error)
+    if (!obterRefreshToken()) {
+      limparSessao()
+      throw error
     }
-
-    const refreshToken = localStorage.getItem('refresh')
-
-    if (!refreshToken) {
-      limparTokens()
-      return Promise.reject(error)
-    }
-
-    originalRequest._retry = true
-
-    try {
-      if (!refreshPromise) {
-        refreshPromise = authApi
-          .post('token/refresh/', {
-            refresh: refreshToken,
-          })
-          .then(({ data }) => {
-            localStorage.setItem('token', data.access)
-
-            // Compatível com refresh token rotation,
-            // caso esteja habilitada no Django.
-            if (data.refresh) {
-              localStorage.setItem('refresh', data.refresh)
-            }
-
-            return data.access
-          })
-          .finally(() => {
-            refreshPromise = null
-          })
-      }
-
-      const novoToken = await refreshPromise
-
-      // Atualiza o token na requisição original.
-      originalRequest.headers.Authorization =
-        `Bearer ${novoToken}`
-
-      // Repete a requisição que falhou.
-      return api(originalRequest)
-    } catch (refreshError) {
-      limparTokens()
-      return Promise.reject(refreshError)
-    }
-  }
+    original._retry = true
+    // Um 401 pode chegar depois de outra requisição já ter renovado o token.
+    const access = obterAccessToken()
+    if (!access || access === original._accessToken) await renovarAccessToken()
+    if (original._authRevision !== sessao.revisao) throw error
+    return api(original)
+  },
 )
 
 export default api

@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
+import { trocarSenha as salvarSenha, paginaInicial } from '@/services/authService'
+import { mensagensErro } from '@/utils/authErrors'
 
 const router = useRouter()
 
@@ -14,6 +15,7 @@ const sucesso = ref('')
 const carregando = ref(false)
 
 const trocarSenha = async () => {
+  if (carregando.value) return
   erro.value = ''
   sucesso.value = ''
 
@@ -32,30 +34,23 @@ const trocarSenha = async () => {
     return
   }
 
+  if (novaSenha.value === senhaAtual.value) {
+    erro.value = 'A nova senha deve ser diferente da senha atual.'
+    return
+  }
+
   carregando.value = true
 
   try {
-    await api.post('auth/trocar-senha/', {
-      senha_atual: senhaAtual.value,
-      nova_senha: novaSenha.value,
-    })
+    await salvarSenha(senhaAtual.value, novaSenha.value)
 
     sucesso.value = 'Senha alterada com sucesso!'
 
     senhaAtual.value = ''
     novaSenha.value = ''
     confirmarSenha.value = ''
-
-    setTimeout(() => {
-      router.back()
-    }, 1000)
-
   } catch (error) {
-    console.error('ERRO AO TROCAR SENHA:', error)
-
-    erro.value =
-      error.response?.data?.detail ||
-      'Não foi possível alterar a senha.'
+    erro.value = mensagensErro(error, 'Não foi possível alterar a senha.').join(' ')
   } finally {
     carregando.value = false
   }
@@ -64,22 +59,23 @@ const trocarSenha = async () => {
 
 <template>
   <div class="trocar-senha">
-
     <div class="topo">
-      <button @click="router.back()">
+      <button type="button" :disabled="carregando" @click="router.replace(paginaInicial())">
         <i class="fa-solid fa-arrow-left"></i>
       </button>
 
       <h2>Alterar senha</h2>
     </div>
 
-    <div class="formulario">
-
+    <form class="formulario" @submit.prevent="trocarSenha" :aria-busy="carregando">
       <div class="campo">
         <label>Senha atual</label>
         <input
           v-model="senhaAtual"
           type="password"
+          autocomplete="current-password"
+          required
+          :disabled="carregando"
           placeholder="Digite sua senha atual"
         />
       </div>
@@ -89,6 +85,10 @@ const trocarSenha = async () => {
         <input
           v-model="novaSenha"
           type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+          :disabled="carregando"
           placeholder="Digite sua nova senha"
         />
       </div>
@@ -98,27 +98,26 @@ const trocarSenha = async () => {
         <input
           v-model="confirmarSenha"
           type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+          :disabled="carregando"
           placeholder="Digite novamente sua nova senha"
         />
       </div>
 
-      <p v-if="erro" class="erro">
+      <p v-if="erro" class="erro" role="alert">
         {{ erro }}
       </p>
 
-      <p v-if="sucesso" class="sucesso">
+      <p v-if="sucesso" class="sucesso" role="status">
         {{ sucesso }}
       </p>
 
-      <button
-        class="btn-salvar"
-        @click="trocarSenha"
-        :disabled="carregando"
-      >
+      <button class="btn-salvar" type="submit" :disabled="carregando">
         {{ carregando ? 'Alterando...' : 'Alterar senha' }}
       </button>
-
-    </div>
+    </form>
   </div>
 </template>
 

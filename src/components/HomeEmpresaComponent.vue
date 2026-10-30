@@ -2,40 +2,33 @@
 import { ref, onMounted } from 'vue'
 // import logoMaruJob from '@/assets/images/logoempresa.png'
 import fundoEmpresa from '@/assets/images/fundoempresa.png'
+import { sessao } from '@/services/authService'
 
 const mostrarAvisoSenha = ref(false)
 
 onMounted(() => {
-  mostrarAvisoSenha.value =
-    localStorage.getItem('precisa_definir_senha') === 'true'
+  mostrarAvisoSenha.value = localStorage.getItem('precisa_definir_senha') === 'true'
 })
 </script>
 <template>
-  <main class="home":style="{backgroundImage: `url('${fundoEmpresa}')`,}">
+  <main class="home" :style="{ backgroundImage: `url('${fundoEmpresa}')` }">
     <div v-if="mostrarAvisoSenha" class="aviso-senha">
-  <button class="fechar-aviso" @click="mostrarAvisoSenha = false">
-    ×
-  </button>
+      <button class="fechar-aviso" @click="mostrarAvisoSenha = false">×</button>
 
-  <div class="aviso-conteudo">
-    <strong>Crie uma senha para sua conta</strong>
+      <div class="aviso-conteudo">
+        <strong>Crie uma senha para sua conta</strong>
 
-    <span>
-      Sua conta Google ainda não possui uma senha. Você pode criar uma
-      para também entrar usando seu e-mail e senha.
-    </span>
+        <span>
+          Sua conta Google ainda não possui uma senha. Você pode criar uma para também entrar usando
+          seu e-mail e senha.
+        </span>
 
-    <button
-      class="btn-criar-senha"
-      @click="$router.push('/definir-senha')"
-    >
-      Criar senha
-    </button>
-  </div>
-</div>
+        <button class="btn-criar-senha" @click="$router.push('/definir-senha')">Criar senha</button>
+      </div>
+    </div>
     <!-- Welcome -->
     <section class="welcome">
-      <h2>Bem-vindo, Nome da Empresa!</h2>
+      <h2>Bem-vindo, {{ sessao.usuario?.name || 'Empresa' }}!</h2>
 
       <p>Encontre os melhores freelancers para seus projetos.</p>
 
@@ -226,8 +219,6 @@ onMounted(() => {
   padding-bottom: 100px;
 }
 
-
-
 .hero {
   height: 70px;
   display: flex;
@@ -266,8 +257,6 @@ onMounted(() => {
   width: 300px;
   z-index: 2;
 }
-
-
 
 .welcome {
   padding: 20px;
@@ -310,8 +299,6 @@ onMounted(() => {
   font-size: 22px;
 }
 
-
-
 .section {
   padding: 0 20px;
   margin-top: 18px;
@@ -338,7 +325,6 @@ onMounted(() => {
   color: #8474a9;
   font-size: 13px;
 }
-
 
 .job-card {
   background: #f6effd;
@@ -395,8 +381,6 @@ onMounted(() => {
   font-weight: 600;
 }
 
-
-
 .categories {
   display: flex;
   gap: 8px;
@@ -418,8 +402,6 @@ onMounted(() => {
   background: #7b58d3;
   color: white;
 }
-
-
 
 .freelancers {
   margin-top: 16px;

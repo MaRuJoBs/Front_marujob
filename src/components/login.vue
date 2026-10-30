@@ -1,103 +1,54 @@
- <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { login as fazerLogin, loginComGoogle } from '@/services/authService'
-import { configurarGoogle } from '@/utils/googleAuth'
-import api from '@/services/api'
+<script setup>
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { login as fazerLogin, paginaInicial } from '@/services/authService'
+import { useGoogleAuth } from '@/composables/useGoogleAuth'
+import { mensagensErro, emailValido } from '@/utils/authErrors'
 
 const router = useRouter()
-
+const route = useRoute()
 const email = ref('')
 const senha = ref('')
-const error = ref('')
+const motivos = {
+  grupo: 'Não foi possível identificar o grupo da sua conta. Contate o suporte.',
+  conexao: 'Não foi possível validar sua sessão. Verifique sua conexão e tente novamente.',
+  sessao: 'Sua sessão expirou. Entre novamente.',
+}
+const error = ref(motivos[route.query.motivo] || '')
 const carregando = ref(false)
-const googleButton = ref(null)
-const googleLoading = ref(false)
+const {
+  googleButton,
+  googleLoading,
+  googleErro,
+  googlePronto,
+  googleInicializando,
+  carregarGoogle,
+} = useGoogleAuth({
+  ocupado: carregando,
+  onSuccess: () => router.replace(paginaInicial()),
+  onError: (mensagens) => {
+    error.value = mensagens.join(' ')
+  },
+})
+const ocupado = computed(() => carregando.value || googleLoading.value)
 
 const login = async () => {
-  carregando.value = true
+  if (ocupado.value) return
   error.value = ''
-
+  if (!emailValido(email.value) || !senha.value) {
+    error.value = 'Informe um e-mail válido e sua senha.'
+    return
+  }
+  carregando.value = true
   try {
-    const response = await fazerLogin(email.value, senha.value)
-
-    localStorage.setItem('token', response.access)
-    localStorage.setItem('refresh', response.refresh)
-
-    const usuarioResponse = await api.get('usuarios/me/')
-    const usuario = usuarioResponse.data
-
-    console.log('USUÁRIO LOGADO:', usuario)
-    console.log('GRUPOS:', usuario.groups)
-
-    const ehEmpresa = usuario.groups?.some(
-      (grupo) => grupo.name === 'Empresa'
-    )
-
-    if (ehEmpresa) {
-      router.push('/homeEmpresa')
-    } else {
-      router.push('/home')
-    }
+    await fazerLogin(email.value, senha.value)
+    await router.replace(paginaInicial())
   } catch (erro) {
-    console.error('ERRO NO LOGIN:', erro)
-    error.value = 'E-mail ou senha inválidos.'
+    error.value = mensagensErro(erro, 'E-mail ou senha inválidos.').join(' ')
   } finally {
     carregando.value = false
   }
 }
-
-onMounted(async () => {
-  try {
-    await configurarGoogle(googleButton.value, async (response) => {
-      googleLoading.value = true
-      error.value = ''
-
-      try {
-        const data = await loginComGoogle(
-          response.credential,
-          null,
-          false
-        )
-
-        localStorage.setItem('token', data.access)
-        localStorage.setItem('refresh', data.refresh)
-
-        localStorage.setItem(
-          'precisa_definir_senha',
-          data.precisa_definir_senha ? 'true' : 'false'
-        )
-
-        const usuario = data.user
-
-        const ehEmpresa = usuario.groups?.some(
-          (grupo) => grupo.name === 'Empresa'
-        )
-
-        if (ehEmpresa) {
-          router.push('/homeEmpresa')
-        } else {
-          router.push('/home')
-        }
-      } catch (erro) {
-        console.error('ERRO NO LOGIN GOOGLE:', erro)
-        console.error('RESPOSTA:', erro.response?.data)
-
-        const data = erro.response?.data
-
-        if (data?.detail) {
-          error.value = data.detail
-        } else {
-          error.value = 'Não foi possível entrar com o Google.'
-        }
-      } finally {
-        googleLoading.value = false
-      }
-    })
-  } catch (erro) {
-    console.error('Não foi possível carregar o Google:', erro)
-  }
-})
 </script>
 
 <template>
@@ -121,14 +72,21 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="form-card">
+      <form class="form-card" @submit.prevent="login" :aria-busy="ocupado">
         <div class="field">
           <label>E-mail</label>
 
           <div class="input">
             <i class="mdi mdi-email-outline"></i>
 
-            <input v-model="email" type="email" placeholder="Digite seu e-mail..." />
+            <input
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              required
+              :disabled="ocupado"
+              placeholder="Digite seu e-mail..."
+            />
           </div>
         </div>
 
@@ -138,23 +96,50 @@ onMounted(async () => {
           <div class="input">
             <i class="mdi mdi-lock-outline"></i>
 
-            <input v-model="senha" type="password" placeholder="Digite sua senha..." />
+            <input
+              v-model="senha"
+              type="password"
+              autocomplete="current-password"
+              required
+              :disabled="ocupado"
+              placeholder="Digite sua senha..."
+            />
           </div>
         </div>
-        <p v-if="error" class="error-message">
+        <p v-if="error" class="error-message" role="alert">
           {{ error }}
         </p>
 
-        <div class="forgot">Esqueceu sua senha?</div>
-
-        <button class="btn-login" @click="login" :disabled="carregando">
+        <button class="btn-login" type="submit" :disabled="ocupado">
           {{ carregando ? 'Entrando...' : 'Entrar' }}
         </button>
         <div class="ou">
           <span>ou</span>
         </div>
 
-        <div ref="googleButton" class="google-button"></div>
+        <div class="google-auth" :inert="ocupado">
+          <button
+            v-if="!googlePronto"
+            class="google-fallback"
+            type="button"
+            :disabled="googleInicializando || ocupado"
+            @click="carregarGoogle"
+          >
+            {{
+              googleInicializando
+                ? 'Carregando Google...'
+                : googleErro
+                  ? 'Tentar Google novamente'
+                  : 'Entrar com Google'
+            }}
+          </button>
+          <div ref="googleButton" class="google-button"></div>
+        </div>
+        <p v-if="googleLoading" role="status">Entrando com Google...</p>
+        <p v-else-if="!googlePronto && !googleErro" role="status">
+          Carregando acesso com Google...
+        </p>
+        <p v-if="googleErro" class="error-message" role="status">{{ googleErro }}</p>
 
         <div class="register">
           Não tem uma conta?
@@ -167,12 +152,31 @@ onMounted(async () => {
             </li>
           </ul>
         </div>
-      </div>
+      </form>
     </div>
   </div>
 </template>
 
 <style scoped>
+.google-fallback {
+  width: 300px;
+  max-width: 100%;
+  min-height: 40px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  background: white;
+  color: #5f6368;
+  font-size: 14px;
+}
+.google-auth {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
 * {
   margin: 0;
   padding: 0;
