@@ -3,7 +3,12 @@ import { useRouter } from 'vue-router'
 import { sessao } from '../services/authService.js'
 import { publicarVaga } from '../services/freelanceService.js'
 import { useVagasStore } from '../stores/vagas.js'
-import { validarVaga, montarPayloadVaga, interpretarErroPublicacao } from '../utils/vagaForm.js'
+import {
+  validarVaga,
+  montarPayloadVaga,
+  interpretarErroPublicacao,
+  camposNaoConfirmados,
+} from '../utils/vagaForm.js'
 
 export function useCriarVaga() {
   const router = useRouter()
@@ -31,11 +36,19 @@ export function useCriarVaga() {
     publicando.value = true
     const revisao = sessao.revisao
     try {
-      const vaga = await publicarVaga(montarPayloadVaga(form))
+      const payload = montarPayloadVaga(form)
+      const vaga = await publicarVaga(payload)
       publicada.value = true
       // Não exibe dados de uma conta depois de logout ou troca de sessão.
       if (sessao.revisao !== revisao) return
-      store.registrarPublicacao(vaga)
+      const pendentes = camposNaoConfirmados(vaga, payload)
+      store.registrarPublicacao(vaga, pendentes.length > 0)
+      if (pendentes.length) {
+        erroGeral.value = `A vaga foi publicada, mas o servidor não confirmou estas informações: ${pendentes.join(', ')}. O preenchimento foi mantido nesta sessão. Não publique novamente para evitar uma vaga duplicada.`
+        store.confirmacao =
+          'Vaga publicada. As informações complementares ainda não foram confirmadas pelo servidor.'
+        return
+      }
       if (ativo) {
         try {
           await router.replace({ name: 'homeEmpresa' })

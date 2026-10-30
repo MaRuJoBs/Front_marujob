@@ -1,6 +1,9 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { useEditarVaga } from '@/composables/useEditarVaga'
+import EmpresaHeader from '@/components/EmpresaHeader.vue'
 import { useCriarVaga } from '@/composables/useCriarVaga'
 import {
   categoriasVaga,
@@ -10,16 +13,30 @@ import {
   validarVaga,
   normalizarPagamento,
   formatarPagamento,
+  camposComplementaresVaga,
 } from '@/utils/vagaForm'
 
 const router = useRouter()
-const { form, erros, erroGeral, publicando, publicada, publicar } = useCriarVaga()
+const editando = useRoute().name === 'editar-vaga'
+const fluxo = editando ? useEditarVaga() : useCriarVaga()
+const { form, erros, erroGeral, publicando, publicada, publicar } = fluxo
+const carregando = fluxo.carregando || ref(false)
+const autorizada = fluxo.autorizada || ref(true)
+const validar = fluxo.validar || validarVaga
 const formulario = ref(null)
 const feedback = ref(null)
-const preenchidos = computed(() => 6 - Object.keys(validarVaga(form)).length)
+const preenchidos = computed(
+  () =>
+    ['titulo', 'categoria', 'modalidade', 'descricao', 'preco', 'tempo'].filter(
+      (campo) => String(form[campo]).trim() && !validar(form)[campo],
+    ).length,
+)
 const limiteDescricao = computed(() => limiteDescricaoVaga(form.modalidade))
 const pagamentoPreview = computed(() => normalizarPagamento(form.preco))
 const caracteresDescricao = computed(() => [...form.descricao].length)
+const complementosPreenchidos = computed(() =>
+  camposComplementaresVaga.filter(({ nome }) => String(form[nome] ?? '').trim()),
+)
 
 async function enviar() {
   await publicar()
@@ -30,7 +47,7 @@ async function enviar() {
 }
 
 function validarCampo(campo) {
-  const validacao = validarVaga(form)
+  const validacao = validar(form)
   if (validacao[campo]) erros.value[campo] = validacao[campo]
   else delete erros.value[campo]
 }
@@ -43,40 +60,38 @@ function alterarModalidade() {
 
 <template>
   <div class="criar-vaga">
-    <header class="header">
-      <div class="header-logo">
-        <img src="@/assets/images/logo.png" alt="MaRuJoB's" class="logo-icon" />
-        <span class="marca">MaRuJoB's<span>Conexões que viram oportunidades</span></span>
-      </div>
-      <button
-        class="btn-back"
-        type="button"
-        :disabled="publicando"
-        @click="router.push('/homeEmpresa')"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12" /></svg>
-        <span>Voltar ao início</span>
-      </button>
-    </header>
+    <EmpresaHeader :voltar="!publicando" />
 
     <main class="conteudo">
       <section class="apresentacao">
-        <span class="area-tag"><span aria-hidden="true">✦</span> Área da empresa</span>
-        <h1>Criar nova vaga</h1>
-        <p>Seu próximo projeto começa com uma boa oportunidade. Conte o que você precisa.</p>
+        <h1>{{ editando ? 'Editar oportunidade' : 'Criar nova vaga' }}</h1>
+        <p>
+          {{ editando ? 'Atualize as informações da sua vaga' : 'Preencha as informações da vaga' }}
+        </p>
       </section>
 
       <section v-if="publicada" class="sucesso" role="status">
         <span class="sucesso-icone" aria-hidden="true">✓</span>
-        <h2>Vaga publicada com sucesso!</h2>
+        <h2>{{ editando ? 'Vaga editada com sucesso!' : 'Vaga publicada' }}</h2>
         <p>
           {{ erroGeral || 'Sua oportunidade foi criada. Você já pode voltar à área da empresa.' }}
         </p>
+        <details v-if="erroGeral && complementosPreenchidos.length" class="dados-mantidos">
+          <summary>Ver informações complementares preenchidas</summary>
+          <dl>
+            <div v-for="campo in complementosPreenchidos" :key="campo.nome">
+              <dt>{{ campo.rotulo }}</dt>
+              <dd>{{ form[campo.nome] }}</dd>
+            </div>
+          </dl>
+        </details>
         <button class="btn-publicar" type="button" @click="router.replace('/homeEmpresa')">
           Ir para o início
         </button>
       </section>
 
+      <p v-else-if="carregando" role="status">Carregando oportunidade...</p>
+      <div v-else-if="!autorizada" role="alert" class="feedback-erro">{{ erroGeral }}</div>
       <div v-else class="layout-publicacao">
         <form
           ref="formulario"
@@ -137,6 +152,16 @@ function alterarModalidade() {
               >
                 <option value="" disabled>Selecione uma categoria</option>
                 <option
+                  v-if="
+                    editando &&
+                    form.categoria &&
+                    !categoriasVaga.some((c) => c.value === form.categoria)
+                  "
+                  :value="form.categoria"
+                >
+                  {{ form.categoria }} (categoria atual)
+                </option>
+                <option
                   v-for="categoria in categoriasVaga"
                   :key="categoria.value"
                   :value="categoria.value"
@@ -185,7 +210,7 @@ function alterarModalidade() {
                 v-model="form.descricao"
                 name="descricao"
                 required
-                :maxlength="limiteDescricao"
+                :maxlength="editando ? undefined : limiteDescricao"
                 rows="5"
                 placeholder="Descreva o trabalho e o resultado esperado. Ex.: Criar uma página responsiva com apresentação dos serviços e formulário de contato."
                 :aria-invalid="Boolean(erros.descricao)"
@@ -200,6 +225,67 @@ function alterarModalidade() {
               </div>
               <p v-if="erros.descricao" id="descricao-erro" class="msg-erro">
                 {{ erros.descricao }}
+              </p>
+            </div>
+          </fieldset>
+
+          <fieldset :disabled="publicando" class="condicoes complementos-vaga">
+            <legend>Informações complementares</legend>
+            <p class="descricao-secao">
+              Preencha os detalhes da oportunidade. Estes campos são opcionais.
+            </p>
+            <div v-for="campo in camposComplementaresVaga" :key="campo.nome" class="campo">
+              <label :for="'vaga-' + campo.nome">{{ campo.rotulo }}</label>
+              <textarea
+                v-if="campo.tipo === 'textarea'"
+                :id="'vaga-' + campo.nome"
+                v-model="form[campo.nome]"
+                :name="campo.nome"
+                :maxlength="editando ? undefined : campo.limite"
+                rows="4"
+                :placeholder="campo.placeholder"
+                :aria-invalid="Boolean(erros[campo.nome])"
+                :aria-describedby="erros[campo.nome] ? campo.nome + '-erro' : undefined"
+                @blur="validarCampo(campo.nome)"
+              ></textarea>
+              <select
+                v-else-if="campo.tipo === 'select'"
+                :id="'vaga-' + campo.nome"
+                v-model="form[campo.nome]"
+                :name="campo.nome"
+                :aria-invalid="Boolean(erros[campo.nome])"
+                :aria-describedby="erros[campo.nome] ? campo.nome + '-erro' : undefined"
+                @change="validarCampo(campo.nome)"
+              >
+                <option value="">Não informar</option>
+                <option
+                  v-if="form[campo.nome] && !campo.opcoes.includes(form[campo.nome])"
+                  :value="form[campo.nome]"
+                >
+                  {{ form[campo.nome] }} (valor atual)
+                </option>
+                <option v-for="opcao in campo.opcoes" :key="opcao" :value="opcao">
+                  {{ opcao }}
+                </option>
+              </select>
+              <input
+                v-else
+                :id="'vaga-' + campo.nome"
+                v-model="form[campo.nome]"
+                :name="campo.nome"
+                :type="campo.tipo === 'date' ? 'date' : 'text'"
+                :inputmode="campo.tipo === 'moeda' ? 'decimal' : undefined"
+                :maxlength="editando ? undefined : campo.limite"
+                :placeholder="campo.placeholder"
+                :aria-invalid="Boolean(erros[campo.nome])"
+                :aria-describedby="erros[campo.nome] ? campo.nome + '-erro' : undefined"
+                @blur="validarCampo(campo.nome)"
+              />
+              <p v-if="campo.limite && campo.tipo === 'textarea'" class="ajuda contador">
+                {{ [...form[campo.nome]].length }}/{{ campo.limite }}
+              </p>
+              <p v-if="erros[campo.nome]" :id="campo.nome + '-erro'" class="msg-erro">
+                {{ erros[campo.nome] }}
               </p>
             </div>
           </fieldset>
@@ -263,7 +349,14 @@ function alterarModalidade() {
             </button>
             <button class="btn-publicar" type="submit" :disabled="publicando">
               <span v-if="publicando" class="spinner" aria-hidden="true"></span
-              >{{ publicando ? 'Publicando...' : 'Publicar vaga'
+              >{{
+                publicando
+                  ? editando
+                    ? 'Salvando...'
+                    : 'Publicando...'
+                  : editando
+                    ? 'Salvar alterações'
+                    : 'Publicar vaga'
               }}<span v-if="!publicando" aria-hidden="true">↗</span>
             </button>
           </div>
@@ -327,9 +420,6 @@ function alterarModalidade() {
               </p>
             </div>
           </div>
-          <p class="limite-publicacao">
-            Tipo de contratação e faixa de pagamento ainda não estão disponíveis nesta publicação.
-          </p>
         </aside>
       </div>
     </main>
@@ -339,42 +429,93 @@ function alterarModalidade() {
 <style scoped>
 .criar-vaga {
   isolation: isolate;
-  min-height: 100vh;
-  background: #f5f3fc;
-  color: #28213e;
-  font-family: 'Poppins', sans-serif;
+  min-height: 100dvh;
+  background: #e1d2ed;
+  color: #442575;
+  font-family: inherit;
 }
-.header {
+.conteudo {
+  padding: 16px 16px calc(106px + env(safe-area-inset-bottom, 0px));
+}
+.apresentacao {
+  margin-bottom: 18px;
+  padding-inline: 4px;
+}
+h1 {
+  font-size: 23px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.apresentacao p {
+  margin-top: 4px;
+  color: #766084;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.layout-publicacao {
+  display: grid;
+  gap: 16px;
+}
+.form-card {
+  min-width: 0;
+  padding: 20px 16px;
+  border: 1px solid #e6d8f0;
+  border-radius: 20px;
+  background: #f3eaf9;
+}
+.cabecalho-form {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 20px 40px;
-  background: white;
-  border-bottom: 1px solid #e9e3f5;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0d0eb;
 }
-.header-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.etiqueta {
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 1.4px;
+  color: #87679f;
 }
-.logo-icon {
-  width: 54px;
-  height: 54px;
-  object-fit: contain;
+.cabecalho-form h2 {
+  margin-top: 3px;
+  font-size: 16px;
+  font-weight: 650;
+  color: #4d2c7a;
 }
-.marca {
-  font-size: 21px;
-  font-weight: 700;
-  color: #5b3cc4;
-  letter-spacing: -0.6px;
-}
-.marca span {
-  display: block;
+.obrigatorios {
+  color: #735d84;
   font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: #7b748e;
+}
+fieldset {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+fieldset > legend {
+  padding: 0 0 16px;
+  color: #59388b;
+  font-size: 13px;
+  font-weight: 650;
+}
+.campo {
+  min-width: 0;
+  margin-bottom: 18px;
+}
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #513077;
+}
+label span {
+  color: #7040a8;
 }
 button,
 input,
@@ -386,409 +527,191 @@ button {
   cursor: pointer;
 }
 button:disabled {
-  cursor: wait;
   opacity: 0.65;
-}
-button:focus-visible,
-a:focus-visible {
-  outline: 3px solid #b5a0f3;
-  outline-offset: 4px;
-}
-.btn-back {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  background: transparent;
-  color: #5f527d;
-  font-size: 12px;
-  padding: 10px 0;
-}
-svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.conteudo {
-  padding: 36px 40px 48px;
-}
-.apresentacao {
-  margin-bottom: 28px;
-}
-.area-tag {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  color: #5b3cc4;
-  font-size: 11px;
-  font-weight: 600;
-  background: #eae3fc;
-  padding: 5px 12px;
-  border-radius: 20px;
-  margin-bottom: 14px;
-}
-h1 {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -1px;
-  line-height: 1.25;
-  margin-bottom: 9px;
-}
-.apresentacao p {
-  color: #736983;
-  font-size: 13px;
-  max-width: 600px;
-}
-.layout-publicacao {
-  display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-.form-card,
-.preview-card {
-  background: #fff;
-  border: 1px solid #e9e3f5;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px #38215c05;
-}
-.form-card {
-  padding: 28px;
-  min-width: 0;
-}
-.cabecalho-form {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 22px;
-  margin-bottom: 22px;
-  border-bottom: 1px solid #eee9f6;
-}
-.etiqueta {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 1.6px;
-  color: #8a7e9f;
-}
-.cabecalho-form h2 {
-  font-size: 18px;
-  font-weight: 600;
-  margin-top: 4px;
-}
-.obrigatorios {
-  color: #8a7e9f;
-  font-size: 9px;
-  white-space: nowrap;
-}
-fieldset {
-  border: 0;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-}
-fieldset > legend {
-  font-size: 12px;
-  font-weight: 600;
-  color: #5b3cc4;
-  padding: 0 0 16px;
-}
-.campo {
-  margin-bottom: 20px;
-  min-width: 0;
-}
-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  margin-bottom: 8px;
-  color: #3e3455;
-}
-label span {
-  color: #673fd7;
+  cursor: wait;
 }
 input,
 select,
 textarea {
   width: 100%;
   min-width: 0;
-  color: #33284a;
-  background: #fdfcfe;
-  border: 1px solid #ded7eb;
-  border-radius: 10px;
-  padding: 12px 13px;
-  font-size: 12px;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-  outline: none;
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: #fdfaff;
+  color: #49315f;
+  font-size: 16px;
+  line-height: 1.5;
+  scroll-margin-block: 90px;
+}
+select {
+  padding-right: 24px;
+}
+textarea {
+  min-height: 134px;
+  resize: vertical;
 }
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #673fd7;
-  box-shadow: 0 0 0 3px #673fd712;
+  outline: 2px solid #9d77c5;
+  outline-offset: 2px;
   background: white;
 }
 input[aria-invalid='true'],
-textarea[aria-invalid='true'],
-select[aria-invalid='true'] {
-  border-color: #bb384b;
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: #b72f4c;
 }
 ::placeholder,
 select.placeholder {
-  color: #92869f;
-}
-textarea {
-  resize: vertical;
-  min-height: 135px;
-  line-height: 1.7;
+  color: #887493;
+  opacity: 1;
 }
 .ajuda,
-.ajuda-linha {
-  color: #8a809a;
-  font-size: 10px;
+.ajuda-linha,
+.descricao-secao,
+.limite-publicacao {
+  color: #796587;
+  font-size: 12px;
   line-height: 1.6;
+}
+.ajuda {
   margin-top: 6px;
 }
 .ajuda-linha {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 6px;
 }
 .contador {
+  margin-left: auto;
   white-space: nowrap;
+  font-size: 11px;
 }
 .msg-erro {
-  font-size: 11px;
-  color: #b62f46;
+  color: #a32443;
   margin-top: 6px;
+  font-size: 12px;
   line-height: 1.6;
 }
 .condicoes {
-  margin-top: 8px;
-  padding-top: 22px;
-  border-top: 1px solid #eee9f6;
+  padding-top: 16px;
+  border-top: 1px solid #e0d0eb;
 }
 .condicoes legend {
-  padding: 0;
-  float: left;
-  width: 100%;
-  margin-bottom: 6px;
+  padding-bottom: 6px;
 }
 .descricao-secao {
-  clear: both;
-  font-size: 11px;
-  color: #8a809a;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 .campos-duplos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 0;
 }
 .input-moeda {
   position: relative;
 }
 .input-moeda > span {
   position: absolute;
-  left: 13px;
+  left: 14px;
   top: 13px;
-  font-size: 12px;
-  color: #7c6b96;
+  font-size: 14px;
+  color: #806b8f;
 }
 .input-moeda input {
-  padding-left: 38px;
+  padding-left: 40px;
 }
 .acoes {
+  position: fixed;
+  z-index: 20;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  border-top: 1px solid #eee9f6;
-  padding-top: 22px;
-  margin-top: 2px;
+  gap: 10px;
+  width: min(100%, 420px);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: #efe5f7;
+  border-top: 1px solid #d9c5ea;
+  box-shadow: 0 -3px 12px #4925630a;
 }
 .btn-cancelar,
 .btn-publicar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 12px 22px;
-  min-height: 46px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 16px;
   border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
 }
 .btn-cancelar {
-  background: white;
-  border: 1px solid #ded7eb;
-  color: #655576;
+  border: 1px solid #ac8cd0;
+  background: #faf6fe;
+  color: #6b429c;
 }
 .btn-publicar {
-  background: #5b3cc4;
-  border: 1px solid #5b3cc4;
+  flex: 1;
+  border: 1px solid #7548bd;
+  background: #7548bd;
   color: white;
-  box-shadow: 0 4px 10px #5b3cc41a;
 }
 .btn-publicar:hover:not(:disabled) {
-  background: #673fd7;
+  background: #6035a2;
 }
-.btn-publicar > span:last-child:not(.spinner) {
-  font-size: 18px;
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #6b3aa3;
+  outline-offset: 3px;
 }
 .painel-lateral {
-  position: sticky;
-  top: 24px;
   min-width: 0;
 }
 .preview-card {
-  padding: 24px;
-  overflow-wrap: anywhere;
-}
-.preview-topo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 26px;
-}
-.rascunho-tag {
-  color: #7f718d;
-  background: #f3f0f8;
-  font-size: 9px;
-  border-radius: 20px;
-  padding: 4px 9px;
-  white-space: nowrap;
-}
-.preview-icone {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  background: #eee8fc;
-  color: #673fd7;
-  border-radius: 13px;
-  margin-bottom: 16px;
-}
-.preview-icone svg {
-  width: 24px;
-  height: 24px;
-}
-.preview-categoria {
-  display: inline-block;
-  color: #673fd7;
-  background: #f2edff;
-  font-size: 10px;
-  padding: 4px 9px;
-  border-radius: 6px;
-  margin-bottom: 12px;
-}
-.preview-card h2 {
-  font-size: 18px;
-  line-height: 1.5;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-.preview-descricao {
-  font-size: 11px;
-  color: #84788f;
-  line-height: 1.8;
-  white-space: pre-wrap;
-}
-.preview-condicoes {
-  display: grid;
-  gap: 15px;
-  padding: 22px 0;
-  margin-top: 6px;
-}
-.preview-condicoes span {
-  display: block;
-  color: #8a7e9f;
-  font-size: 10px;
-  margin-bottom: 3px;
-}
-.preview-condicoes strong {
-  font-size: 14px;
-  font-weight: 600;
-  color: #4c347f;
-}
-.progresso {
-  border-top: 1px solid #eee9f6;
-  padding-top: 18px;
-}
-.progresso > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 9px;
-  color: #8a7e9f;
-  margin-bottom: 8px;
-}
-.progresso strong {
-  font-weight: 600;
-  color: #673fd7;
-}
-progress {
-  display: block;
-  width: 100%;
-  height: 5px;
-  border: 0;
-  border-radius: 6px;
-  overflow: hidden;
-  background: #eee8f8;
-  accent-color: #673fd7;
-}
-progress::-webkit-progress-bar {
-  background: #eee8f8;
-}
-progress::-webkit-progress-value {
-  background: #673fd7;
-  border-radius: 6px;
+  display: none;
 }
 .dica-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-top: 20px;
-  padding: 20px;
-  border-radius: 16px;
-  background: #ece6fc;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #ece0f5;
 }
 .dica-icone {
-  font-size: 25px;
-  color: #673fd7;
-  line-height: 1;
+  color: #8452bc;
+  font-size: 24px;
+  line-height: 1.2;
 }
 .dica-card h3 {
-  font-size: 11px;
+  color: #583682;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.6;
-  color: #513781;
-  margin-bottom: 7px;
+  line-height: 1.5;
 }
-.dica-card p,
-.limite-publicacao {
-  font-size: 10px;
-  color: #857594;
-  line-height: 1.8;
+.dica-card p {
+  margin-top: 6px;
+  color: #796487;
+  font-size: 12px;
+  line-height: 1.7;
 }
 .limite-publicacao {
-  margin: 16px 6px 0;
+  margin: 12px 4px 0;
 }
 .feedback-erro {
-  background: #fff2f3;
-  border: 1px solid #f2c6cc;
-  color: #a22940;
+  margin-bottom: 18px;
   padding: 14px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  font-size: 12px;
+  border: 1px solid #edc1cf;
+  border-radius: 12px;
+  background: #fff1f5;
+  color: #9b2844;
+  font-size: 13px;
 }
 .feedback-erro strong {
   font-weight: 600;
@@ -797,201 +720,93 @@ progress::-webkit-progress-value {
   margin-top: 4px;
 }
 .status-publicacao {
-  color: #77608d;
-  font-size: 11px;
   margin-top: 14px;
-  text-align: right;
+  color: #6c4d81;
+  font-size: 12px;
 }
 .spinner {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border: 2px solid #ffffff66;
   border-top-color: white;
   border-radius: 50%;
   animation: girar 0.7s linear infinite;
 }
 .sucesso {
-  background: white;
-  border: 1px solid #e9e3f5;
+  padding: 32px 20px;
+  border: 1px solid #e1d2ee;
   border-radius: 20px;
-  padding: 40px 24px;
+  background: #faf6fe;
   text-align: center;
 }
 .sucesso-icone {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  height: 50px;
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
   border-radius: 50%;
   background: #e4f5ed;
-  color: #228259;
-  font-size: 25px;
-  margin-bottom: 16px;
+  color: #216547;
+  font-size: 24px;
 }
 .sucesso h2 {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 21px;
+  font-weight: 650;
 }
 .sucesso p {
+  margin: 12px 0 20px;
+  color: #756080;
   font-size: 13px;
-  color: #80718f;
-  margin: 12px 0 24px;
+  line-height: 1.6;
+}
+.dados-mantidos {
+  margin-block: 16px;
+  text-align: left;
+  font-size: 13px;
+}
+.dados-mantidos summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 10px;
+  color: #583682;
+}
+.dados-mantidos dt {
+  margin-top: 12px;
+  font-weight: 600;
+}
+.dados-mantidos dd {
+  margin-top: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 @keyframes girar {
   to {
     transform: rotate(360deg);
   }
 }
-/* Layout de celular em qualquer largura de navegador. */
-.header {
-  padding: 16px 24px;
+@media (min-width: 400px) {
+  .campos-duplos {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+  }
 }
-.conteudo {
-  padding: 24px 20px calc(112px + env(safe-area-inset-bottom, 0px));
-}
-.layout-publicacao {
-  grid-template-columns: minmax(0, 1fr);
-}
-.painel-lateral {
-  position: static;
-}
-.preview-card {
-  display: none;
-}
-.dica-card {
-  margin-top: 0;
-}
-.btn-back {
-  min-height: 44px;
-  padding: 8px;
-  font-size: 12px;
-}
-.apresentacao p {
-  font-size: 14px;
-}
-.campos-duplos {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-}
-label,
-fieldset > legend {
-  font-size: 14px;
-}
-input,
-select,
-textarea {
-  font-size: 16px;
-  min-height: 50px;
-  scroll-margin-block: 100px;
-}
-.input-moeda > span {
-  top: 14px;
-  font-size: 14px;
-}
-.ajuda,
-.ajuda-linha,
-.descricao-secao,
-.msg-erro,
-.dica-card p,
-.limite-publicacao {
-  font-size: 12px;
-}
-.dica-card h3 {
-  font-size: 13px;
-}
-.acoes {
-  position: fixed;
-  left: 50%;
-  right: auto;
-  width: min(100%, 420px);
-  transform: translateX(-50%);
-  bottom: 0;
-  z-index: 20;
-  gap: 12px;
-  margin: 0;
-  padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: #fff;
-  border-top: 1px solid #e7e0f4;
-  box-shadow: 0 -4px 20px #35215b0a;
-}
-.btn-publicar,
-.btn-cancelar {
-  min-height: 48px;
-  font-size: 14px;
-}
-.acoes .btn-publicar {
-  flex: 1;
-}
-.status-publicacao {
-  font-size: 12px;
-  text-align: left;
-}
-
-.header {
-  padding: 12px 16px;
-  gap: 8px;
-}
-.marca {
-  font-size: 18px;
-}
-.marca span {
-  display: none;
-}
-.logo-icon {
-  width: 42px;
-  height: 42px;
-}
-.btn-back {
-  font-size: 12px;
-  gap: 4px;
-}
-.btn-back svg {
-  width: 16px;
-}
-.conteudo {
-  padding: 20px 16px calc(112px + env(safe-area-inset-bottom, 0px));
-}
-.form-card {
-  padding: 20px 16px;
-  border-radius: 16px;
-}
-.cabecalho-form {
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 6px;
-}
-.campos-duplos {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-}
-.acoes {
-  gap: 10px;
-  padding-inline: 16px;
-}
-.btn-cancelar {
-  padding: 12px 16px;
-}
-.btn-publicar {
-  flex: 1;
-  padding: 12px;
-}
-input,
-select,
-textarea {
-  font-size: 16px;
-}
-.ajuda-linha {
-  align-items: flex-start;
+@media (max-width: 359px) {
+  .conteudo {
+    padding-inline: 12px;
+  }
+  .form-card {
+    padding-inline: 12px;
+  }
+  .btn-cancelar,
+  .btn-publicar {
+    padding-inline: 12px;
+    font-size: 13px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation: none;
-  }
-  input,
-  textarea,
-  select {
-    transition: none;
   }
 }
 </style>

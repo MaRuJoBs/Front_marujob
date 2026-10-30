@@ -18,11 +18,20 @@ export const useVagasStore = defineStore('vagas', () => {
     proprietarioId.value = usuarioId
   }
 
-  function registrarPublicacao(vaga) {
+  function registrarPublicacao(vaga, preservarRascunho = false) {
     ultimaPublicada.value = vaga && typeof vaga === 'object' ? vaga : null
     confirmacao.value = 'Vaga publicada com sucesso!'
-    Object.assign(rascunho, novoRascunhoVaga())
+    if (!preservarRascunho) Object.assign(rascunho, novoRascunhoVaga())
   }
+
+  watch(
+    () => sessao.revisao,
+    () => {
+      ultimaPublicada.value = null
+      confirmacao.value = ''
+    },
+    { flush: 'sync' },
+  )
 
   watch(
     () => sessao.usuario?.id,
@@ -34,6 +43,7 @@ export const useVagasStore = defineStore('vagas', () => {
         prepararRascunho(id)
       }
     },
+    { flush: 'sync' },
   )
 
   return { rascunho, ultimaPublicada, confirmacao, prepararRascunho, registrarPublicacao }

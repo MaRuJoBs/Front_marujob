@@ -41,6 +41,14 @@ const falhar = (config, status, data = {}) => {
 }
 const corpo = (config) => (typeof config.data === 'string' ? JSON.parse(config.data) : config.data)
 const formularioValido = () => ({
+  requisitos: '',
+  beneficios: '',
+  tipo_contratacao: '',
+  nivel_experiencia: '',
+  jornada_trabalho: '',
+  data_publicacao: '',
+  salario_minimo: '',
+  salario_maximo: '',
   modalidade: 'Remoto',
   titulo: 'Criar uma página responsiva',
   descricao: 'Desenvolver a apresentação dos serviços com formulário de contato.',
@@ -79,6 +87,12 @@ const { useVagasStore } = await vite.ssrLoadModule('/src/stores/vagas.js')
 const { useCriarVaga } = await vite.ssrLoadModule('/src/composables/useCriarVaga.js')
 const { routes } = await vite.ssrLoadModule('/src/router/routes.js')
 const { protegerRota } = await vite.ssrLoadModule('/src/router/authGuard.js')
+const servicoGestao = await vite.ssrLoadModule('/src/services/freelanceService.js')
+const { useGerenciamentoVagas } = await vite.ssrLoadModule('/src/stores/gerenciamentoVagas.js')
+const { useEditarVaga } = await vite.ssrLoadModule('/src/composables/useEditarVaga.js')
+const { useDetalheVagaEmpresa } = await vite.ssrLoadModule(
+  '/src/composables/useDetalheVagaEmpresa.js',
+)
 let pinia
 
 function autenticar(tipo = 'empresa', id = 7) {
@@ -157,6 +171,14 @@ test('formulário começa vazio, incluindo select e pagamento', () => {
     descricao: '',
     preco: '',
     tempo: '',
+    requisitos: '',
+    beneficios: '',
+    tipo_contratacao: '',
+    nivel_experiencia: '',
+    jornada_trabalho: '',
+    data_publicacao: '',
+    salario_minimo: '',
+    salario_maximo: '',
   })
   assert.equal(Object.keys(formUtils.validarVaga(formUtils.novoRascunhoVaga())).length, 6)
 })
@@ -265,7 +287,7 @@ test('duração exige horas positivas e respeita o limite de tamanho', () => {
   assert.equal(formUtils.validarVaga({ ...formularioValido(), tempo: '2,5' }).tempo, undefined)
 })
 
-test('payload envia somente os cinco campos reais, com textos normalizados', () => {
+test('payload sem complementos preserva os cinco campos existentes, com textos normalizados', () => {
   const payload = formUtils.montarPayloadVaga({
     ...formularioValido(),
     titulo: ' Título ',
@@ -496,4 +518,526 @@ test('resposta após logout não exibe publicação nem redireciona a conta segu
   } finally {
     tela.desmontar()
   }
+})
+
+const propria = (id = 12, empresa = 7) => ({
+  ...vagaCriada,
+  id,
+  empresa,
+  descricao: 'Modalidade: Remoto\n\nDescrição original',
+})
+
+test('listagem percorre páginas, filtra proprietário e nulos, usa JWT e mantém histórico após nova consulta', async () => {
+  autenticar()
+  transporte = async (c) =>
+    resposta(
+      c,
+      c.url.includes('?')
+        ? { results: [propria(22)], next: null }
+        : {
+            results: [propria(), propria(13, 9), propria(14, null)],
+            next: '/api/freelances/?page=2',
+          },
+      200,
+    )
+  const store = useGerenciamentoVagas()
+  await store.carregar()
+  assert.deepEqual(
+    store.vagas.map((v) => v.id),
+    [22, 12],
+  )
+  assert.equal(store.ultima.id, 22)
+  assert.equal(chamadas[1].url, 'freelances/?page=2')
+  assert.equal(chamadas[1].headers.Authorization, 'Bearer access-frontend-teste')
+  await store.carregar()
+  assert.equal(store.vagas.length, 2)
+})
+
+for (const next of [
+  'https://externo.test/api/freelances/?page=2',
+  '/api/usuarios/',
+  'freelances/',
+]) {
+  test('paginação insegura ou circular é rejeitada: ' + next, async () => {
+    autenticar()
+    transporte = async (c) => resposta(c, { results: [propria()], next }, 200)
+    await assert.rejects(servicoGestao.listarVagasEmpresa())
+    assert.equal(chamadas.length, 1)
+  })
+}
+
+test('estado vazio e falha de rede têm resultados distintos', async () => {
+  autenticar()
+  const store = useGerenciamentoVagas()
+  transporte = async (c) => resposta(c, { results: [], next: null }, 200)
+  await store.carregar()
+  assert.equal(store.vagas.length, 0)
+  assert.equal(store.erro, '')
+  transporte = async (c) => {
+    throw new axios.AxiosError('rede', 'ERR_NETWORK', c)
+  }
+  await store.carregar()
+  assert.match(store.erro, /conectar/)
+  assert.equal(store.carregando, false)
+})
+
+test('logout e troca de conta limpam sincronamente e descartam resposta atrasada', async () => {
+  autenticar()
+  const atraso = pendente()
+  transporte = async (c) => {
+    await atraso.promise
+    return resposta(c, { results: [propria()], next: null }, 200)
+  }
+  const store = useGerenciamentoVagas()
+  const tarefa = store.carregar()
+  await aguardar()
+  autenticar('empresa', 9)
+  assert.equal(store.vagas.length, 0)
+  atraso.resolve()
+  await tarefa
+  assert.equal(store.vagas.length, 0)
+  auth.logout()
+  assert.equal(store.ultima, null)
+})
+
+test('edição extrai somente prefixo exato, preserva categoria, duração e descrição legadas', () => {
+  const vaga = propria()
+  const form = formUtils.formularioDaVaga(vaga)
+  assert.equal(form.modalidade, 'Remoto')
+  assert.equal(form.descricao, 'Descrição original')
+  form.preco = '1200,50'
+  assert.deepEqual(formUtils.montarPayloadEdicao(form, vaga), { preco: '1200.50' })
+  for (const descricao of [
+    'Modalidade: Remoto sem separador',
+    'Texto\nModalidade: Remoto',
+    'x'.repeat(220),
+  ]) {
+    const legado = { ...vaga, descricao, tag: 'Categoria legada', tempo: '2 dias' }
+    const dados = formUtils.formularioDaVaga(legado)
+    assert.equal(dados.descricao, descricao)
+    assert.equal(dados.modalidade, '')
+    assert.ok(formUtils.validarEdicaoVaga(dados, legado).modalidade)
+    assert.equal(dados.categoria, legado.tag)
+    assert.equal(dados.tempo, legado.tempo)
+  }
+  form.modalidade = 'Presencial'
+  assert.equal(
+    formUtils.montarPayloadEdicao(form, vaga).descricao,
+    'Modalidade: Presencial\n\nDescrição original',
+  )
+  assert.equal(formUtils.formatarTempo('2 dias'), '2 dias')
+})
+
+test('detalhe e mutações alheias são bloqueadas antes de PATCH ou DELETE', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(12, 9), 200)
+  await assert.rejects(servicoGestao.consultarVagaPropria(12))
+  await assert.rejects(servicoGestao.editarVaga(12, { titulo: 'Inválido' }))
+  await assert.rejects(servicoGestao.excluirVaga(12))
+  assert.ok(chamadas.every((c) => c.method === 'get'))
+})
+
+test('PATCH envia somente contrato e exige 200; não transfere empresa', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(), 200)
+  await servicoGestao.editarVaga(12, { titulo: 'Novo', empresa: 9, status: 'ativo' })
+  assert.equal(chamadas[1].url, 'freelances/12/')
+  assert.deepEqual(corpo(chamadas[1]), { titulo: 'Novo' })
+  transporte = async (c) => resposta(c, propria(), c.method === 'patch' ? 202 : 200)
+  await assert.rejects(servicoGestao.editarVaga(12, {}))
+})
+
+test('cancelar não envia DELETE; confirmar impede duplicação, remove após 204 e recalcula última', async () => {
+  autenticar()
+  const store = useGerenciamentoVagas()
+  store.vagas = [propria(22), propria(12)]
+  store.pedirExclusao(store.ultima)
+  store.cancelarExclusao()
+  await store.confirmarExclusao()
+  assert.equal(chamadas.length, 0)
+  store.pedirExclusao(store.ultima)
+  const atraso = pendente()
+  transporte = async (c) => {
+    if (c.method === 'get') return resposta(c, propria(22), 200)
+    await atraso.promise
+    return resposta(c, null, 204)
+  }
+  const tarefa = store.confirmarExclusao()
+  await store.confirmarExclusao()
+  await aguardar()
+  assert.equal(store.vagas.length, 2)
+  atraso.resolve()
+  await tarefa
+  assert.equal(chamadas.filter((c) => c.method === 'delete').length, 1)
+  assert.equal(store.ultima.id, 12)
+  assert.match(store.sucesso, /excluída/)
+})
+
+for (const status of [400, 401, 403, 404, 500]) {
+  test('exclusão com erro ' + status + ' mantém vaga e informa falha', async () => {
+    autenticar()
+    const store = useGerenciamentoVagas()
+    store.vagas = [propria()]
+    store.pedirExclusao(store.ultima)
+    transporte = async (c) => (c.method === 'get' ? resposta(c, propria(), 200) : falhar(c, status))
+    // 401 sem refresh evita uma renovação real; a sessão limpa os dados por segurança.
+    if (status === 401) storage.delete('refresh')
+    await store.confirmarExclusao()
+    if (status !== 401) {
+      assert.equal(store.vagas.length, 1)
+      assert.ok(store.erroExclusao)
+    } else assert.equal(auth.sessao.usuario, null)
+    assert.equal(store.sucesso, '')
+  })
+}
+
+async function montarEdicao(id = 12) {
+  let estado
+  const router = criarRouter()
+  await router.push('/editar-vaga/' + id)
+  const app = renderer.createApp({
+    setup() {
+      estado = useEditarVaga()
+      return () => h('div')
+    },
+  })
+  app.use(pinia)
+  app.use(router)
+  app.mount({ children: [] })
+  await aguardar()
+  return { estado, router, desmontar: () => app.unmount() }
+}
+
+test('formulário de edição carrega dados reais, valida, preserva erro e bloqueia PATCH repetido', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(), 200)
+  const tela = await montarEdicao()
+  assert.equal(tela.estado.form.titulo, propria().titulo)
+  assert.equal(tela.estado.form.modalidade, 'Remoto')
+  tela.estado.form.titulo = ''
+  await tela.estado.publicar()
+  assert.ok(tela.estado.erros.value.titulo)
+  assert.equal(chamadas.length, 1)
+  tela.estado.form.titulo = 'Alterada'
+  transporte = async (c) =>
+    c.method === 'get' ? resposta(c, propria(), 200) : falhar(c, 400, { titulo: ['Revise'] })
+  await tela.estado.publicar()
+  assert.equal(tela.estado.form.titulo, 'Alterada')
+  assert.equal(tela.estado.erros.value.titulo, 'Revise')
+  const atraso = pendente()
+  transporte = async (c) => {
+    if (c.method === 'get') return resposta(c, propria(), 200)
+    await atraso.promise
+    return resposta(c, { ...propria(), titulo: 'Alterada' }, 200)
+  }
+  const antes = chamadas.length
+  const tarefa = tela.estado.publicar()
+  await tela.estado.publicar()
+  await aguardar()
+  atraso.resolve()
+  await tarefa
+  assert.equal(chamadas.slice(antes).filter((c) => c.method === 'patch').length, 1)
+  assert.equal(tela.router.currentRoute.value.path, '/homeEmpresa')
+  assert.match(useGerenciamentoVagas().sucesso, /editada/)
+  tela.desmontar()
+})
+
+test('rota de edição exige empresa e mantém rotas freelancer', () => {
+  const rota = routes.find((r) => r.name === 'editar-vaga')
+  assert.equal(rota.meta.tipo, 'empresa')
+  assert.equal(rota.meta.requiresAuth, true)
+  assert.equal(routes.find((r) => r.name === 'freelances').meta.tipo, 'usuario')
+})
+
+test('edição alheia não libera formulário nem salvamento', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(12, 9), 200)
+  const tela = await montarEdicao()
+  assert.equal(tela.estado.autorizada.value, false)
+  assert.ok(tela.estado.erroGeral.value)
+  await tela.estado.publicar()
+  assert.equal(chamadas.length, 1)
+  tela.desmontar()
+})
+
+for (const metodo of ['patch', 'delete']) {
+  test('troca de sessão durante ' + metodo + ' não exibe sucesso na conta nova', async () => {
+    autenticar()
+    const atraso = pendente()
+    transporte = async (c) => {
+      if (c.method === 'get') return resposta(c, propria(), 200)
+      await atraso.promise
+      return resposta(c, propria(), metodo === 'patch' ? 200 : 204)
+    }
+    const tarefa =
+      metodo === 'patch'
+        ? servicoGestao.editarVaga(12, { titulo: 'Novo' })
+        : servicoGestao.excluirVaga(12)
+    const rejeitada = assert.rejects(tarefa, /sessão/)
+    await aguardar()
+    autenticar('empresa', 9)
+    atraso.resolve()
+    await rejeitada
+    assert.equal(useGerenciamentoVagas().sucesso, '')
+  })
+}
+
+test('troca de sessão durante verificação de propriedade impede mutação', async () => {
+  autenticar()
+  const atraso = pendente()
+  transporte = async (c) => {
+    await atraso.promise
+    return resposta(c, propria(), 200)
+  }
+  const tarefa = assert.rejects(servicoGestao.editarVaga(12, { titulo: 'Novo' }))
+  await aguardar()
+  autenticar('empresa', 9)
+  atraso.resolve()
+  await tarefa
+  assert.ok(chamadas.every((c) => c.method === 'get'))
+})
+
+test('paginação aceita URL absoluta da API e relativa sem duplicar api', async () => {
+  autenticar()
+  for (const next of ['http://localhost/api/freelances/?page=2', '?page=2']) {
+    chamadas.length = 0
+    transporte = async (c) =>
+      resposta(c, { results: [propria()], next: c.url.includes('?') ? null : next }, 200)
+    await servicoGestao.listarVagasEmpresa()
+    assert.equal(chamadas[1].url, 'freelances/?page=2')
+  }
+})
+
+test('seleção alheia e confirmação sem seleção não enviam requisições', async () => {
+  autenticar()
+  const store = useGerenciamentoVagas()
+  store.pedirExclusao(propria(12, 9))
+  assert.equal(store.selecionada, null)
+  await store.confirmarExclusao()
+  assert.equal(chamadas.length, 0)
+})
+
+async function montarDetalhe(id = 12) {
+  let estado
+  const router = criarRouter()
+  await router.push('/empresa/vagas/' + id)
+  const app = renderer.createApp({
+    setup() {
+      estado = useDetalheVagaEmpresa()
+      return () => h('div')
+    },
+  })
+  app.use(pinia)
+  app.use(router)
+  app.mount({ children: [] })
+  return { estado, router, desmontar: () => app.unmount() }
+}
+
+test('detalhe consulta vaga real, funciona sem store prévia e reconsulta ao trocar o ID', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(Number(c.url.split('/')[1])), 200)
+  const tela = await montarDetalhe()
+  await aguardar()
+  assert.equal(tela.estado.vaga.value.id, 12)
+  assert.equal(useGerenciamentoVagas().vagas.length, 0)
+  await tela.router.push('/empresa/vagas/22')
+  await aguardar()
+  assert.equal(tela.estado.vaga.value.id, 22)
+  assert.equal(chamadas[1].url, 'freelances/22/')
+  tela.desmontar()
+})
+
+for (const status of [403, 404, 500]) {
+  test('detalhe trata erro ' + status + ' sem exibir vaga e permite tentar novamente', async () => {
+    autenticar()
+    transporte = async (c) => falhar(c, status)
+    const tela = await montarDetalhe()
+    await aguardar()
+    assert.equal(tela.estado.vaga.value, null)
+    assert.ok(tela.estado.erro.value)
+    assert.equal(tela.estado.carregando.value, false)
+    transporte = async (c) => resposta(c, propria(), 200)
+    tela.estado.recarregar()
+    await aguardar()
+    assert.equal(tela.estado.vaga.value.id, 12)
+    assert.equal(tela.estado.erro.value, '')
+    tela.desmontar()
+  })
+}
+
+test('detalhe alheio bloqueia dados e troca de sessão descarta detalhe atrasado', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(12, 9), 200)
+  const tela = await montarDetalhe()
+  await aguardar()
+  assert.equal(tela.estado.vaga.value, null)
+  assert.match(tela.estado.erro.value, /permissão/)
+  const atraso = pendente()
+  transporte = async (c) => {
+    await atraso.promise
+    return resposta(c, propria(), 200)
+  }
+  tela.estado.recarregar()
+  await aguardar()
+  auth.logout()
+  assert.equal(tela.estado.vaga.value, null)
+  atraso.resolve()
+  await aguardar()
+  assert.equal(tela.estado.vaga.value, null)
+  tela.desmontar()
+})
+
+test('rota de detalhe permite apenas empresa autenticada', async () => {
+  const rota = routes.find((r) => r.name === 'detalhe-vaga-empresa')
+  assert.equal(rota.meta.requiresAuth, true)
+  assert.equal(rota.meta.tipo, 'empresa')
+  const router = criarRouter()
+  await router.push('/empresa/vagas/12')
+  assert.equal(router.currentRoute.value.name, 'login')
+  autenticar('usuario')
+  await router.push('/empresa/vagas/12')
+  assert.equal(router.currentRoute.value.path, '/home')
+})
+
+const complementosValidos = () => ({
+  requisitos: 'Conhecimento em Vue',
+  beneficios: 'Horário flexível',
+  tipo_contratacao: 'PJ',
+  nivel_experiencia: 'Pleno',
+  jornada_trabalho: 'Segunda a sexta, das 9h às 18h',
+  data_publicacao: '2026-10-30',
+  salario_minimo: '2000,50',
+  salario_maximo: '3500.00',
+})
+
+test('complementos são opcionais, normalizados e independentes da descrição', () => {
+  const form = { ...formularioValido(), ...complementosValidos() }
+  assert.deepEqual(formUtils.validarVaga(form), {})
+  const payload = formUtils.montarPayloadVaga(form)
+  assert.equal(payload.requisitos, form.requisitos)
+  assert.equal(payload.salario_minimo, '2000.50')
+  assert.equal(payload.salario_maximo, '3500.00')
+  assert.equal(payload.data_publicacao, '2026-10-30')
+  assert.equal(payload.descricao, 'Modalidade: Remoto\n\n' + form.descricao)
+  assert.equal(Object.hasOwn(payload, 'empresa'), false)
+  assert.equal(formUtils.formatarDataPublicacao('2026-10-30T00:00:00Z'), '30/10/2026')
+  assert.equal(formUtils.formatarDataPublicacao('2026-02-30'), 'Não disponível')
+  assert.match(formUtils.formatarFaixaSalarial('2000.50', '3500.00'), /2\.000,50.*3\.500,00/)
+})
+
+test('validação de complementos rejeita limites, opções, datas e faixas inválidas', () => {
+  const form = {
+    ...formularioValido(),
+    ...complementosValidos(),
+    requisitos: 'x'.repeat(1001),
+    beneficios: 'x'.repeat(1001),
+    jornada_trabalho: 'x'.repeat(101),
+    data_publicacao: '2026-02-30',
+    tipo_contratacao: 'Inválido',
+    nivel_experiencia: 'Inválido',
+    salario_minimo: '4000',
+    salario_maximo: '3000',
+  }
+  const erros = formUtils.validarVaga(form)
+  for (const campo of [
+    'requisitos',
+    'beneficios',
+    'jornada_trabalho',
+    'data_publicacao',
+    'tipo_contratacao',
+    'nivel_experiencia',
+    'salario_maximo',
+  ])
+    assert.ok(erros[campo], campo)
+  assert.ok(formUtils.validarVaga({ ...formularioValido(), salario_minimo: '2000' }).salario_maximo)
+  assert.ok(formUtils.validarVaga({ ...formularioValido(), salario_maximo: '3000' }).salario_minimo)
+  assert.ok(
+    formUtils.validarVaga({ ...formularioValido(), salario_minimo: '-1', salario_maximo: '3000' })
+      .salario_minimo,
+  )
+})
+
+test('edição preenche, preserva e limpa complementos sem alterar campos alheios', () => {
+  const vaga = {
+    ...propria(),
+    ...formUtils.montarPayloadVaga({ ...formularioValido(), ...complementosValidos() }),
+  }
+  const form = formUtils.formularioDaVaga(vaga)
+  assert.equal(form.beneficios, 'Horário flexível')
+  assert.deepEqual(formUtils.montarPayloadEdicao(form, vaga), {})
+  form.beneficios = ''
+  form.data_publicacao = ''
+  form.salario_minimo = form.salario_maximo = ''
+  assert.deepEqual(formUtils.montarPayloadEdicao(form, vaga), {
+    beneficios: '',
+    data_publicacao: null,
+    salario_minimo: null,
+    salario_maximo: null,
+  })
+})
+
+test('serviço PATCH permite os complementos e continua bloqueando empresa/status', async () => {
+  autenticar()
+  const payload = formUtils.montarPayloadVaga({ ...formularioValido(), ...complementosValidos() })
+  transporte = async (c) => resposta(c, { ...propria(), ...payload }, 200)
+  await servicoGestao.editarVaga(12, { ...payload, empresa: 9, status: 'ativo' })
+  assert.deepEqual(corpo(chamadas.find((c) => c.method === 'patch')), payload)
+})
+
+test('campos complementares ignorados ou alterados pelo servidor não são confirmados', () => {
+  const payload = formUtils.montarPayloadVaga({ ...formularioValido(), ...complementosValidos() })
+  assert.equal(formUtils.camposNaoConfirmados(propria(), payload).length, 8)
+  assert.deepEqual(
+    formUtils.camposNaoConfirmados(
+      { ...payload, salario_minimo: '2000.5', data_publicacao: '2026-10-30T00:00:00Z' },
+      payload,
+    ),
+    [],
+  )
+  assert.deepEqual(
+    formUtils.camposNaoConfirmados({ beneficios: 'Outro' }, { beneficios: 'Texto' }),
+    ['Benefícios'],
+  )
+})
+
+test('criação envia complementos; HTTP 400 mapeia erros sem apagar os campos', async () => {
+  autenticar()
+  const tela = await montar()
+  Object.assign(tela.estado.form, formularioValido(), complementosValidos())
+  transporte = async (c) =>
+    falhar(c, 400, { requisitos: ['Revise os requisitos'], salario_minimo: ['Valor inválido'] })
+  await tela.estado.publicar()
+  assert.equal(corpo(chamadas[0]).tipo_contratacao, 'PJ')
+  assert.equal(tela.estado.form.requisitos, 'Conhecimento em Vue')
+  assert.equal(tela.estado.erros.value.requisitos, 'Revise os requisitos')
+  assert.equal(tela.estado.erros.value.salario_minimo, 'Valor inválido')
+  tela.desmontar()
+})
+
+test('POST 201 com complementos ignorados avisa, retém rascunho e bloqueia republicação', async () => {
+  autenticar()
+  const tela = await montar()
+  Object.assign(tela.estado.form, formularioValido(), complementosValidos())
+  transporte = async (c) => resposta(c, propria(), 201)
+  await tela.estado.publicar()
+  assert.equal(tela.estado.publicada.value, true)
+  assert.match(tela.estado.erroGeral.value, /não confirmou/)
+  assert.equal(tela.estado.form.requisitos, 'Conhecimento em Vue')
+  assert.equal(tela.router.currentRoute.value.path, '/criar-vaga')
+  await tela.estado.publicar()
+  assert.equal(chamadas.length, 1)
+  tela.desmontar()
+})
+
+test('edição mantém dados complementares quando o servidor os ignora', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(), 200)
+  const tela = await montarEdicao()
+  Object.assign(tela.estado.form, complementosValidos())
+  await tela.estado.publicar()
+  assert.equal(tela.estado.publicada.value, false)
+  assert.match(tela.estado.erroGeral.value, /não confirmou/)
+  assert.equal(tela.estado.form.beneficios, 'Horário flexível')
+  assert.equal(tela.router.currentRoute.value.path, '/editar-vaga/12')
+  tela.desmontar()
 })
