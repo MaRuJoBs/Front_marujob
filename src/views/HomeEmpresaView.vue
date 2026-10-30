@@ -1,9 +1,9 @@
 <template>
-  <Header />
+  <EmpresaHeader />
   <HomeEmpresaComponent />
 </template>
 
 <script setup>
-import Header from '@/components/Header.vue'
+import EmpresaHeader from '@/components/EmpresaHeader.vue'
 import HomeEmpresaComponent from '../components/HomeEmpresaComponent.vue'
 </script>

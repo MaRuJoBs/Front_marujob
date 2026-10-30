@@ -1,14 +1,43 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-// import logoMaruJob from '@/assets/images/logoempresa.png'
+import { computed, ref, onMounted, watch } from 'vue'
+import ConfirmarExclusaoVaga from '@/components/ConfirmarExclusaoVaga.vue'
 import fundoEmpresa from '@/assets/images/fundoempresa.png'
 import { sessao } from '@/services/authService'
 import { storeToRefs } from 'pinia'
 import { useVagasStore } from '@/stores/vagas'
-import { formatarPagamento } from '@/utils/vagaForm'
+import { useGerenciamentoVagas } from '@/stores/gerenciamentoVagas'
+import { formatarTempo, formatarPagamento } from '@/utils/vagaForm'
 
 const vagasStore = useVagasStore()
-const { ultimaPublicada, confirmacao } = storeToRefs(vagasStore)
+const { confirmacao } = storeToRefs(vagasStore)
+const gerenciamento = useGerenciamentoVagas()
+const { vagas, ultima: ultimaPublicada, carregando, erro, sucesso } = storeToRefs(gerenciamento)
+const busca = ref('')
+const categoria = ref('')
+const categorias = computed(() => [...new Set(vagas.value.map((vaga) => vaga.tag).filter(Boolean))])
+const normalizarBusca = (texto) =>
+  String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+const vagasFiltradas = computed(() =>
+  vagas.value.filter(
+    (vaga) =>
+      (!categoria.value || vaga.tag === categoria.value) &&
+      normalizarBusca(`${vaga.titulo} ${vaga.descricao} ${vaga.tag}`).includes(
+        normalizarBusca(busca.value).trim(),
+      ),
+  ),
+)
+watch(
+  () => [sessao.usuario?.id, sessao.revisao, sessao.tipo],
+  () => {
+    busca.value = ''
+    categoria.value = ''
+    if (sessao.tipo === 'empresa') gerenciamento.carregar()
+  },
+  { immediate: true },
+)
 
 const mostrarAvisoSenha = ref(false)
 
@@ -49,7 +78,7 @@ onMounted(() => {
     <section class="welcome">
       <h2>Bem-vindo, {{ sessao.usuario?.name || 'Empresa' }}!</h2>
 
-      <p>Encontre os melhores freelancers para seus projetos.</p>
+      <p>Gerencie suas vagas e encontre profissionais para seus projetos.</p>
 
       <router-link v-if="sessao.tipo === 'empresa'" class="new-job" to="/criar-vaga">
         <span>+</span>
@@ -58,14 +87,22 @@ onMounted(() => {
     </section>
 
     <!-- Vagas -->
-    <section class="section">
+    <section class="section" :aria-busy="carregando">
       <div class="section-title">
-        <h3>Última vaga publicada</h3>
+        <h3 tabindex="-1">Última vaga publicada</h3>
       </div>
 
-      <div v-if="ultimaPublicada" class="job-card vaga-publicada">
+      <p v-if="carregando" role="status">Carregando suas oportunidades...</p>
+      <div v-else-if="erro" role="alert">
+        {{ erro }} <button type="button" @click="gerenciamento.carregar()">Tentar novamente</button>
+      </div>
+      <div v-else-if="ultimaPublicada" class="job-card vaga-publicada">
         <div class="job-header">
-          <h4>{{ ultimaPublicada.titulo }}</h4>
+          <h4>
+            <router-link class="titulo-vaga" :to="'/empresa/vagas/' + ultimaPublicada.id">{{
+              ultimaPublicada.titulo
+            }}</router-link>
+          </h4>
 
           <div class="price">{{ formatarPagamento(ultimaPublicada.preco) }}</div>
         </div>
@@ -78,441 +115,445 @@ onMounted(() => {
           <div class="job-info">{{ ultimaPublicada.tag }}</div>
 
           <div class="job-info">
-            <i class="fa-regular fa-clock" aria-hidden="true"></i> {{ ultimaPublicada.tempo }} horas
+            <i class="fa-regular fa-clock" aria-hidden="true"></i>
+            {{ formatarTempo(ultimaPublicada.tempo) }}
           </div>
         </div>
       </div>
 
-      <p v-else class="sem-publicacao">
-        A confirmação da sua próxima publicação aparecerá aqui. O histórico de vagas ainda não está
-        disponível nesta área.
+      <div v-else class="sem-publicacao">
+        <p>Você ainda não tem oportunidades publicadas.</p>
+        <router-link to="/criar-vaga">Criar nova vaga</router-link>
+      </div>
+      <p v-if="ultimaPublicada" class="sem-publicacao">
+        Exibimos a vaga com maior ID como aproximação da última publicação. A API não informa a data
+        de publicação.
       </p>
     </section>
-
-    <!-- Recomendações -->
-    <section class="section">
+    <section class="section" v-if="!carregando && !erro && vagas.length">
       <div class="section-title">
-        <h3>Recomendações de Freelancers</h3>
-        <span>Ver todos ›</span>
+        <h3>Suas oportunidades ({{ vagas.length }})</h3>
       </div>
-
-      <div class="categories">
-        <button class="active">Design</button>
-
-        <button>Redação</button>
-
-        <button>Marketing</button>
-
-        <button>Vídeo</button>
+      <div class="filtros-vagas">
+        <label class="busca-vagas">
+          <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" aria-hidden="true" />
+          <span class="sr-only">Buscar suas vagas</span>
+          <input
+            v-model="busca"
+            type="search"
+            placeholder="Buscar por título ou palavra-chave..."
+          />
+        </label>
+        <label class="categoria-vagas">
+          <span class="sr-only">Filtrar por categoria</span>
+          <select v-model="categoria">
+            <option value="">Todas as categorias</option>
+            <option v-for="tag in categorias" :key="tag" :value="tag">{{ tag }}</option>
+          </select>
+        </label>
       </div>
-
-      <div class="freelancers">
-        <div class="freelancer-card">
-          <div class="avatar"></div>
-
-          <h4>Ricardo Baron</h4>
-
-          <p>Design Gráfico</p>
-
-          <div class="stars">
-            <i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i>
+      <p v-if="sucesso" role="status" class="confirmacao-publicacao">{{ sucesso }}</p>
+      <p v-if="!vagasFiltradas.length" class="sem-publicacao" role="status">
+        Nenhuma vaga encontrada com esses filtros.
+      </p>
+      <div class="lista-vagas">
+        <article v-for="vaga in vagasFiltradas" :key="vaga.id" class="job-card vaga-publicada">
+          <div class="vaga-icone" aria-hidden="true">
+            <FontAwesomeIcon :icon="['fas', 'briefcase']" />
           </div>
-
-          <button>Ver perfil</button>
-        </div>
-
-        <div class="freelancer-card">
-          <div class="avatar"></div>
-
-          <h4>Ricardo Baron</h4>
-
-          <p>Design Gráfico</p>
-
-          <div class="stars">⭐⭐⭐⭐⭐</div>
-
-          <button>Ver perfil</button>
-        </div>
+          <div class="vaga-conteudo">
+            <div class="job-header">
+              <h4>
+                <router-link class="titulo-vaga" :to="'/empresa/vagas/' + vaga.id">{{
+                  vaga.titulo
+                }}</router-link>
+              </h4>
+              <strong class="price">{{ formatarPagamento(vaga.preco) }}</strong>
+            </div>
+            <p class="descricao-publicada">{{ vaga.descricao }}</p>
+            <div class="job-footer">
+              <span class="job-info">{{ vaga.tag }}</span
+              ><span class="job-info">{{ formatarTempo(vaga.tempo) }}</span>
+            </div>
+            <div class="acoes-vaga">
+              <router-link :to="'/editar-vaga/' + vaga.id"
+                >Editar<span class="sr-only"> {{ vaga.titulo }}</span></router-link
+              >
+              <router-link class="ver-detalhes" :to="'/empresa/vagas/' + vaga.id"
+                >Ver detalhes<span class="sr-only"> {{ vaga.titulo }}</span></router-link
+              >
+              <button type="button" @click="gerenciamento.pedirExclusao(vaga)">
+                Excluir<span class="sr-only"> {{ vaga.titulo }}</span>
+              </button>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
+    <p v-if="sucesso && !vagas.length" role="status" class="confirmacao-publicacao">
+      {{ sucesso }}
+    </p>
+    <ConfirmarExclusaoVaga />
   </main>
 </template>
 
 <style scoped>
-.new-job {
+.titulo-vaga {
+  display: inline-block;
+  padding-block: 4px;
+  color: inherit;
+  font-weight: inherit;
   text-decoration: none;
+}
+.titulo-vaga:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.home {
+  min-height: calc(100dvh - 92px);
+  padding: 4px 16px calc(104px + env(safe-area-inset-bottom, 0px));
+  background-color: #ddc8f7;
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+  color: #412473;
+}
+.welcome {
+  padding: 18px 0 4px;
+}
+.welcome h2 {
+  font-size: 21px;
+  line-height: 1.35;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.welcome p {
+  margin-top: 6px;
+  max-width: 34ch;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #65517e;
+}
+.new-job {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #7548bd;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 3px 8px #59318c14;
+}
+.new-job span {
+  font-size: 23px;
+  line-height: 1;
+}
+.section {
+  margin-top: 22px;
+  min-width: 0;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.section-title h3 {
+  font-size: 16px;
+  font-weight: 650;
+  color: #442477;
+}
+.job-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #eee3fa;
+  border-radius: 16px;
+  background: #f4ecfb;
+  overflow-wrap: anywhere;
+}
+.job-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.job-header h4 {
+  min-width: 0;
+  flex: 1 1 120px;
+  color: #452677;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.price {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border: 1px solid #cebddf;
+  border-radius: 20px;
+  background: #faf7fe;
+  color: #4e2a80;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.descricao-publicada {
+  margin: 12px 0;
+  color: #625272;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.job-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+.job-info {
+  color: #604b7a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.job-info:first-child {
+  border: 1px solid #d4c2e7;
+  background: #e9dcf6;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+.lista-vagas {
+  display: grid;
+  gap: 12px;
+}
+.lista-vagas .job-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 12px;
+  border-radius: 13px;
+}
+.vaga-icone {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 48px;
+  border-radius: 10px;
+  background: #a48aca;
+  color: white;
+  font-size: 19px;
+}
+.vaga-conteudo {
+  flex: 1;
+  min-width: 0;
+}
+.lista-vagas .job-header h4 {
+  font-size: 14px;
+}
+.lista-vagas .price {
+  font-size: 11px;
+}
+.lista-vagas .descricao-publicada {
+  margin-block: 6px;
+  font-size: 12px;
+}
+.acoes-vaga {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.acoes-vaga button,
+.acoes-vaga a,
+.section button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid #9a73ca;
+  border-radius: 9px;
+  background: #faf7fe;
+  color: #5a348c;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.acoes-vaga a {
+  background: #7548bd;
+  border-color: #7548bd;
+  color: white;
+}
+.acoes-vaga button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.filtros-vagas {
+  display: grid;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.busca-vagas {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #faf7fe;
+  border: 1px solid #c4abdf;
+  border-radius: 10px;
+  padding-inline: 12px;
+  color: #927aa9;
+}
+.busca-vagas input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  color: #49335e;
+  font: inherit;
+  font-size: 14px;
+}
+.categoria-vagas select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #c4abdf;
+  border-radius: 10px;
+  background: #ede1f7;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: #513279;
+}
+.sem-publicacao {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f3ebfa;
+  color: #68537e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.sem-publicacao a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #63339e;
+  font-weight: 600;
 }
 .confirmacao-publicacao {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  margin: 16px;
-  padding: 16px;
-  border-radius: 14px;
-  color: #216547;
-  background: #e9f8ee;
+  margin-block: 12px;
+  padding: 14px;
   border: 1px solid #bde2ca;
-}
-.confirmacao-publicacao strong {
-  font-weight: 600;
-  font-size: 14px;
+  border-radius: 12px;
+  background: #e9f8ee;
+  color: #216547;
+  font-size: 13px;
 }
 .confirmacao-publicacao p {
   margin-top: 4px;
   font-size: 12px;
+  line-height: 1.5;
 }
 .confirmacao-publicacao button {
   margin-left: auto;
   border: 0;
   background: transparent;
   color: inherit;
+  min-width: 28px;
+  min-height: 28px;
   font-size: 22px;
   cursor: pointer;
 }
-.descricao-publicada {
-  font-size: 13px;
-  line-height: 1.7;
-  color: #756889;
-  margin: 12px 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #63369e;
+  outline-offset: 3px;
 }
-.vaga-publicada .job-header {
-  align-items: flex-start;
-  gap: 12px;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
-.vaga-publicada h4 {
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.vaga-publicada .price {
-  white-space: nowrap;
-}
-.sem-publicacao {
-  padding: 18px;
-  background: #f5f3fc;
-  border-radius: 14px;
-  color: #756889;
-  font-size: 13px;
-  line-height: 1.7;
-}
-/* Aviso para criar senha */
 .aviso-senha {
   position: fixed;
-  top: 10px;
-
-  width: calc(100% - 40px);
-  max-width: 420px;
-
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
-
-  padding: 18px;
-
-  background: #efe5fa;
-  border-radius: 16px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-
+  width: min(388px, calc(100% - 32px));
   z-index: 1000;
+  padding: 18px;
+  border: 1px solid #c8afe2;
+  border-radius: 16px;
+  background: #f2e8fc;
+  box-shadow: 0 8px 30px #39234f22;
 }
-
 .fechar-aviso {
   position: absolute;
-  top: 8px;
-  right: 10px;
-
+  top: 4px;
+  right: 8px;
+  min-width: 36px;
+  min-height: 36px;
   border: none;
   background: transparent;
-
-  color: #74688f;
-  font-size: 22px;
+  color: #604478;
+  font-size: 24px;
   cursor: pointer;
 }
-
 .aviso-conteudo {
   display: flex;
   flex-direction: column;
   gap: 8px;
-
-  padding-right: 20px;
+  padding-right: 22px;
 }
-
 .aviso-conteudo strong {
-  color: #5e3ea7;
-  font-size: 16px;
+  color: #563484;
+  font-size: 15px;
 }
-
 .aviso-conteudo span {
-  color: #74688f;
+  color: #68517f;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.5;
 }
-
 .btn-criar-senha {
-  width: fit-content;
-
-  margin-top: 5px;
-  padding: 9px 16px;
-
-  border: none;
-  border-radius: 20px;
-
-  background: #7854d7;
+  align-self: flex-start;
+  min-height: 44px;
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 16px;
+  background: #7548bd;
   color: white;
-
+  font: inherit;
   font-size: 13px;
-  font-weight: 600;
-
   cursor: pointer;
 }
-.home {
-  min-height: 100vh;
-  width: 100%;
-
-  background-repeat: no-repeat;
-  background-position: top center;
-
-  margin-top: -17px;
-
-  background-size: cover;
-  background-attachment: scroll;
-
-  padding-bottom: 100px;
-}
-
-.hero {
-  height: 70px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  padding: 5px 15px 0;
-  position: relative;
-  overflow: hidden;
-}
-
-.logo {
-  width: 180px;
-  height: auto;
-  object-fit: contain;
-  position: relative;
-  top: -10px;
-
-  z-index: 2;
-}
-
-.hero::after {
-  content: '';
-
-  position: absolute;
-  width: 350px;
-  height: 350px;
-
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-
-  bottom: -250px;
-  left: -100px;
-}
-
-.logo {
-  width: 300px;
-  z-index: 2;
-}
-
-.welcome {
-  padding: 20px;
-}
-
-.welcome h2 {
-  color: #5e3ea7;
-  font-size: 25px;
-  font-weight: 800;
-}
-
-.welcome p {
-  color: #74688f;
-  font-size: 14px;
-  margin-top: 2px;
-}
-
-.new-job {
-  margin-top: 20px;
-  background-color: #5b3cc4;
-  border: none;
-
-  color: white;
-
-  padding: 14px 20px;
-
-  border-radius: 15px;
-
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  font-size: 15px;
-  font-weight: 600;
-
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
-}
-
-.new-job span {
-  font-size: 22px;
-}
-
-.section {
-  padding: 0 20px;
-  margin-top: 18px;
-}
-
-.section-title {
-  background: #efe5fa;
-
-  padding: 14px 16px;
-
-  border-radius: 14px;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.section-title h3 {
-  color: #5f469a;
-  font-size: 18px;
-}
-
-.section-title span {
-  color: #8474a9;
-  font-size: 13px;
-}
-
-.job-card {
-  background: #f6effd;
-  border-radius: 18px;
-  padding: 16px;
-  margin-top: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.job-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.job-header h4 {
-  color: #5e3ea7;
-}
-
-.price {
-  background: white;
-  padding: 4px 16px;
-  border-radius: 30px;
-  color: #5e3ea7;
-  font-weight: 700;
-}
-
-.job-date {
-  margin-top: 10px;
-  color: #80759b;
-}
-
-.job-footer {
-  margin-top: 14px;
-
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.job-info {
-  color: #80759b;
-  font-size: 13px;
-}
-
-.details-btn {
-  margin-left: auto;
-  border: none;
-  background: #7854d7;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 600;
-}
-
-.categories {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  margin-top: 14px;
-  padding-bottom: 5px;
-}
-
-.categories button {
-  border: none;
-  background: white;
-  color: #75658f;
-  padding: 8px 14px;
-  border-radius: 20px;
-  white-space: nowrap;
-}
-
-.categories .active {
-  background: #7b58d3;
-  color: white;
-}
-
-.freelancers {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.freelancer-card {
-  background: #f6effd;
-  border-radius: 18px;
-  padding: 16px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.avatar {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: #d8d8d8;
-  margin: 0 auto 12px;
-}
-
-.freelancer-card h4 {
-  color: #5e3ea7;
-  font-size: 15px;
-}
-
-.freelancer-card p {
-  color: #8474a9;
-  font-size: 13px;
-
-  margin-top: 4px;
-}
-
-.stars {
-  margin: 10px 0;
-}
-
-.freelancer-card button {
-  width: 100%;
-  border: none;
-  background: #7854d7;
-  color: white;
-  padding: 10px;
-  border-radius: 20px;
-  font-weight: 600;
+@media (max-width: 359px) {
+  .home {
+    padding-inline: 12px;
+  }
+  .vaga-icone {
+    width: 34px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .lista-vagas .job-card {
+    gap: 8px;
+  }
 }
 </style>

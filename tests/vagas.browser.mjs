@@ -42,6 +42,7 @@ let conta = null
 let modoPublicacao = 400
 let publicacoes = 0
 let ultimoPayload
+let vagaPersistida = null
 let scriptInicial
 
 try {
@@ -102,10 +103,17 @@ try {
         status = modoPublicacao
         data =
           status === 201
-            ? { id: 3501, ...ultimoPayload }
+            ? { id: 3501, empresa: 35, ...ultimoPayload }
             : { preco: ['Revise o pagamento informado.'] }
+        if (status === 201) vagaPersistida = data
         await aguardar(800)
-      } else data = { count: 0, next: null, previous: null, results: [] }
+      } else
+        data = {
+          count: vagaPersistida ? 1 : 0,
+          next: null,
+          previous: null,
+          results: vagaPersistida ? [vagaPersistida] : [],
+        }
       await enviar('Fetch.fulfillRequest', {
         requestId,
         responseCode: status,
@@ -268,7 +276,7 @@ try {
   assert.ok(ultimoPayload.descricao.startsWith('Modalidade: Remoto\n\n'))
   assert.ok([...ultimoPayload.descricao].length <= 200)
   assert.equal(
-    await avaliar("document.querySelector('.vaga-publicada h4').textContent"),
+    await avaliar("document.querySelector('.vaga-publicada h4').textContent.trim()"),
     'Oportunidade de teste isolado',
   )
   assert.equal(

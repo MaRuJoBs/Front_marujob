@@ -33,7 +33,18 @@ const sair = () => {
     </router-link>
 
     <button type="button" class="item" @click="sair">
-      <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+      <span class="icon"
+        ><svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M10 4H4v16h6M9 12h12m-5-5 5 5-5 5" /></svg
+      ></span>
       <p>Sair</p>
     </button>
   </footer>
@@ -43,13 +54,13 @@ const sair = () => {
 .footer {
   position: fixed;
   bottom: 0;
-  /* left: 50%;
-  transform: translateX(-50%); */
+  left: 50%;
+  transform: translateX(-50%);
   width: min(100%, 420px);
-  min-height: 85px;
+  min-height: 76px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   /* padding-bottom: env(safe-area-inset-bottom); */
-  background: #e9e4f5;
+  background: #cbbcd9;
   border-radius: 25px 25px 0 0;
   display: flex;
   justify-content: space-around;
@@ -67,7 +78,10 @@ const sair = () => {
   align-items: center;
   text-decoration: none;
   font-size: 12px;
-  color: #8b7bb5;
+  color: #65517f;
+  min-width: 44px;
+  min-height: 48px;
+  justify-content: center;
 }
 
 .icon {
@@ -77,5 +91,11 @@ const sair = () => {
 
 .router-link-active {
   color: #31168a;
+}
+
+.item:focus-visible {
+  outline: 3px solid #63369e;
+  outline-offset: 3px;
+  border-radius: 8px;
 }
 </style>

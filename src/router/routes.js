@@ -38,6 +38,18 @@ export const routes = [
     meta: { requiresAuth: true, tipo: 'empresa', hideFooter: true },
   },
   {
+    path: '/empresa/vagas/:id',
+    name: 'detalhe-vaga-empresa',
+    component: () => import('../views/DetalheVagaEmpresaView.vue'),
+    meta: { requiresAuth: true, tipo: 'empresa' },
+  },
+  {
+    path: '/editar-vaga/:id',
+    name: 'editar-vaga',
+    component: () => import('../views/CriarVagaView.vue'),
+    meta: { requiresAuth: true, tipo: 'empresa', hideFooter: true },
+  },
+  {
     path: '/definir-senha',
     name: 'definir-senha',
     component: () => import('../views/DefinirSenhaView.vue'),
