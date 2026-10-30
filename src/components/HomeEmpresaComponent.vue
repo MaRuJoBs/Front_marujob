@@ -3,6 +3,12 @@ import { ref, onMounted } from 'vue'
 // import logoMaruJob from '@/assets/images/logoempresa.png'
 import fundoEmpresa from '@/assets/images/fundoempresa.png'
 import { sessao } from '@/services/authService'
+import { storeToRefs } from 'pinia'
+import { useVagasStore } from '@/stores/vagas'
+import { formatarPagamento } from '@/utils/vagaForm'
+
+const vagasStore = useVagasStore()
+const { ultimaPublicada, confirmacao } = storeToRefs(vagasStore)
 
 const mostrarAvisoSenha = ref(false)
 
@@ -12,6 +18,19 @@ onMounted(() => {
 </script>
 <template>
   <main class="home" :style="{ backgroundImage: `url('${fundoEmpresa}')` }">
+    <div v-if="confirmacao" class="confirmacao-publicacao" role="status">
+      <div>
+        <strong>{{ confirmacao }}</strong>
+        <p>Sua oportunidade já foi enviada para a plataforma.</p>
+      </div>
+      <button
+        type="button"
+        aria-label="Fechar confirmação de publicação"
+        @click="vagasStore.confirmacao = ''"
+      >
+        ×
+      </button>
+    </div>
     <div v-if="mostrarAvisoSenha" class="aviso-senha">
       <button class="fechar-aviso" @click="mostrarAvisoSenha = false">×</button>
 
@@ -32,54 +51,42 @@ onMounted(() => {
 
       <p>Encontre os melhores freelancers para seus projetos.</p>
 
-      <button class="new-job">
+      <router-link v-if="sessao.tipo === 'empresa'" class="new-job" to="/criar-vaga">
         <span>+</span>
         Criar nova vaga
-      </button>
+      </router-link>
     </section>
 
     <!-- Vagas -->
     <section class="section">
       <div class="section-title">
-        <h3>Vagas Ativas</h3>
-        <span>Ver todos ›</span>
+        <h3>Última vaga publicada</h3>
       </div>
 
-      <div class="job-card">
+      <div v-if="ultimaPublicada" class="job-card vaga-publicada">
         <div class="job-header">
-          <h4>Vagas Ativas</h4>
+          <h4>{{ ultimaPublicada.titulo }}</h4>
 
-          <div class="price">R$ 200</div>
+          <div class="price">{{ formatarPagamento(ultimaPublicada.preco) }}</div>
         </div>
 
-        <div class="job-date"><i class="fa-regular fa-calendar"></i> 3 dias</div>
+        <p v-if="ultimaPublicada.descricao" class="descricao-publicada">
+          {{ ultimaPublicada.descricao }}
+        </p>
 
         <div class="job-footer">
-          <div class="job-info"><i class="fa-solid fa-location-dot"></i> Centro, SP</div>
+          <div class="job-info">{{ ultimaPublicada.tag }}</div>
 
-          <div class="job-info"><i class="fa-solid fa-briefcase"></i> Home Office</div>
-
-          <button class="details-btn">Ver mais</button>
+          <div class="job-info">
+            <i class="fa-regular fa-clock" aria-hidden="true"></i> {{ ultimaPublicada.tempo }} horas
+          </div>
         </div>
       </div>
 
-      <div class="job-card">
-        <div class="job-header">
-          <h4>Vagas Ativas</h4>
-
-          <div class="price">R$ 200</div>
-        </div>
-
-        <div class="job-date"><i class="fa-regular fa-calendar"></i> 3 dias</div>
-
-        <div class="job-footer">
-          <div class="job-info"><i class="fa-solid fa-location-dot"></i> Centro, SP</div>
-
-          <div class="job-info"><i class="fa-solid fa-briefcase"></i> Home Office</div>
-
-          <button class="details-btn">Ver mais</button>
-        </div>
-      </div>
+      <p v-else class="sem-publicacao">
+        A confirmação da sua próxima publicação aparecerá aqui. O histórico de vagas ainda não está
+        disponível nesta área.
+      </p>
     </section>
 
     <!-- Recomendações -->
@@ -135,6 +142,63 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.new-job {
+  text-decoration: none;
+}
+.confirmacao-publicacao {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  color: #216547;
+  background: #e9f8ee;
+  border: 1px solid #bde2ca;
+}
+.confirmacao-publicacao strong {
+  font-weight: 600;
+  font-size: 14px;
+}
+.confirmacao-publicacao p {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.confirmacao-publicacao button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 22px;
+  cursor: pointer;
+}
+.descricao-publicada {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #756889;
+  margin: 12px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vaga-publicada .job-header {
+  align-items: flex-start;
+  gap: 12px;
+}
+.vaga-publicada h4 {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.vaga-publicada .price {
+  white-space: nowrap;
+}
+.sem-publicacao {
+  padding: 18px;
+  background: #f5f3fc;
+  border-radius: 14px;
+  color: #756889;
+  font-size: 13px;
+  line-height: 1.7;
+}
 /* Aviso para criar senha */
 .aviso-senha {
   position: fixed;
@@ -276,7 +340,7 @@ onMounted(() => {
 
 .new-job {
   margin-top: 20px;
-  background-color: #4687ab;
+  background-color: #5b3cc4;
   border: none;
 
   color: white;
