@@ -31,6 +31,13 @@ export const routes = [
     meta: { requiresAuth: true, tipo: 'empresa' },
   },
   {
+    path: '/criar-vaga',
+    alias: '/CriarVaga',
+    name: 'criar-vaga',
+    component: () => import('../views/CriarVagaView.vue'),
+    meta: { requiresAuth: true, tipo: 'empresa', hideFooter: true },
+  },
+  {
     path: '/definir-senha',
     name: 'definir-senha',
     component: () => import('../views/DefinirSenhaView.vue'),

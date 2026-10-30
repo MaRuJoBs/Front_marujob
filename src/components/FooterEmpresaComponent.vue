@@ -45,8 +45,9 @@ const sair = () => {
   bottom: 0;
   /* left: 50%;
   transform: translateX(-50%); */
-  width: 420px;
-  height: 85px;
+  width: min(100%, 420px);
+  min-height: 85px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   /* padding-bottom: env(safe-area-inset-bottom); */
   background: #e9e4f5;
   border-radius: 25px 25px 0 0;
