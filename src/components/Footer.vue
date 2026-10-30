@@ -47,7 +47,7 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
   bottom: 0;
   /* left: 50%;
   transform: translateX(-50%); */
-  width: 420px; 
+  width: min(100%, 420px);
   height: 85px;
   /* padding-bottom: env(safe-area-inset-bottom); */
   background: #e9e4f5;

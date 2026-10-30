@@ -1,12 +1,12 @@
 <template>
   <div class="page">
-   <OportunidadeComponent />
+    <OportunidadeComponent />
   </div>
 </template>
 
 <script setup>
-import OportunidadeComponent from '@/components/OportunidadeComponent.vue';
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'</script>
+import OportunidadeComponent from '@/components/OportunidadeComponent.vue'
+</script>
 
 <style scoped>
 .page {

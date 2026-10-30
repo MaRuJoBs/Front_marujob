@@ -1,371 +1,129 @@
 <script setup>
-import { ref, watch } from 'vue'
-
-const props = defineProps({
-  jobs: {
-    type: Array,
-    default: () => []
-  },
-  pesquisa: {
-    type: String,
-    default: ''
-  }
-})
-
-const aberto = ref(false)
-
-const categoriasSelecionadas = ref([])
-const tempoMinimo = ref('')
-const tempoMaximo = ref('')
-const precoMinimo = ref('')
-const precoMaximo = ref('')
-
-
-
-
+import { nextTick, ref } from 'vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faSliders } from '@fortawesome/free-solid-svg-icons'
+import { parametrosOportunidades } from '@/utils/oportunidades'
+const props = defineProps({ filtros: { type: Object, required: true } })
 const emit = defineEmits(['aplicar-filtros', 'limpar-filtros'])
-
-const abrirFiltros = () => {
+const aberto = ref(false)
+const rascunho = ref({})
+const erro = ref('')
+const primeiroCampo = ref(null)
+const botaoAbrir = ref(null)
+function abrir() {
+  rascunho.value = { ...props.filtros }
+  erro.value = ''
   aberto.value = true
+  nextTick(() => primeiroCampo.value?.focus())
 }
-
-const fecharFiltros = () => {
+function fechar() {
   aberto.value = false
+  nextTick(() => botaoAbrir.value?.focus())
 }
-
-const aplicarFiltros = () => {
-  const termoPesquisa = props.pesquisa.toLowerCase().trim()
-
-  const resultado = props.jobs.filter((job) => {
-
-    if (termoPesquisa) {
-      const titulo = String(job.titulo || '').toLowerCase()
-      const descricao = String(job.descricao || '').toLowerCase()
-      const tag = String(job.tag || '').toLowerCase()
-
-      const encontrouPesquisa =
-        titulo.startsWith(termoPesquisa) ||
-        descricao.includes(termoPesquisa) ||
-        tag.includes(termoPesquisa)
-
-      if (!encontrouPesquisa) {
-        return false
-      }
-    }
-
- 
-    if (categoriasSelecionadas.value.length > 0) {
-      const categoriaJob = String(job.tag || '')
-        .toLowerCase()
-        .trim()
-
-      const encontrouCategoria =
-        categoriasSelecionadas.value.some(
-          (categoria) =>
-            categoriaJob === categoria.toLowerCase().trim()
-        )
-
-      if (!encontrouCategoria) {
-        return false
-      }
-    }
-
-  
-    if (
-      tempoMinimo.value !== '' &&
-      Number(job.tempo) < Number(tempoMinimo.value)
-    ) {
-      return false
-    }
-
- 
-    if (
-      tempoMaximo.value !== '' &&
-      Number(job.tempo) > Number(tempoMaximo.value)
-    ) {
-      return false
-    }
-
-  
-    if (
-      precoMinimo.value !== '' &&
-      Number(job.preco) < Number(precoMinimo.value)
-    ) {
-      return false
-    }
-
-
-    if (
-      precoMaximo.value !== '' &&
-      Number(job.preco) > Number(precoMaximo.value)
-    ) {
-      return false
-    }
-
-    return true
-  })
-
-  emit('aplicar-filtros', resultado)
-
-  fecharFiltros()
-}
-
-const filtrarJobs = () => {
-  aplicarFiltros()
-  fecharFiltros()
-}
-
-const limparFiltros = () => {
-  categoriasSelecionadas.value = []
-  tempoMinimo.value = ''
-  tempoMaximo.value = ''
-  precoMinimo.value = ''
-  precoMaximo.value = ''
-
-  emit('limpar-filtros')
-
-  fecharFiltros()
-}
-
-watch(
-  () => props.pesquisa,
-  () => {
-    aplicarFiltros()
+function teclaModal(event) {
+  if (event.key !== 'Tab') return
+  const campos = Array.from(event.currentTarget.querySelectorAll('button, input'))
+  const primeiro = campos[0],
+    ultimo = campos.at(-1)
+  if (event.shiftKey && document.activeElement === primeiro) {
+    event.preventDefault()
+    ultimo.focus()
+  } else if (!event.shiftKey && document.activeElement === ultimo) {
+    event.preventDefault()
+    primeiro.focus()
   }
-)
+}
+function aplicar() {
+  try {
+    parametrosOportunidades(rascunho.value)
+    emit('aplicar-filtros', { ...rascunho.value })
+    fechar()
+  } catch (e) {
+    erro.value = e.message
+  }
+}
+function limpar() {
+  emit('limpar-filtros')
+  fechar()
+}
+defineExpose({ abrir })
 </script>
-
 <template>
   <div class="filtros-container">
-
-    
-    <button class="botao-filtro" @click="abrirFiltros">
-      <span class="fa-solid fa-filter"></span>
-      Filtros
+    <button
+      ref="botaoAbrir"
+      class="botao-filtro"
+      :aria-expanded="aberto"
+      aria-haspopup="dialog"
+      @click="abrir"
+    >
+      <span>Filtros</span><FontAwesomeIcon :icon="faSliders" aria-hidden="true" />
     </button>
-
-
-    
-    <div v-if="aberto" class="filtros-overlay">
-
-      <div class="filtros-painel">
-
-        
+    <div v-if="aberto" class="filtros-overlay" @click.self="fechar" @keydown.esc="fechar">
+      <form
+        class="filtros-painel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filtros de oportunidades"
+        @submit.prevent="aplicar"
+        @keydown="teclaModal"
+      >
         <header class="filtros-header">
-
-          <div>
-            <h2>Filtros</h2>
-            <p>Refine sua busca</p>
-          </div>
-
-          <button
-            class="botao-fechar"
-            @click="fecharFiltros"
-          >
-            <span class="fa-solid fa-xmark"></span>
+          <h2>Filtros</h2>
+          <button type="button" class="botao-fechar" aria-label="Fechar filtros" @click="fechar">
+            ×
           </button>
-
         </header>
-
-
-        
-        <main class="filtros-conteudo">
-
+        <div class="filtros-conteudo">
           <section class="filtro-secao">
-
-            <h3>Categoria</h3>
-
-            <div class="categorias">
-
-              <label>
-                <input
-  v-model="categoriasSelecionadas"
-  type="checkbox"
-  value="Desenvolvimento Web"
->
-                <span>Desenvolvimento Web</span>
-              </label>
-
-              <label>
-                <input
-  v-model="categoriasSelecionadas"
-  type="checkbox"
-  value="Mobile"
->
-                <span>Mobile</span>
-              </label>
-
-              <label>
-                <input
-  v-model="categoriasSelecionadas"
-  type="checkbox"
-  value="UI/UX"
->
-                <span>UI/UX</span>
-              </label>
-
-              <label>
-                <input
-  v-model="categoriasSelecionadas"
-  type="checkbox"
-  value="Design Gráfico"
->
-                <span>Design Gráfico</span>
-              </label>
-
-              <label>
-                <input
-  v-model="categoriasSelecionadas"
-  type="checkbox"
-  value="Marketing"
->
-                <span>Marketing</span>
-              </label>
-
-              <label>
-                <input
-  v-model="categoriasSelecionadas"
-  type="checkbox"
-  value="Vídeo"
->
-                <span>Edição de Vídeo</span>
-              </label>
-
-              <label>
-                <input
-  v-model="categoriasSelecionadas"
-  type="checkbox"
-  value="Suporte"
->
-                <span>Suporte Técnico</span>
-              </label>
-
-              <label>
-                <input
-  v-model="categoriasSelecionadas"
-  type="checkbox"
-  value="Outros"
->
-                <span>Outros</span>
-              </label>
-
+            <h3>Tag</h3>
+            <label for="filtro-tag">Informe a tag da oportunidade</label>
+            <div class="input-wrapper">
+              <input id="filtro-tag" ref="primeiroCampo" v-model="rascunho.tag" type="text" />
             </div>
-
           </section>
-
-
-          <!-- TEMPO -->
           <section class="filtro-secao">
-
-            <h3>Tempo estimado</h3>
-
-            <div class="campos">
-
-              <div class="campo">
-                <label>Mínimo</label>
-
-                <div class="input-wrapper">
-                  <input
-  v-model="tempoMinimo"
-  type="number"
-  min="0"
-  placeholder="0"
->
-                  <span>h</span>
-                </div>
-              </div>
-
-              <span class="separador">até</span>
-
-              <div class="campo">
-                <label>Máximo</label>
-
-                <div class="input-wrapper">
-                  <input
-  v-model="tempoMaximo"
-  type="number"
-  min="0"
-  placeholder="∞"
->
-                  <span>h</span>
-                </div>
-              </div>
-
-            </div>
-
-          </section>
-
-          <section class="filtro-secao">
-
             <h3>Preço</h3>
-
             <div class="campos">
-
               <div class="campo">
-                <label>Mínimo</label>
-
+                <label for="preco-min">Mínimo</label>
                 <div class="input-wrapper">
-                  <span>R$</span>
-
-                  <input
-  v-model="precoMinimo"
-  type="number"
-  min="0"
-  placeholder="0"
->
+                  <input id="preco-min" v-model="rascunho.preco_min" inputmode="decimal" />
                 </div>
               </div>
-
-              <span class="separador">até</span>
-
               <div class="campo">
-                <label>Máximo</label>
-
+                <label for="preco-max">Máximo</label>
                 <div class="input-wrapper">
-                  <span>R$</span>
-
-                  <input
-  v-model="precoMaximo"
-  type="number"
-  min="0"
-  placeholder="∞"
->
+                  <input id="preco-max" v-model="rascunho.preco_max" inputmode="decimal" />
                 </div>
               </div>
-
             </div>
-
           </section>
-
-        </main>
-
+          <p v-if="erro" role="alert">{{ erro }}</p>
+        </div>
         <footer class="filtros-footer">
-
-          <button
-  class="limpar"
-  @click="limparFiltros"
->
-  Limpar
-</button>
-
-<button
-  class="aplicar"
-  @click="filtrarJobs"
->
-  Aplicar filtros
-</button>
-
+          <button type="button" class="limpar" @click="limpar">Limpar filtros</button
+          ><button class="aplicar" type="submit">Aplicar filtros</button>
         </footer>
-
-      </div>
-
+      </form>
     </div>
-
   </div>
 </template>
-
-
 <style scoped>
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #68449b;
+  outline-offset: 3px;
+}
+.campo {
+  min-width: 0;
+}
+input {
+  box-sizing: border-box;
+  min-width: 0;
+  font-size: 16px !important;
+}
+
 /* ===== CONTAINER ===== */
 .filtros-container {
   display: inline-block;
@@ -376,13 +134,14 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  background-color: #6c2bd9;
+  padding: 9px 12px;
+  min-height: 40px;
+  background-color: #7050a6;
   color: #fff;
   border: none;
   border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
@@ -404,8 +163,12 @@ watch(
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ===== PAINEL (bottom sheet) ===== */
@@ -422,8 +185,12 @@ watch(
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 /* ===== HEADER ===== */
@@ -498,7 +265,7 @@ watch(
   background: #f8f8f8;
 }
 
-.categorias input[type="checkbox"] {
+.categorias input[type='checkbox'] {
   width: 18px;
   height: 18px;
   accent-color: #6c2bd9;
