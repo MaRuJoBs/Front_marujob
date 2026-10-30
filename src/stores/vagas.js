@@ -8,12 +8,25 @@ export const useVagasStore = defineStore('vagas', () => {
   const proprietarioId = ref(null)
   const ultimaPublicada = shallowRef(null)
   const confirmacao = ref('')
+  const envios = reactive(new Set())
+  const avisoPublicacao = ref('')
+
+  function iniciarEnvio(chave) {
+    if (envios.has(chave)) return false
+    envios.add(chave)
+    return true
+  }
+
+  function finalizarEnvio(chave) {
+    envios.delete(chave)
+  }
 
   function prepararRascunho(usuarioId) {
     if (proprietarioId.value !== usuarioId) {
       Object.assign(rascunho, novoRascunhoVaga())
       ultimaPublicada.value = null
       confirmacao.value = ''
+      avisoPublicacao.value = ''
     }
     proprietarioId.value = usuarioId
   }
@@ -21,6 +34,7 @@ export const useVagasStore = defineStore('vagas', () => {
   function registrarPublicacao(vaga, preservarRascunho = false) {
     ultimaPublicada.value = vaga && typeof vaga === 'object' ? vaga : null
     confirmacao.value = 'Vaga publicada com sucesso!'
+    avisoPublicacao.value = ''
     if (!preservarRascunho) Object.assign(rascunho, novoRascunhoVaga())
   }
 
@@ -29,6 +43,8 @@ export const useVagasStore = defineStore('vagas', () => {
     () => {
       ultimaPublicada.value = null
       confirmacao.value = ''
+      avisoPublicacao.value = ''
+      envios.clear()
     },
     { flush: 'sync' },
   )
@@ -46,5 +62,15 @@ export const useVagasStore = defineStore('vagas', () => {
     { flush: 'sync' },
   )
 
-  return { rascunho, ultimaPublicada, confirmacao, prepararRascunho, registrarPublicacao }
+  return {
+    rascunho,
+    ultimaPublicada,
+    confirmacao,
+    prepararRascunho,
+    registrarPublicacao,
+    envios,
+    iniciarEnvio,
+    finalizarEnvio,
+    avisoPublicacao,
+  }
 })

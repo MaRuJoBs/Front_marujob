@@ -12,7 +12,7 @@ export const categoriasVaga = [
 
 export const limitesVaga = { titulo: 100, descricao: 200, tag: 50, tempo: 50 }
 export const modalidadesVaga = ['Remoto', 'Híbrido', 'Presencial']
-// Proposta de integração para o backend; campos opcionais e independentes da descrição.
+// Contrato conferido no model/serializer da DEV do backend (PR #17).
 export const camposComplementaresVaga = [
   {
     nome: 'requisitos',
@@ -111,7 +111,11 @@ export function validarEdicaoVaga(form, original) {
   if (!original) return erros
   const anterior = formularioDaVaga(original)
   for (const { nome } of camposComplementaresVaga) {
-    if (textoCampo(form[nome]) === anterior[nome]) delete erros[nome]
+    if (
+      !['salario_minimo', 'salario_maximo'].includes(nome) &&
+      textoCampo(form[nome]) === anterior[nome]
+    )
+      delete erros[nome]
   }
   for (const campo of ['titulo', 'categoria', 'preco', 'tempo']) {
     if (form[campo] === anterior[campo] && form[campo].trim()) delete erros[campo]
@@ -200,7 +204,7 @@ export function validarVaga(form) {
 }
 
 function dataPublicacaoValida(valor) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor) || valor.startsWith('0000-')) return false
   const data = new Date(`${valor}T00:00:00Z`)
   return Number.isFinite(data.getTime()) && data.toISOString().slice(0, 10) === valor
 }

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { setImmediate as aguardar } from 'node:timers/promises'
 import axios from 'axios'
 import { createServer } from 'vite'
-import { createRouter, createMemoryHistory } from 'vue-router'
-import { createRenderer, h, nextTick } from 'vue'
+import { createRouter, createMemoryHistory, RouterView, useRoute } from 'vue-router'
+import { createRenderer, h, nextTick, onBeforeUnmount } from 'vue'
 import { createPinia, setActivePinia, disposePinia } from 'pinia'
 
 // Testes exclusivamente do frontend: transporte em memória, sem servidor ou publicação real.
@@ -90,6 +90,9 @@ const { protegerRota } = await vite.ssrLoadModule('/src/router/authGuard.js')
 const servicoGestao = await vite.ssrLoadModule('/src/services/freelanceService.js')
 const { useGerenciamentoVagas } = await vite.ssrLoadModule('/src/stores/gerenciamentoVagas.js')
 const { useEditarVaga } = await vite.ssrLoadModule('/src/composables/useEditarVaga.js')
+const { useChaveFormularioVaga } = await vite.ssrLoadModule(
+  '/src/composables/useChaveFormularioVaga.js',
+)
 const { useDetalheVagaEmpresa } = await vite.ssrLoadModule(
   '/src/composables/useDetalheVagaEmpresa.js',
 )
@@ -105,10 +108,14 @@ function autenticar(tipo = 'empresa', id = 7) {
   auth.sessao.tipo = tipo
 }
 
-const criarRouter = () => {
+const criarRouter = (componentes = {}) => {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: routes.map((route) => (route.component ? { ...route, component: {} } : route)),
+    routes: routes.map((route) =>
+      route.component
+        ? { ...route, component: componentes[route.name] || { render: () => h('div') } }
+        : route,
+    ),
   })
   router.beforeEach(protegerRota)
   return router
@@ -1040,4 +1047,311 @@ test('edição mantém dados complementares quando o servidor os ignora', async 
   assert.equal(tela.estado.form.beneficios, 'Horário flexível')
   assert.equal(tela.router.currentRoute.value.path, '/editar-vaga/12')
   tela.desmontar()
+})
+
+// Exercita RouterView e ciclo de vida real dos composables. O teste Chrome também
+// monta os SFCs originais e comprova que CriarVagaView não é desmontada.
+async function montarRotasFormulario(inicial = '/criar-vaga') {
+  const instancias = []
+  let montagensView = 0
+  const Formulario = {
+    setup() {
+      const editando = useRoute().name === 'editar-vaga'
+      const item = {
+        editando,
+        estado: editando ? useEditarVaga() : useCriarVaga(),
+        desmontada: false,
+      }
+      instancias.push(item)
+      onBeforeUnmount(() => {
+        item.desmontada = true
+      })
+      return () => h('form')
+    },
+  }
+  const View = {
+    setup() {
+      montagensView++
+      const chave = useChaveFormularioVaga()
+      return () =>
+        session.sessao.tipo === 'empresa' && session.sessao.usuario
+          ? h(Formulario, { key: chave.value })
+          : h('p')
+    },
+  }
+  const router = criarRouter({ 'criar-vaga': View, 'editar-vaga': View })
+  await router.push(inicial)
+  const app = renderer.createApp({ render: () => h(RouterView) })
+  app.use(pinia)
+  app.use(router)
+  app.mount({ children: [] })
+  const estabilizar = async () => {
+    await aguardar()
+    await nextTick()
+  }
+  await estabilizar()
+  return {
+    router,
+    instancias,
+    atual: () => instancias.at(-1),
+    montagens: () => montagensView,
+    ir: async (rota) => {
+      await router.push(rota)
+      await estabilizar()
+    },
+    estabilizar,
+    desmontar: () => app.unmount(),
+  }
+}
+
+test('SPA mantém a view e reinicia formulário entre criação, edição A, edição B e criação', async () => {
+  autenticar()
+  transporte = async (c) =>
+    resposta(
+      c,
+      { ...propria(Number(c.url.split('/')[1])), titulo: 'Vaga ' + c.url.split('/')[1] },
+      200,
+    )
+  const tela = await montarRotasFormulario()
+  try {
+    const criacao = tela.atual()
+    Object.assign(criacao.estado.form, formularioValido(), { titulo: 'Rascunho próprio' })
+    await tela.ir('/editar-vaga/12')
+    assert.equal(criacao.desmontada, true)
+    assert.equal(tela.atual().editando, true)
+    assert.equal(tela.atual().estado.form.titulo, 'Vaga 12')
+    await tela.ir('/editar-vaga/22')
+    assert.equal(tela.atual().estado.form.titulo, 'Vaga 22')
+    await tela.ir('/criar-vaga')
+    assert.equal(tela.atual().editando, false)
+    assert.equal(tela.atual().estado.form.titulo, 'Rascunho próprio')
+    assert.equal(tela.montagens(), 1)
+    assert.deepEqual(
+      chamadas.map((c) => c.method),
+      ['get', 'get'],
+    )
+  } finally {
+    tela.desmontar()
+  }
+})
+
+test('SPA envia POST na criação e PATCH no ID correto, sem executar instâncias desmontadas', async () => {
+  autenticar()
+  transporte = async (c) =>
+    resposta(
+      c,
+      { ...propria(c.method === 'post' ? 923 : Number(c.url.split('/')[1])), ...corpo(c) },
+      c.method === 'post' ? 201 : 200,
+    )
+  const tela = await montarRotasFormulario('/editar-vaga/12')
+  try {
+    const edicao = tela.atual()
+    await tela.ir('/criar-vaga')
+    await edicao.estado.publicar()
+    const criacao = tela.atual()
+    Object.assign(criacao.estado.form, formularioValido())
+    await criacao.estado.publicar()
+    await criacao.estado.publicar()
+    await tela.ir('/editar-vaga/22')
+    tela.atual().estado.form.titulo = 'Edição da vaga 22'
+    await criacao.estado.publicar()
+    await tela.atual().estado.publicar()
+    const mutacoes = chamadas.filter((c) => c.method !== 'get')
+    assert.deepEqual(
+      mutacoes.map((c) => [c.method, c.url]),
+      [
+        ['post', 'freelances/'],
+        ['patch', 'freelances/22/'],
+      ],
+    )
+  } finally {
+    tela.desmontar()
+  }
+})
+
+test('SPA troca de conta limpa formulário e ignora GET atrasado de outra vaga', async () => {
+  autenticar()
+  const atraso = pendente()
+  transporte = async (c) => {
+    if (c.url === 'freelances/12/') await atraso.promise
+    return resposta(
+      c,
+      {
+        ...propria(Number(c.url.split('/')[1]), session.sessao.usuario.id),
+        titulo: 'Conta ' + session.sessao.usuario.id + ' vaga ' + c.url.split('/')[1],
+      },
+      200,
+    )
+  }
+  const tela = await montarRotasFormulario('/editar-vaga/12')
+  try {
+    await tela.ir('/editar-vaga/22')
+    assert.equal(tela.atual().estado.form.titulo, 'Conta 7 vaga 22')
+    atraso.resolve()
+    await tela.estabilizar()
+    assert.equal(tela.atual().estado.form.titulo, 'Conta 7 vaga 22')
+    await tela.ir('/criar-vaga')
+    Object.assign(tela.atual().estado.form, formularioValido(), { titulo: 'Privado da conta 7' })
+    autenticar('empresa', 9)
+    await tela.estabilizar()
+    assert.equal(tela.atual().estado.form.titulo, '')
+    assert.equal(tela.montagens(), 1)
+    await tela.ir('/editar-vaga/22')
+    assert.equal(tela.atual().estado.form.titulo, 'Conta 9 vaga 22')
+  } finally {
+    atraso.resolve()
+    tela.desmontar()
+  }
+})
+
+test('SPA bloqueia POST duplicado ao sair e voltar enquanto a publicação está pendente', async () => {
+  autenticar()
+  const atraso = pendente()
+  transporte = async (c) => {
+    if (c.method === 'get') return resposta(c, propria(), 200)
+    await atraso.promise
+    return resposta(c, propria(), 201)
+  }
+  const tela = await montarRotasFormulario()
+  try {
+    Object.assign(tela.atual().estado.form, formularioValido())
+    const envio = tela.atual().estado.publicar()
+    await aguardar()
+    await tela.ir('/editar-vaga/12')
+    await tela.ir('/criar-vaga')
+    assert.equal(tela.atual().estado.publicando.value, true)
+    await tela.atual().estado.publicar()
+    assert.equal(chamadas.filter((c) => c.method === 'post').length, 1)
+    atraso.resolve()
+    await envio
+    assert.equal(tela.router.currentRoute.value.path, '/criar-vaga')
+    assert.equal(tela.atual().estado.form.titulo, '')
+    assert.equal(tela.atual().estado.publicando.value, false)
+  } finally {
+    atraso.resolve()
+    tela.desmontar()
+  }
+})
+
+test('SPA bloqueia PATCH duplicado ao voltar à mesma vaga e recarrega após a resposta', async () => {
+  autenticar()
+  const atraso = pendente()
+  let vaga = propria()
+  transporte = async (c) => {
+    if (c.method === 'patch') {
+      await atraso.promise
+      vaga = { ...vaga, ...corpo(c) }
+    }
+    return resposta(c, vaga, 200)
+  }
+  const tela = await montarRotasFormulario('/editar-vaga/12')
+  try {
+    tela.atual().estado.form.titulo = 'Atualizada no servidor'
+    const envio = tela.atual().estado.publicar()
+    await aguardar()
+    await tela.ir('/criar-vaga')
+    await tela.ir('/editar-vaga/12')
+    assert.equal(tela.atual().estado.publicando.value, true)
+    assert.equal(tela.atual().estado.carregando.value, true)
+    await tela.atual().estado.publicar()
+    atraso.resolve()
+    await envio
+    await tela.estabilizar()
+    assert.equal(tela.atual().estado.form.titulo, 'Atualizada no servidor')
+    assert.equal(chamadas.filter((c) => c.method === 'patch').length, 1)
+    assert.equal(tela.router.currentRoute.value.path, '/editar-vaga/12')
+  } finally {
+    atraso.resolve()
+    tela.desmontar()
+  }
+})
+
+test('contrato DEV: faixa considera máximo intacto e data não aceita ano zero', () => {
+  const vaga = { ...propria(), salario_minimo: '2000.00', salario_maximo: '3000.00' }
+  const form = formUtils.formularioDaVaga(vaga)
+  form.salario_minimo = '4000'
+  assert.ok(formUtils.validarEdicaoVaga(form, vaga).salario_maximo)
+  assert.ok(
+    formUtils.validarVaga({ ...formularioValido(), data_publicacao: '0000-01-01' }).data_publicacao,
+  )
+  form.salario_minimo = '2500'
+  assert.deepEqual(formUtils.validarEdicaoVaga(form, vaga), {})
+  assert.deepEqual(formUtils.montarPayloadEdicao(form, vaga), { salario_minimo: '2500.00' })
+})
+
+test('SPA resposta antiga da mesma rota não vaza entre contas', async () => {
+  autenticar()
+  const atraso = pendente()
+  transporte = async (c) => {
+    const empresa = session.sessao.usuario.id
+    if (empresa === 7) await atraso.promise
+    return resposta(c, { ...propria(12, empresa), titulo: 'Dados da conta ' + empresa }, 200)
+  }
+  const tela = await montarRotasFormulario('/editar-vaga/12')
+  try {
+    autenticar('empresa', 9)
+    await tela.estabilizar()
+    assert.equal(tela.atual().estado.form.titulo, 'Dados da conta 9')
+    atraso.resolve()
+    await tela.estabilizar()
+    assert.equal(tela.atual().estado.form.titulo, 'Dados da conta 9')
+    assert.equal(tela.montagens(), 1)
+  } finally {
+    atraso.resolve()
+    tela.desmontar()
+  }
+})
+
+test('SPA mantém bloqueio de republicação ao voltar após POST parcialmente confirmado', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(), c.method === 'post' ? 201 : 200)
+  const tela = await montarRotasFormulario()
+  try {
+    Object.assign(tela.atual().estado.form, formularioValido(), complementosValidos())
+    await tela.atual().estado.publicar()
+    await tela.ir('/editar-vaga/12')
+    await tela.ir('/criar-vaga')
+    assert.equal(tela.atual().estado.publicada.value, true)
+    assert.match(tela.atual().estado.erroGeral.value, /não confirmou/)
+    assert.equal(tela.atual().estado.form.requisitos, 'Conhecimento em Vue')
+    await tela.atual().estado.publicar()
+    assert.equal(chamadas.filter((c) => c.method === 'post').length, 1)
+  } finally {
+    tela.desmontar()
+  }
+})
+
+test('contrato DEV: opções exatas e defaults vazios/nulos retornados pelo serializer', () => {
+  const opcoes = {
+    tipo_contratacao: ['CLT', 'PJ', 'Autônomo', 'Temporário', 'Estágio', 'Outros'],
+    nivel_experiencia: ['Iniciante', 'Júnior', 'Pleno', 'Sênior', 'Especialista'],
+  }
+  for (const [campo, valores] of Object.entries(opcoes)) {
+    assert.deepEqual(
+      formUtils.camposComplementaresVaga.find((c) => c.nome === campo).opcoes,
+      valores,
+    )
+    for (const valor of valores)
+      assert.equal(
+        formUtils.validarVaga({ ...formularioValido(), [campo]: valor })[campo],
+        undefined,
+      )
+    assert.ok(
+      formUtils.validarVaga({ ...formularioValido(), [campo]: 'valor desconhecido' })[campo],
+    )
+  }
+  const respostaAntiga = {
+    ...propria(),
+    requisitos: '',
+    beneficios: '',
+    tipo_contratacao: '',
+    nivel_experiencia: '',
+    jornada_trabalho: '',
+    data_publicacao: null,
+    salario_minimo: null,
+    salario_maximo: null,
+  }
+  const form = formUtils.formularioDaVaga(respostaAntiga)
+  assert.deepEqual(formUtils.validarEdicaoVaga(form, respostaAntiga), {})
+  assert.deepEqual(formUtils.montarPayloadEdicao(form, respostaAntiga), {})
 })

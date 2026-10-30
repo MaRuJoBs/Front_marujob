@@ -188,6 +188,51 @@ try {
   assert.equal(await avaliar('!!document.querySelector(\'a[href="/criar-vaga"]\')'), false)
   console.log('PASSOU: visitante e freelancer não acessam a criação.')
   await abrir('empresa')
+  // Navegação SPA direta: a view compartilhada deve permanecer montada.
+  vagas = [3601, 3602].map((id) => ({
+    id,
+    empresa: 35,
+    titulo: 'Vaga ' + id,
+    descricao: 'Modalidade: Remoto\n\nDescrição ' + id,
+    tag: 'Desenvolvimento Web',
+    preco: '100.00',
+    tempo: '10',
+  }))
+  await avaliar(
+    "(async()=>{window.__routerFormulario=(await import('/src/router/index.js')).default;window.__viewFormulario=document.querySelector('.criar-vaga').__vueParentComponent.parent; const campo=document.querySelector('#vaga-titulo');campo.value='Rascunho da criação';campo.dispatchEvent(new Event('input',{bubbles:true}));})()",
+  )
+  await avaliar("window.__routerFormulario.push('/editar-vaga/3601')")
+  await esperar(
+    "document.querySelector('.apresentacao h1')?.textContent.trim()==='Editar oportunidade'",
+  )
+  assert.equal(
+    await avaliar(
+      "document.querySelector('.criar-vaga').__vueParentComponent.parent===window.__viewFormulario",
+    ),
+    true,
+  )
+  await esperar("document.querySelector('#vaga-titulo')?.value==='Vaga 3601'")
+  await avaliar("window.__routerFormulario.push('/editar-vaga/3602')")
+  await esperar("document.querySelector('#vaga-titulo')?.value==='Vaga 3602'")
+  await avaliar("window.__routerFormulario.push('/criar-vaga')")
+  await esperar(
+    "document.querySelector('.apresentacao h1')?.textContent.trim()==='Criar nova vaga'",
+  )
+  assert.equal(
+    await avaliar(
+      "document.querySelector('.criar-vaga').__vueParentComponent.parent===window.__viewFormulario",
+    ),
+    true,
+  )
+  assert.equal(await avaliar("document.querySelector('#vaga-titulo').value"), 'Rascunho da criação')
+  assert.equal(publicacoes, 0)
+  await avaliar(
+    "(()=>{const campo=document.querySelector('#vaga-titulo');campo.value='';campo.dispatchEvent(new Event('input',{bubbles:true}));})()",
+  )
+  vagas = []
+  console.log(
+    'PASSOU: criação → edição A → edição B → criação, sem desmontar a view nem publicar durante navegação.',
+  )
   assert.equal(await avaliar("document.querySelector('#vaga-categoria').value"), '')
   assert.equal(await avaliar("document.querySelector('#vaga-modalidade').value"), '')
   assert.deepEqual(
