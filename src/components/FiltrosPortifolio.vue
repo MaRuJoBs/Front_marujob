@@ -4,39 +4,26 @@ import { ref, computed } from 'vue'
 const props = defineProps({
   projetos: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   pesquisa: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 })
 
-const emit = defineEmits([
-  'aplicar-filtros',
-  'limpar-filtros'
-])
+const emit = defineEmits(['aplicar-filtros', 'limpar-filtros'])
 
 const aberto = ref(false)
 const categoriasSelecionadas = ref([])
 const tecnologiasSelecionadas = ref([])
 
-const categorias = [
-  'Website',
-  'Aplicativo',
-  'UI / UX',
-  'Branding',
-  'Social Media',
-  'Marketing',
-  'Design Gráfico'
-]
+const categorias = computed(() => [
+  ...new Set(props.projetos.map((p) => p.categoria).filter(Boolean)),
+])
 
 const tecnologias = computed(() => {
-  return [
-    ...new Set(
-      props.projetos.flatMap(projeto => projeto.tags || [])
-    )
-  ]
+  return [...new Set(props.projetos.flatMap((projeto) => projeto.tags || []))]
 })
 
 const abrirFiltros = () => {
@@ -50,14 +37,13 @@ const fecharFiltros = () => {
 const aplicarFiltros = () => {
   const resultado = props.projetos.filter((projeto) => {
     if (categoriasSelecionadas.value.length > 0) {
-      const categoriaProjeto = String(
-        projeto.categoria || ''
-      ).toLowerCase().trim()
+      const categoriaProjeto = String(projeto.categoria || '')
+        .toLowerCase()
+        .trim()
 
-      const encontrouCategoria =
-        categoriasSelecionadas.value.some(categoria =>
-          categoriaProjeto === categoria.toLowerCase().trim()
-        )
+      const encontrouCategoria = categoriasSelecionadas.value.some(
+        (categoria) => categoriaProjeto === categoria.toLowerCase().trim(),
+      )
 
       if (!encontrouCategoria) {
         return false
@@ -65,14 +51,11 @@ const aplicarFiltros = () => {
     }
 
     if (tecnologiasSelecionadas.value.length > 0) {
-      const tagsProjeto = (projeto.tags || []).map(tag =>
-        String(tag).toLowerCase().trim()
-      )
+      const tagsProjeto = (projeto.tags || []).map((tag) => String(tag).toLowerCase().trim())
 
-      const encontrouTecnologia =
-        tecnologiasSelecionadas.value.some(tecnologia =>
-          tagsProjeto.includes(tecnologia.toLowerCase().trim())
-        )
+      const encontrouTecnologia = tecnologiasSelecionadas.value.some((tecnologia) =>
+        tagsProjeto.includes(tecnologia.toLowerCase().trim()),
+      )
 
       if (!encontrouTecnologia) {
         return false
@@ -97,49 +80,30 @@ const limparFiltros = () => {
 
 <template>
   <div class="filtros-container">
-    <button
-      class="botao-filtro"
-      @click="abrirFiltros"
-    >
+    <button class="botao-filtro" @click="abrirFiltros">
       <FontAwesomeIcon :icon="['fas', 'sliders']" />
     </button>
 
-    <div
-      v-if="aberto"
-      class="filtros-overlay"
-      @click.self="fecharFiltros"
-    >
+    <div v-if="aberto" class="filtros-overlay" @click.self="fecharFiltros">
       <div class="filtros-painel">
-
         <header class="filtros-header">
           <div>
             <h2>Filtros</h2>
             <p>Refine seus projetos</p>
           </div>
 
-          <button
-            class="botao-fechar"
-            @click="fecharFiltros"
-          >
+          <button class="botao-fechar" @click="fecharFiltros">
             <FontAwesomeIcon :icon="['fas', 'xmark']" />
           </button>
         </header>
 
         <main class="filtros-conteudo">
-
           <section class="filtro-secao">
             <h3>Categoria</h3>
 
             <div class="opcoes">
-              <label
-                v-for="categoria in categorias"
-                :key="categoria"
-              >
-                <input
-                  v-model="categoriasSelecionadas"
-                  type="checkbox"
-                  :value="categoria"
-                >
+              <label v-for="categoria in categorias" :key="categoria">
+                <input v-model="categoriasSelecionadas" type="checkbox" :value="categoria" />
 
                 <span>{{ categoria }}</span>
               </label>
@@ -150,41 +114,22 @@ const limparFiltros = () => {
             <h3>Tecnologia / Tag</h3>
 
             <div class="opcoes">
-              <label
-                v-for="tecnologia in tecnologias"
-                :key="tecnologia"
-              >
-                <input
-                  v-model="tecnologiasSelecionadas"
-                  type="checkbox"
-                  :value="tecnologia"
-                >
+              <label v-for="tecnologia in tecnologias" :key="tecnologia">
+                <input v-model="tecnologiasSelecionadas" type="checkbox" :value="tecnologia" />
 
                 <span>{{ tecnologia }}</span>
               </label>
             </div>
           </section>
-
         </main>
 
         <footer class="filtros-footer">
-          <button
-            type="button"
-            class="botao-limpar"
-            @click="limparFiltros"
-          >
-            Limpar filtros
-          </button>
+          <button type="button" class="botao-limpar" @click="limparFiltros">Limpar filtros</button>
 
-          <button
-            type="button"
-            class="botao-aplicar"
-            @click="aplicarFiltros"
-          >
+          <button type="button" class="botao-aplicar" @click="aplicarFiltros">
             Aplicar filtros
           </button>
         </footer>
-
       </div>
     </div>
   </div>
@@ -212,7 +157,7 @@ const limparFiltros = () => {
 .filtros-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: flex-end;
   justify-content: center;

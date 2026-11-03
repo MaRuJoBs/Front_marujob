@@ -1,154 +1,139 @@
-
-import { ref, onMounted } from 'vue'
+﻿import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
-
 import { usePerfilLocalizacao } from '@/composables/usePerfilLocalizacao'
 import { usePerfilImagem } from '@/composables/usePerfilImagem'
 import { usePerfilHabilidades } from '@/composables/usePerfilHabilidades'
-
+import { useRecursoPrivado } from '@/composables/useRecursoPrivado'
+import { consultarPerfil, atualizarPerfil } from '@/services/perfilPortfolioService'
+import { sessao } from '@/services/authSession'
+import { validarLista, errosCampos } from '@/utils/perfilPortfolio'
 export function useEditarPerfil() {
   const router = useRouter()
-
-  const nome = ref('')
-  const profissao = ref('')
-  const sobre = ref('')
-  const telefone = ref('')
-
-  const localizacaoPerfil = usePerfilLocalizacao()
-  const imagemPerfil = usePerfilImagem()
-  const habilidadesPerfil = usePerfilHabilidades()
-
-  const carregando = ref(true)
-  const salvando = ref(false)
-  const erro = ref('')
-  const sucesso = ref('')
-
-  const carregarPerfil = async () => {
-    carregando.value = true
-    erro.value = ''
-
-    try {
-      const response = await api.get('usuarios/me/')
-      const user = response.data
-
-      nome.value = user.name || ''
-      profissao.value = user.profissao || ''
-      sobre.value = user.sobre || ''
-      telefone.value = user.telefone || ''
-
-      localizacaoPerfil.carregarLocalizacao(user)
-      imagemPerfil.carregarImagem(user.profile_image)
-      habilidadesPerfil.carregarHabilidades(user.habilidades)
-    } catch (error) {
-      console.error('Erro ao carregar perfil:', error)
-      erro.value = 'Não foi possível carregar seus dados.'
-    } finally {
-      carregando.value = false
-    }
+  const nome = ref(''),
+    profissao = ref(''),
+    sobre = ref(''),
+    telefone = ref('')
+  const local = usePerfilLocalizacao(),
+    foto = usePerfilImagem(),
+    habilidades = usePerfilHabilidades()
+  const pronto = ref(false),
+    salvando = ref(false),
+    sucesso = ref(''),
+    camposErro = ref({})
+  let envio = 0
+  function limpar() {
+    envio++
+    nome.value = profissao.value = sobre.value = telefone.value = sucesso.value = ''
+    local.carregarLocalizacao({})
+    foto.carregarImagem(null)
+    habilidades.carregarHabilidades([])
+    pronto.value = false
+    salvando.value = false
+    camposErro.value = {}
   }
-
-  const validarPerfil = () => {
-    if (!nome.value.trim()) return 'Informe seu nome.'
-    if (!profissao.value.trim()) return 'Informe sua profissão.'
-    if (!localizacaoPerfil.localizacao.value.trim()) {
-      return 'Informe sua localização.'
-    }
-    if (!sobre.value.trim()) return 'Preencha o campo sobre você.'
-    if (!telefone.value.trim()) return 'Informe seu telefone.'
-
-    return null
+  const recurso = useRecursoPrivado(limpar)
+  function preencher(user) {
+    nome.value = user.name || ''
+    profissao.value = user.profissao || ''
+    sobre.value = user.sobre || ''
+    telefone.value = user.telefone || ''
+    local.carregarLocalizacao(user)
+    foto.carregarImagem(user.profile_image)
+    habilidades.carregarHabilidades(user.habilidades)
+    pronto.value = true
   }
-
-  const salvarPerfil = async () => {
-    erro.value = ''
-    sucesso.value = ''
-
-    const erroValidacao = validarPerfil()
-
-    if (erroValidacao) {
-      erro.value = erroValidacao
-      return
+  const carregarPerfil = () => recurso.executar(consultarPerfil, preencher)
+  async function salvarPerfil() {
+    if (salvando.value || !pronto.value) return
+    const dados = {
+      name: nome.value,
+      profissao: profissao.value,
+      sobre: sobre.value,
+      telefone: telefone.value,
+      localizacao: local.localizacao.value,
+      latitude: local.latitude.value,
+      longitude: local.longitude.value,
+      geolocation_accuracy: local.precisao.value,
+      geolocation_timestamp: local.dataLocalizacao.value,
+      habilidades: [...habilidades.habilidades.value],
     }
-
-    if (salvando.value) return
-
+    camposErro.value = {}
+    for (const [k, max] of Object.entries({
+      name: 255,
+      profissao: 255,
+      localizacao: 255,
+      telefone: 30,
+    }))
+      if (dados[k].length > max) camposErro.value[k] = `Use até ${max} caracteres.`
+    const listaErro = validarLista(dados.habilidades)
+    if (listaErro) camposErro.value.habilidades = listaErro
+    if (
+      dados.latitude !== null &&
+      (!Number.isFinite(Number(dados.latitude)) || Math.abs(Number(dados.latitude)) > 90)
+    )
+      camposErro.value.localizacao = 'Latitude inválida.'
+    if (
+      dados.longitude !== null &&
+      (!Number.isFinite(Number(dados.longitude)) || Math.abs(Number(dados.longitude)) > 180)
+    )
+      camposErro.value.localizacao = 'Longitude inválida.'
+    if (
+      dados.geolocation_accuracy !== null &&
+      (!Number.isFinite(Number(dados.geolocation_accuracy)) ||
+        Number(dados.geolocation_accuracy) < 0)
+    )
+      camposErro.value.localizacao = 'Precisão inválida.'
+    if (dados.geolocation_timestamp && !Number.isFinite(Date.parse(dados.geolocation_timestamp)))
+      camposErro.value.localizacao = 'Data de localização inválida.'
+    if (Object.keys(camposErro.value).length) return
+    if (foto.imagem.value) dados.profile_image = foto.imagem.value
+    const envioAtual = ++envio
     salvando.value = true
-
-    try {
-      const dados = new FormData()
-
-      dados.append('name', nome.value)
-      dados.append('profissao', profissao.value)
-      dados.append('localizacao', localizacaoPerfil.localizacao.value)
-
-      const latitude = localizacaoPerfil.latitude.value
-      const longitude = localizacaoPerfil.longitude.value
-      const precisao = localizacaoPerfil.precisao.value
-      const dataLocalizacao = localizacaoPerfil.dataLocalizacao.value
-
-      dados.append('latitude', latitude ?? '')
-      dados.append('longitude', longitude ?? '')
-      dados.append('geolocation_accuracy', precisao ?? '')
-      dados.append('geolocation_timestamp', dataLocalizacao ?? '')
-
-      dados.append('sobre', sobre.value)
-      dados.append('telefone', telefone.value)
-
-      dados.append(
-        'habilidades',
-        JSON.stringify(habilidadesPerfil.habilidades.value)
-      )
-
-      if (imagemPerfil.imagem.value) {
-        dados.append('profile_image', imagemPerfil.imagem.value)
-      }
-
-      const response = await api.patch('usuarios/me/', dados)
-
-      console.log('PERFIL ATUALIZADO:', response.data)
-
-      sucesso.value = 'Perfil atualizado com sucesso!'
-
-      setTimeout(() => {
-        router.push('/perfil')
-      }, 800)
-    } catch (error) {
-      console.error('Erro ao salvar perfil:', error)
-
-      if (error.response?.data) {
-        console.error('ERRO DA API:', error.response.data)
-      }
-
-      erro.value = 'Não foi possível salvar seu perfil.'
-    } finally {
-      salvando.value = false
-    }
+    sucesso.value = ''
+    await recurso.executar(
+      async (config) => {
+        try {
+          return await atualizarPerfil(dados, config)
+        } catch (e) {
+          if (!config.signal.aborted) camposErro.value = errosCampos(e)
+          throw e
+        }
+      },
+      async (user, config) => {
+        preencher(user)
+        sessao.usuario = user
+        sucesso.value = 'Perfil atualizado com sucesso.'
+        try {
+          const confirmado = await consultarPerfil(config)
+          if (!config.signal.aborted) {
+            preencher(confirmado)
+            sessao.usuario = confirmado
+          }
+        } catch {
+          if (!config.signal.aborted)
+            sucesso.value =
+              'Perfil salvo. Não foi possível verificar a persistência; consulte novamente.'
+        }
+      },
+    )
+    if (envioAtual === envio) salvando.value = false
   }
-
-  const voltar = () => {
-    router.push('/perfil')
-  }
-
   onMounted(carregarPerfil)
-
   return {
     nome,
     profissao,
     sobre,
     telefone,
-
-    ...localizacaoPerfil,
-    ...imagemPerfil,
-    ...habilidadesPerfil,
-
-    carregando,
+    ...local,
+    ...foto,
+    ...habilidades,
+    ...recurso,
+    pronto,
     salvando,
-    erro,
     sucesso,
-
+    camposErro,
     carregarPerfil,
     salvarPerfil,
-    voltar,
+    voltar: () => router.push('/perfil'),
   }
 }

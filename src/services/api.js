@@ -67,6 +67,9 @@ export function renovarAccessToken() {
 }
 
 api.interceptors.request.use((config) => {
+  if (config._sessionRevision !== undefined && config._sessionRevision !== sessao.revisao) {
+    return Promise.reject(new axios.CanceledError('A sessão foi substituída.'))
+  }
   if (rotaPublica(config)) {
     delete config.headers.Authorization
     return config
