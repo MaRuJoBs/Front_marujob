@@ -1,39 +1,29 @@
-
-import { ref } from 'vue'
-
+﻿import { ref } from 'vue'
+import { validarLista } from '@/utils/perfilPortfolio'
 export function usePerfilHabilidades() {
-  const habilidades = ref([])
-  const novaHabilidade = ref('')
-
+  const habilidades = ref([]),
+    novaHabilidade = ref(''),
+    erroHabilidade = ref('')
   const carregarHabilidades = (lista) => {
     habilidades.value = Array.isArray(lista) ? [...lista] : []
+    novaHabilidade.value = ''
+    erroHabilidade.value = ''
   }
-
-  const adicionarHabilidade = () => {
-    const habilidade = novaHabilidade.value.trim()
-
-    if (!habilidade) return
-
-    const jaExiste = habilidades.value.some(
-      (item) => item.toLowerCase() === habilidade.toLowerCase()
-    )
-
-    if (!jaExiste) {
-      habilidades.value.push(habilidade)
-    }
-
+  function adicionarHabilidade() {
+    const valor = novaHabilidade.value.trim()
+    erroHabilidade.value = validarLista([...habilidades.value, valor])
+    if (erroHabilidade.value) return
+    habilidades.value.push(valor)
     novaHabilidade.value = ''
   }
-
-  const removerHabilidade = (habilidade) => {
-    habilidades.value = habilidades.value.filter(
-      (item) => item !== habilidade
-    )
+  const removerHabilidade = (valor) => {
+    habilidades.value = habilidades.value.filter((v) => v !== valor)
+    erroHabilidade.value = ''
   }
-
   return {
     habilidades,
     novaHabilidade,
+    erroHabilidade,
     carregarHabilidades,
     adicionarHabilidade,
     removerHabilidade,

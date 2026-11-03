@@ -1,162 +1,135 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import api from '@/services/api'
-
-const route = useRoute()
-const router = useRouter()
-
-const projeto = ref(null)
-const carregando = ref(true)
-
-const mostrarModalExcluir = ref(false)
-
-const carregarProjeto = async () => {
-  try {
-    const response = await api.get(`portfolios/${route.params.id}/`)
-    projeto.value = response.data
-
-    console.log('PORTFÓLIO:', projeto.value)
-  } catch (error) {
-    console.error('ERRO AO BUSCAR PORTFÓLIO:', error)
-  } finally {
-    carregando.value = false
-  }
-}
-const excluirProjeto = async () => {
-  try {
-    await api.delete(`portfolios/${route.params.id}/`)
-
-    mostrarModalExcluir.value = false
-
-    router.push('/portfolio')
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-onMounted(() => {
-  carregarProjeto()
-})
+import ConfirmarExclusaoProjeto from './ConfirmarExclusaoProjeto.vue'
+import { useProjetoDetalhe } from '@/composables/useProjetoDetalhe'
+import { resolverImagem } from '@/services/perfilPortfolioService'
+import { linkSeguro } from '@/utils/perfilPortfolio'
+const {
+  projeto,
+  mostrarModalExcluir,
+  excluindo,
+  sucesso,
+  carregando,
+  erro,
+  carregarProjeto,
+  excluirProjeto,
+  router,
+} = useProjetoDetalhe()
 </script>
 <template>
   <div class="portfolio-detalhe">
-    <div v-if="carregando" class="carregando">Carregando projeto...</div>
-
-    <div v-else-if="!projeto" class="carregando">Projeto não encontrado.</div>
-
-   <div v-else class="conteudo-projeto">
-
-    <!-- Cabeçalho -->
-    <section class="header">
-      <router-link to="/portfolio" class="btn-voltar">
-        <FontAwesomeIcon :icon="['fas', 'arrow-left']" />
-      </router-link>
-
-      <h2>Detalhes do Projeto</h2>
-    </section>
-
-    <!-- Imagem -->
-    <section class="imagem-projeto">
-      <img v-if="projeto.imagem" :src="projeto.imagem" alt="Projeto" />
-
-      <div v-else class="imagem-vazia">
-        <FontAwesomeIcon :icon="['fas', 'image']" class="icone-imagem" />
-      </div>
-    </section>
-
-    <!-- Informações -->
-    <section class="informacoes">
-      <div class="cabecalho">
-        <h1>{{ projeto.titulo }}</h1>
-
-        <span class="categoria">
-          {{ projeto.categoria }}
-        </span>
-      </div>
-
-      <div class="tags">
-        <span v-for="tag in projeto.tags" :key="tag">
-          {{ tag }}
-        </span>
-      </div>
-
-      <div class="descricao">
-        <h3>Descrição</h3>
-
-        <p>
-          {{ projeto.descricao }}
-        </p>
-      </div>
-
-      <div class="link">
-        <h3>Link do Projeto</h3>
-
-        <a :href="projeto.link" target="_blank">
-          {{ projeto.link }}
-        </a>
-      </div>
-    </section>
-
-    <!-- Botões -->
-    <section class="acoes">
-
-      <button
-  class="editar"
-  @click="router.push(`/portfolio/${projeto.id}/editar`)"
->
-        <FontAwesomeIcon :icon="['fas', 'pen']" />
-
-        Editar
-      </button>
-
-      <button
-  class="excluir"
-  @click="mostrarModalExcluir = true"
->
-  <FontAwesomeIcon :icon="['fas', 'trash']" />
-  Excluir
-</button>
-    </section>
+    <div v-if="carregando && !excluindo" role="status" class="carregando">
+      Carregando projeto...
     </div>
-      <div
-  v-if="mostrarModalExcluir"
-  class="modal-overlay"
->
-  <div class="modal">
 
-
-    <h3>Excluir projeto?</h3>
-
-    <p>
-      Essa ação não poderá ser desfeita.
-    </p>
-
-    <div class="botoes-modal">
-
-      <button
-        class="cancelar-modal"
-        @click="mostrarModalExcluir = false"
-      >
-        Cancelar
-      </button>
-
-      <button
-        class="confirmar-modal"
-        @click="excluirProjeto"
-      >
-        Excluir
-      </button>
-
+    <div v-else-if="sucesso" role="status">
+      {{ sucesso }} <router-link to="/portfolio">Voltar ao portfólio</router-link>
     </div>
-  </div>
-</div>
-  </div>
+    <div v-else-if="!projeto" role="alert">
+      {{ erro }} <button @click="carregarProjeto">Tentar novamente</button
+      ><router-link to="/portfolio">Voltar</router-link>
+    </div>
 
+    <div v-else class="conteudo-projeto">
+      <!-- Cabeçalho -->
+      <section class="header">
+        <router-link to="/portfolio" class="btn-voltar">
+          <FontAwesomeIcon :icon="['fas', 'arrow-left']" />
+        </router-link>
+
+        <h2>Detalhes do Projeto</h2>
+      </section>
+
+      <!-- Imagem -->
+      <section class="imagem-projeto">
+        <img
+          @load="
+            (event) => {
+              event.target.hidden = false
+            }
+          "
+          @error="
+            (event) => {
+              event.target.hidden = true
+            }
+          "
+          v-if="projeto.imagem"
+          :src="resolverImagem(projeto.imagem)"
+          alt="Projeto"
+        />
+
+        <div v-else class="imagem-vazia">
+          <FontAwesomeIcon :icon="['fas', 'image']" class="icone-imagem" />
+        </div>
+      </section>
+
+      <!-- Informações -->
+      <section class="informacoes">
+        <div class="cabecalho">
+          <h1>{{ projeto.titulo }}</h1>
+
+          <span class="categoria">
+            {{ projeto.categoria }}
+          </span>
+        </div>
+
+        <div class="tags">
+          <span v-for="tag in projeto.tags" :key="tag">
+            {{ tag }}
+          </span>
+        </div>
+
+        <div class="descricao">
+          <h3>Descrição</h3>
+
+          <p>
+            {{ projeto.descricao }}
+          </p>
+        </div>
+
+        <div v-if="linkSeguro(projeto.link)" class="link">
+          <h3>Link do Projeto</h3>
+
+          <a :href="linkSeguro(projeto.link)" target="_blank" rel="noopener noreferrer">
+            {{ projeto.link }}
+          </a>
+        </div>
+      </section>
+
+      <!-- Botões -->
+      <section class="acoes">
+        <button class="editar" @click="router.push(`/portfolio/${projeto.id}/editar`)">
+          <FontAwesomeIcon :icon="['fas', 'pen']" />
+
+          Editar
+        </button>
+
+        <button class="excluir" @click="mostrarModalExcluir = true">
+          <FontAwesomeIcon :icon="['fas', 'trash']" />
+          Excluir
+        </button>
+      </section>
+    </div>
+    <ConfirmarExclusaoProjeto
+      v-if="mostrarModalExcluir"
+      :titulo="projeto?.titulo"
+      :excluindo="excluindo"
+      :erro="erro"
+      @cancelar="mostrarModalExcluir = false"
+      @confirmar="excluirProjeto"
+    />
+  </div>
 </template>
 
-
 <style scoped>
+.informacoes,
+.cabecalho h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.modal {
+  max-height: 90dvh;
+  overflow: auto;
+}
 * {
   margin: 0;
   padding: 0;
