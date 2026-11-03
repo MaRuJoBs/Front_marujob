@@ -21,6 +21,24 @@ defineProps({ voltar: { type: Boolean, default: false } })
       <img src="@/assets/images/logo.png" alt="" />
       <span>MaRuJoB's<small>EMPRESAS</small></span>
     </router-link>
+    <router-link
+      to="/empresa/notificacoes"
+      class="notificacoes"
+      aria-label="Notificações de candidaturas"
+      title="Notificações de candidaturas"
+    >
+      <svg
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+      </svg>
+    </router-link>
   </header>
 </template>
 
@@ -71,6 +89,22 @@ defineProps({ voltar: { type: Boolean, default: false } })
   background: #f8f1ff;
   color: #6d45a8;
   text-decoration: none;
+}
+.notificacoes {
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f8f1ff;
+  color: #6d45a8;
+  text-decoration: none;
+}
+.notificacoes.router-link-active {
+  background: #7548bd;
+  color: white;
 }
 a:focus-visible {
   outline: 3px solid #4e268b;
