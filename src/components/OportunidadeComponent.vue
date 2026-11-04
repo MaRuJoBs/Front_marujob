@@ -4,12 +4,12 @@ import { RouterLink } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass, faHeart, faClock, faAlignLeft } from '@fortawesome/free-solid-svg-icons'
 import Filtros from '@/components/Filtros.vue'
+import FavoritoButton from '@/components/FavoritoButton.vue'
 import { useOportunidades } from '@/composables/useOportunidades'
 import { formatarPreco } from '@/utils/oportunidades'
 const painelFiltros = ref(null)
 const {
   jobs,
-  favoritos,
   erroFavorito,
   pesquisa,
   filtros,
@@ -22,7 +22,6 @@ const {
   carregar,
   aplicar,
   limpar,
-  toggleFavorito,
 } = useOportunidades()
 </script>
 <template>
@@ -116,17 +115,7 @@ const {
                 <h2>{{ job.titulo || 'Título não informado' }}</h2>
                 <p v-if="job.tag" class="tag">{{ job.tag }}</p>
               </div>
-              <button
-                class="favorito"
-                :class="{ ativo: favoritos.includes(job.id) }"
-                :aria-label="
-                  favoritos.includes(job.id) ? 'Remover dos favoritos' : 'Salvar nos favoritos'
-                "
-                :aria-pressed="favoritos.includes(job.id)"
-                @click="toggleFavorito(job)"
-              >
-                <FontAwesomeIcon :icon="faHeart" />
-              </button>
+              <FavoritoButton :id="job.id" />
             </header>
             <div class="info">
               <p v-if="job.descricao" class="descricao">
@@ -339,22 +328,6 @@ h2 {
   font-size: 13px;
   line-height: 1.4;
   margin: 3px 0 0;
-}
-.favorito {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  margin: -5px -7px -4px 0;
-  border: none;
-  background: transparent;
-  color: #b4acbc;
-  font-size: 19px;
-  cursor: pointer;
-}
-.favorito.ativo {
-  color: #e72343;
 }
 .info {
   display: grid;

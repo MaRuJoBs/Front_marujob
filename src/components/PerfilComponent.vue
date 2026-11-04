@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { logout as encerrarSessao } from '@/services/authService'
 import { resolverImagem as getImageUrl } from '@/services/perfilPortfolioService'
 import { usePerfilPortfolio } from '@/composables/usePerfilPortfolio'
+import PerfilAvatar from './PerfilAvatar.vue'
 const router = useRouter()
 const { usuario: user, projetos: portfolio, carregando, erro, carregar } = usePerfilPortfolio()
 const email = computed(() => user.value?.email || '')
@@ -25,24 +26,7 @@ onMounted(carregar)
 
         <div class="profile-content">
           <div class="img-usu">
-            <img
-              @load="
-                (event) => {
-                  event.target.hidden = false
-                }
-              "
-              @error="
-                (event) => {
-                  event.target.hidden = true
-                }
-              "
-              v-if="user?.profile_image"
-              :src="getImageUrl(user.profile_image)"
-              class="avatar"
-              alt="Foto de perfil"
-            />
-
-            <div v-else class="avatar"></div>
+            <PerfilAvatar :usuario="user" class="avatar" />
 
             <button class="icone" aria-label="Alterar foto" @click="router.push('/editar-perfil')">
               <i class="fa-solid fa-camera"></i>

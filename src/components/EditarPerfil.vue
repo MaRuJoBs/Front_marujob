@@ -48,6 +48,7 @@ const {
   erroHabilidade,
   carregarPerfil,
   salvarPerfil,
+  falhaImagemPerfil,
   voltar,
 } = useEditarPerfil()
 
@@ -96,20 +97,12 @@ const receberFotoCamera = (arquivo) => {
       <section class="foto-section">
         <div class="foto-container">
           <img
-            @load="
-              (event) => {
-                event.target.hidden = false
-              }
-            "
-            @error="
-              (event) => {
-                event.target.hidden = true
-              }
-            "
+            @error="falhaImagemPerfil"
             v-if="previewImagem"
             :src="previewImagem"
             class="foto"
             alt="Foto de perfil"
+            referrerpolicy="no-referrer"
           />
 
           <div v-else class="foto foto-vazia">

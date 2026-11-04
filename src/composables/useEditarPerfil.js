@@ -6,6 +6,7 @@ import { usePerfilHabilidades } from '@/composables/usePerfilHabilidades'
 import { useRecursoPrivado } from '@/composables/useRecursoPrivado'
 import { consultarPerfil, atualizarPerfil } from '@/services/perfilPortfolioService'
 import { sessao } from '@/services/authSession'
+import { obterFotoGoogle } from '@/services/fotoGoogle'
 import { validarLista, errosCampos } from '@/utils/perfilPortfolio'
 export function useEditarPerfil() {
   const router = useRouter()
@@ -21,8 +22,10 @@ export function useEditarPerfil() {
     sucesso = ref(''),
     camposErro = ref({})
   let envio = 0
+  let fotoAlternativa = null
   function limpar() {
     envio++
+    fotoAlternativa = null
     nome.value = profissao.value = sobre.value = telefone.value = sucesso.value = ''
     local.carregarLocalizacao({})
     foto.carregarImagem(null)
@@ -38,7 +41,8 @@ export function useEditarPerfil() {
     sobre.value = user.sobre || ''
     telefone.value = user.telefone || ''
     local.carregarLocalizacao(user)
-    foto.carregarImagem(user.profile_image)
+    fotoAlternativa = obterFotoGoogle(user.id)
+    foto.carregarImagem(user.profile_image || fotoAlternativa)
     habilidades.carregarHabilidades(user.habilidades)
     pronto.value = true
   }
@@ -118,6 +122,12 @@ export function useEditarPerfil() {
     )
     if (envioAtual === envio) salvando.value = false
   }
+  function falhaImagemPerfil() {
+    if (foto.imagem.value) return
+    const alternativa = foto.previewImagem.value !== fotoAlternativa ? fotoAlternativa : null
+    fotoAlternativa = null
+    foto.carregarImagem(alternativa)
+  }
   onMounted(carregarPerfil)
   return {
     nome,
@@ -134,6 +144,7 @@ export function useEditarPerfil() {
     camposErro,
     carregarPerfil,
     salvarPerfil,
+    falhaImagemPerfil,
     voltar: () => router.push('/perfil'),
   }
 }

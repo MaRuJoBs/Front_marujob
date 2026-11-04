@@ -3,7 +3,6 @@ import { useRoute, RouterLink } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faArrowLeft,
-  faHeart,
   faClock,
   faWallet,
   faFileLines,
@@ -11,21 +10,18 @@ import {
   faPaperPlane,
   faTag,
 } from '@fortawesome/free-solid-svg-icons'
-import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
+import FavoritoButton from '@/components/FavoritoButton.vue'
 import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
 import { obterOportunidade } from '@/services/freelanceService'
 import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
 const route = useRoute()
 const job = ref(null)
-const { favoritos, erroFavorito, toggleFavorito } = useFavoritosLocais()
-const isFavorite = computed(() => job.value && favoritos.value.includes(job.value.id))
+const { erroFavorito } = useFavoritosLocais()
 const carregando = ref(false)
 const erro = ref('')
 let controlador
 let revisao = 0
-function favoritar() {
-  if (job.value) toggleFavorito(job.value)
-}
 async function carregar() {
   const atual = ++revisao
   controlador?.abort()
@@ -58,16 +54,7 @@ onBeforeUnmount(() => {
         <h1>{{ job?.titulo || (carregando ? 'Carregando...' : 'Oportunidade') }}</h1>
         <p v-if="job?.tag">{{ job.tag }}</p>
       </div>
-      <button
-        v-if="job"
-        class="botao-icone favorito"
-        :class="{ ativo: isFavorite }"
-        :aria-label="isFavorite ? 'Remover dos favoritos' : 'Salvar nos favoritos'"
-        :aria-pressed="Boolean(isFavorite)"
-        @click="favoritar"
-      >
-        <FontAwesomeIcon :icon="faHeart" />
-      </button>
+      <FavoritoButton v-if="job" :id="job.id" />
       <span v-else aria-hidden="true"></span>
     </header>
     <p v-if="erroFavorito" class="estado" role="alert">{{ erroFavorito }}</p>
@@ -145,7 +132,7 @@ onBeforeUnmount(() => {
 }
 .topo {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  grid-template-columns: 40px minmax(0, 1fr) 44px;
   align-items: start;
   gap: 8px;
   margin: 0 -4px 22px;
@@ -179,12 +166,6 @@ onBeforeUnmount(() => {
   margin: 3px 0 0;
   font-size: 13px;
   line-height: 1.35;
-}
-.favorito {
-  color: #b4acbc;
-}
-.favorito.ativo {
-  color: #e72343;
 }
 .blocos {
   display: grid;

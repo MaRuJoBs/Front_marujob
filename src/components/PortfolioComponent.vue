@@ -4,6 +4,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { usePerfilPortfolio } from '@/composables/usePerfilPortfolio'
 import { resolverImagem } from '@/services/perfilPortfolioService'
 import FiltrosPortifolio from './FiltrosPortifolio.vue'
+import PerfilAvatar from './PerfilAvatar.vue'
 
 const pesquisa = ref('')
 const { usuario, projetos, carregando, erro, carregar } = usePerfilPortfolio()
@@ -52,23 +53,7 @@ onMounted(carregar)
       ><section class="header">
         <div class="perfil">
           <div class="avatar">
-            <img
-              @load="
-                (event) => {
-                  event.target.hidden = false
-                }
-              "
-              @error="
-                (event) => {
-                  event.target.hidden = true
-                }
-              "
-              v-if="usuario?.profile_image"
-              :src="resolverImagem(usuario.profile_image)"
-              alt="Foto de perfil"
-            />
-
-            <FontAwesomeIcon v-else :icon="['fas', 'user']" />
+            <PerfilAvatar :usuario="usuario"><FontAwesomeIcon :icon="['fas', 'user']" /></PerfilAvatar>
           </div>
 
           <div class="dados">
