@@ -1,65 +1,74 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
-import { logout as encerrarSessao } from '@/services/authService'
+import { logout as encerrarSessao, sessao } from '@/services/authService'
+import { listarPortfolios, erroPortfolio } from '@/services/portfolioService'
+import { resolverImagem } from '@/utils/imagens'
+import PerfilAvatar from './PerfilAvatar.vue'
 
-const user = ref(null)
-const email = ref('')
+const user = ref(sessao.usuario)
+const email = computed(() => user.value?.email || '')
 const router = useRouter()
 const portfolio = ref([])
+const carregandoProjetos = ref(true)
+const erroProjetos = ref('')
+const erroPerfil = ref('')
+let controlador
+let revisao = 0
+const getImageUrl = resolverImagem
 
-onMounted(async () => {
+async function carregarUsuario() {
+  const carga = revisao
+  const atual = () => carga === revisao && !controlador.signal.aborted
   try {
-    const responseUser = await api.get('usuarios/me/')
-
-    console.log('USER:', responseUser.data)
-    console.log('IMAGE PATH:', responseUser.data.profile_image)
-
-    user.value = responseUser.data
-    email.value = responseUser.data.email
-
-    const responsePortfolio = await api.get('portfolios/')
-
-    console.log('RESPOSTA COMPLETA PORTFÓLIO:', responsePortfolio)
-    console.log('DADOS DO PORTFÓLIO:', responsePortfolio.data)
-
-    portfolio.value = responsePortfolio.data.results
-  } catch (erro) {
-    console.error('Erro ao buscar dados do perfil:', erro)
+    const { data } = await api.get('usuarios/me/', { signal: controlador.signal })
+    if (!atual()) return
+    user.value = data
+    sessao.usuario = data
+    erroPerfil.value = ''
+  } catch {
+    if (atual()) erroPerfil.value = 'Não foi possível atualizar os dados do perfil.'
   }
-})
-
-const getImageUrl = (path) => {
-  if (!path) return null
-
-  if (path.startsWith('http')) return path
-
-  return `${api.defaults.baseURL.replace('/api/', '')}${path}`
 }
-
-const logout = () => {
-  encerrarSessao()
-  router.replace('/')
+async function carregarProjetos() {
+  const carga = revisao
+  const atual = () => carga === revisao && !controlador.signal.aborted
+  carregandoProjetos.value = true
+  erroProjetos.value = ''
+  try {
+    const dados = await listarPortfolios(controlador.signal)
+    if (atual()) portfolio.value = dados
+  } catch (error) {
+    if (atual()) erroProjetos.value = erroPortfolio(error)
+  } finally {
+    if (atual()) carregandoProjetos.value = false
+  }
 }
+watch([() => sessao.usuario?.id, () => sessao.revisao], () => {
+  revisao++
+  controlador?.abort()
+  controlador = new AbortController()
+  user.value = sessao.usuario
+  portfolio.value = []
+  erroPerfil.value = erroProjetos.value = ''
+  carregandoProjetos.value = false
+  if (sessao.usuario) { carregarUsuario(); carregarProjetos() }
+}, { immediate: true, flush: 'sync' })
+onBeforeUnmount(() => { revisao++; controlador?.abort() })
+const logout = () => { encerrarSessao(); router.replace('/') }
 </script>
 <template>
   <div class="perfil">
+    <p v-if="erroPerfil" class="aviso-perfil" role="alert">{{ erroPerfil }}</p>
     <section class="header-perfil">
       <div class="separacao"></div>
 
       <div class="profile-content">
         <div class="img-usu">
-          <img
-            v-if="user?.profile_image"
-            :src="getImageUrl(user.profile_image)"
-            class="avatar"
-            alt="Foto de perfil"
-          />
+          <PerfilAvatar :usuario="user" class="avatar" />
 
-          <div v-else class="avatar"></div>
-
-          <button class="icone">
+          <button class="icone" aria-label="Alterar foto de perfil" @click="router.push('/editar-perfil')">
             <i class="fa-solid fa-camera"></i>
           </button>
         </div>
@@ -77,7 +86,7 @@ const logout = () => {
       <div class="status">
         <div class="card">
           <i class="fa-regular fa-folder"></i>
-          <h3>{{ portfolio.length }}</h3>
+          <h3>{{ carregandoProjetos ? '…' : erroProjetos ? '—' : portfolio.length }}</h3>
           <p>Projetos</p>
         </div>
 
@@ -127,6 +136,11 @@ const logout = () => {
       </div>
 
       <div class="portfolio">
+        <p v-if="carregandoProjetos" role="status">Carregando projetos...</p>
+        <div v-else-if="erroProjetos" role="alert">
+          <p>{{ erroProjetos }}</p>
+          <button type="button" @click="carregarProjetos">Tentar novamente</button>
+        </div>
         <div v-for="item in portfolio" :key="item.id" class="portfolio-card">
           <img
             v-if="item.imagem"
@@ -141,7 +155,7 @@ const logout = () => {
           <p>{{ item.categoria }}</p>
         </div>
 
-        <p v-if="portfolio.length === 0" class="sem-portfolio">
+        <p v-if="!carregandoProjetos && !erroProjetos && portfolio.length === 0" class="sem-portfolio">
           Você ainda não possui projetos no portfólio.
         </p>
       </div>
@@ -244,6 +258,8 @@ const logout = () => {
   background: #8c8c8c;
   border-radius: 50%;
 }
+
+.aviso-perfil { padding: 16px; color: #533a91; overflow-wrap: anywhere; }
 
 .icone {
   position: absolute;

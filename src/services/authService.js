@@ -1,5 +1,6 @@
 import api, { renovarAccessToken } from './api.js'
 import { registrarFalhaGoogle } from '../utils/googleDiagnostics.js'
+import { guardarFotoGoogle } from './fotoGoogle.js'
 import {
   sessao,
   salvarTokens,
@@ -47,11 +48,13 @@ export async function restaurarSessao() {
   return atual.promise
 }
 
-async function iniciarSessao(data) {
+async function iniciarSessao(data, credentialGoogle = null) {
   salvarTokens(data)
   const revisao = sessao.revisao
   try {
     if (!(await restaurarSessao())) throw new Error('A sessão foi encerrada. Entre novamente.')
+    if (sessao.revisao !== revisao) throw new Error('A sessão foi encerrada ou substituída.')
+    if (credentialGoogle) guardarFotoGoogle(credentialGoogle, sessao.usuario.id)
     return data
   } catch (error) {
     if (sessao.revisao === revisao) limparSessao()
@@ -86,7 +89,7 @@ export async function loginComGoogle(credential, tipo = null, cadastro = false) 
   }
   if (sessao.revisao !== revisao) throw new Error('A sessão foi encerrada ou substituída.')
   try {
-    return await iniciarSessao(data)
+    return await iniciarSessao(data, credential)
   } catch (error) {
     error.authStage = 'sessao'
     registrarFalhaGoogle(error, credential)

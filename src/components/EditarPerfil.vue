@@ -43,6 +43,7 @@ const {
   sucesso,
 
   salvarPerfil,
+  falhaImagemPerfil,
   voltar,
 } = useEditarPerfil()
 
@@ -87,7 +88,7 @@ const receberFotoCamera = (arquivo) => {
     <main v-else class="conteudo">
       <section class="foto-section">
         <div class="foto-container">
-          <img v-if="previewImagem" :src="previewImagem" class="foto" alt="Foto de perfil" />
+          <img v-if="previewImagem" :src="previewImagem" class="foto" alt="Foto de perfil" referrerpolicy="no-referrer" @error="falhaImagemPerfil" />
 
           <div v-else class="foto foto-vazia">
             <i class="fa-solid fa-user"></i>

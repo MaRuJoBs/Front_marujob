@@ -17,6 +17,7 @@ const caminhoChrome = (path) =>
     : path
 const roteiro = `
 import { createApp, nextTick } from 'vue'
+import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -27,6 +28,7 @@ import Detalhes from '/src/components/OportunidadeDetalheComponent.vue'
 import api from '/src/services/api.js'
 import { sessao } from '/src/services/authSession.js'
 import '/src/assets/main.css'
+import '@fortawesome/fontawesome-free/css/all.min.css'
 library.add(fas)
 localStorage.clear()
 sessao.usuario = { id: 37, name: 'Conta de teste', groups: ['Usuário'] }
@@ -44,6 +46,7 @@ api.defaults.adapter = async config => {
 }
 const router = createRouter({history:createMemoryHistory(),routes:[{path:'/freelances',component:Listagem},{path:'/oportunidade/:id',component:Detalhes}]})
 const app = createApp(App)
+app.use(createPinia())
 app.component('FontAwesomeIcon',FontAwesomeIcon)
 app.use(router)
 const screen = new URLSearchParams(location.search).get('screen')
@@ -75,7 +78,7 @@ try {
   conferir(document.querySelector('.filtros-painel').getBoundingClientRect().width<=innerWidth,'Largura dos filtros')
   document.querySelector('.botao-fechar').click();await nextTick()
   document.querySelector('.vaga .favorito').click();await nextTick()
-  conferir(JSON.parse(localStorage.getItem('favoritos')).includes(1),'Favorito local')
+  conferir(JSON.parse(localStorage.getItem('marujobs:favoritos:usuario:37')).includes(1),'Favorito local')
   await router.push('/oportunidade/1');await esperar(()=>document.querySelector('.informacoes-card'))
   conferir(document.querySelector('.favorito').getAttribute('aria-pressed')==='true','Favorito nos detalhes')
   longo=true
@@ -92,7 +95,7 @@ try {
   conferir(!document.querySelector('.contato button:not(:disabled)'),'Sem mensagem simulada')
   conferir(!document.body.textContent.includes('Centro, SP'),'Sem localização fictícia')
   document.querySelector('.favorito').click();await nextTick()
-  conferir(JSON.parse(localStorage.getItem('favoritos')).includes(11),'Favorito nos detalhes')
+  conferir(JSON.parse(localStorage.getItem('marujobs:favoritos:usuario:37')).includes(11),'Favorito nos detalhes')
   incompleto=true
   await router.push('/oportunidade/12');await esperar(()=>document.querySelector('.informacoes-card'))
   conferir(!document.querySelector('.sobre'),'Descrição nula omitida')

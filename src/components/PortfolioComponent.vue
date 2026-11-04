@@ -1,37 +1,53 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 
 import api from '@/services/api'
 import FiltrosPortifolio from './FiltrosPortifolio.vue'
+import PerfilAvatar from './PerfilAvatar.vue'
+import { sessao } from '@/services/authSession'
+import { listarPortfolios, erroPortfolio } from '@/services/portfolioService'
+import { resolverImagem } from '@/utils/imagens'
 
 
 const pesquisa = ref('')
 const projetos = ref([])
-const usuario = ref(null)
+const usuario = ref(sessao.usuario)
 const projetosExibidos = ref([])
+const carregando = ref(true)
+const erro = ref('')
+let controlador
+let revisao = 0
+onBeforeUnmount(() => { revisao++; controlador?.abort() })
 
 const carregarUsuario = async () => {
+  const carga = revisao
+  const atual = () => carga === revisao && !controlador.signal.aborted
   try {
-    const response = await api.get('usuarios/me/')
+    const response = await api.get('usuarios/me/', { signal: controlador.signal })
+    if (!atual()) return
     usuario.value = response.data
-
-    console.log('USUÁRIO:', usuario.value)
-  } catch (error) {
-    console.error('ERRO AO BUSCAR USUÁRIO:', error)
+    sessao.usuario = response.data
+  } catch {
+    // Mantém o perfil já validado pela autenticação se a atualização falhar.
   }
 }
 
 const carregarProjetos = async () => {
+  const carga = revisao
+  const atual = () => carga === revisao && !controlador.signal.aborted
+  carregando.value = true
+  erro.value = ''
   try {
-    const response = await api.get('portfolios/')
-
-    projetos.value = response.data.results || response.data
+    const dados = await listarPortfolios(controlador.signal)
+    if (!atual()) return
+    projetos.value = dados
     projetosExibidos.value = projetos.value
 
 
-    console.log('PORTFÓLIOS:', projetos.value)
   } catch (error) {
-    console.error('ERRO AO BUSCAR PORTFÓLIOS:', error)
+    if (atual()) erro.value = erroPortfolio(error)
+  } finally {
+    if (atual()) carregando.value = false
   }
 }
 
@@ -65,10 +81,16 @@ const projetosPesquisados = computed(() => {
   })
 })
 
-onMounted(() => {
-  carregarProjetos()
-  carregarUsuario()
-})
+watch([() => sessao.usuario?.id, () => sessao.revisao], () => {
+  revisao++
+  controlador?.abort()
+  controlador = new AbortController()
+  usuario.value = sessao.usuario
+  projetos.value = projetosExibidos.value = []
+  pesquisa.value = erro.value = ''
+  carregando.value = false
+  if (sessao.usuario) { carregarProjetos(); carregarUsuario() }
+}, { immediate: true, flush: 'sync' })
 
 
 </script>
@@ -79,19 +101,17 @@ onMounted(() => {
     <section class="header">
       <div class="perfil">
         <div class="avatar">
-          <img v-if="usuario?.profile_image" :src="usuario.profile_image" alt="Foto de perfil" />
-
-          <FontAwesomeIcon v-else :icon="['fas', 'user']" />
+          <PerfilAvatar :usuario="usuario"><FontAwesomeIcon :icon="['fas', 'user']" /></PerfilAvatar>
         </div>
 
         <div class="dados">
           <h2>{{ usuario?.name || 'Usuário' }}</h2>
-          <p>Desenvolvedor Full Stack</p>
+          <p>{{ usuario?.profissao || 'Profissão não informada' }}</p>
           <!--Trocar pra informacao do usuario, quando disponivel em PerfilComponent-->
 
           <div class="localizacao">
             <FontAwesomeIcon :icon="['fas', 'location-dot']" />
-            <span>Joinville - SC</span>
+            <span>{{ usuario?.localizacao || 'Localização não informada' }}</span>
           </div>
         </div>
       </div>
@@ -117,9 +137,15 @@ onMounted(() => {
     <section class="titulo">
       <h3>Meus Projetos</h3>
 
-      <span>{{ projetosPesquisados.length }} projetos</span>
+      <span v-if="!carregando && !erro">{{ projetosPesquisados.length }} projetos</span>
     </section>
 
+    <p v-if="carregando" class="estado" role="status">Carregando projetos...</p>
+    <div v-else-if="erro" class="estado" role="alert">
+      <p>{{ erro }}</p>
+      <button type="button" @click="carregarProjetos">Tentar novamente</button>
+    </div>
+    <p v-else-if="!projetosPesquisados.length" class="estado" role="status">Nenhum projeto encontrado. Use o botão + para adicionar um projeto.</p>
     <!-- Grid -->
     <section class="grid">
       <router-link
@@ -129,7 +155,7 @@ onMounted(() => {
         class="card"
       >
         <div class="imagem">
-          <img v-if="projeto.imagem" :src="projeto.imagem" />
+          <img v-if="projeto.imagem" :src="resolverImagem(projeto.imagem)" :alt="projeto.titulo" />
 
           <FontAwesomeIcon v-else :icon="['fas', 'image']" class="img-icon" />
         </div>
@@ -227,6 +253,8 @@ onMounted(() => {
   height: 100%;
   object-fit: cover;
 }
+.avatar > span { width: 100%; height: 100%; }
+.estado { margin: 16px; padding: 16px; background: #f7f5fc; border-radius: 16px; color: #533a91; overflow-wrap: anywhere; }
 
 .dados h2 {
   color: white;

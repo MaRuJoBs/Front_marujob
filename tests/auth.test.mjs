@@ -84,6 +84,7 @@ const vite = await createServer({
 const auth = await vite.ssrLoadModule('/src/services/authService.js')
 const session = await vite.ssrLoadModule('/src/services/authSession.js')
 const { default: api, renovarAccessToken } = await vite.ssrLoadModule('/src/services/api.js')
+const { obterFotoGoogle } = await vite.ssrLoadModule('/src/services/fotoGoogle.js')
 const guards = await vite.ssrLoadModule('/src/router/authGuard.js')
 const { routes } = await vite.ssrLoadModule('/src/router/routes.js')
 const { mensagensErro } = await vite.ssrLoadModule('/src/utils/authErrors.js')
@@ -329,6 +330,32 @@ test('erro 400 do Google é exibido e não dispara refresh', async (t) => {
   assert.equal(chamadas.length, 1)
   await assert.rejects(auth.loginComGoogle(''))
   assert.equal(chamadas.length, 1)
+})
+
+const credencialComFoto = (picture) => `e30.${Buffer.from(JSON.stringify({ iss: 'https://accounts.google.com', picture })).toString('base64url')}.assinaturaDeTeste`
+test('Google guarda somente URL da foto depois do login aceito e isola pelo ID de /me/', async () => {
+  const foto = 'https://lh3.googleusercontent.com/a/foto-teste'
+  const credential = credencialComFoto(foto)
+  transporte = (config) => resposta(config, config.url === 'auth/google/' ? tokens : { ...perfil(), id: 401, profile_image: null })
+  await auth.loginComGoogle(credential)
+  assert.equal(obterFotoGoogle(401), foto)
+  assert.equal(localStorage.getItem('marujobs:foto-google:usuario:401'), foto)
+  assert.equal([...armazenamento.values()].some((valor) => valor.includes(credential)), false)
+  auth.logout()
+  assert.equal(obterFotoGoogle(402), null)
+  assert.equal(localStorage.getItem('marujobs:foto-google:usuario:401'), foto)
+})
+test('Google recusado ou URL de foto insegura não grava foto nem altera autenticação', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  transporte = (config) => falhar(config, 400, { detail: 'Credencial recusada.' })
+  await assert.rejects(auth.loginComGoogle(credencialComFoto('https://lh3.googleusercontent.com/a/foto')))
+  assert.equal([...armazenamento.keys()].some((key) => key.includes('foto-google')), false)
+  transporte = (config) => resposta(config, config.url === 'auth/google/' ? tokens : { ...perfil(), id: 403 })
+  for (const foto of ['javascript:alert(1)', 'https://externo.invalid/a/foto', 'http://lh3.googleusercontent.com/a/foto', 'https://googleusercontent.com.evil.invalid/foto']) {
+    await auth.loginComGoogle(credencialComFoto(foto))
+    assert.equal(session.sessao.usuario.id, 403)
+    assert.equal(obterFotoGoogle(403), null)
+  }
 })
 
 test('restaura sessão após recarregar, sem confiar em perfil persistido', async () => {

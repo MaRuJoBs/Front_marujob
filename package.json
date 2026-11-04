@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test tests/auth.test.mjs tests/vagas.test.mjs tests/oportunidades.test.mjs tests/oportunidades-integracao.test.mjs",
+    "test": "node --test tests/auth.test.mjs tests/vagas.test.mjs tests/oportunidades.test.mjs tests/oportunidades-integracao.test.mjs tests/favoritos.test.mjs tests/perfil-portfolio.test.mjs",
+    "test:favoritos:browser": "node tests/favoritos.browser.mjs",
+    "test:perfil-portfolio:browser": "node tests/perfil-portfolio.browser.mjs",
     "preview": "vite preview",
     "format": "prettier --write --experimental-cli src/"
   },

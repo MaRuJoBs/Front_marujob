@@ -1,161 +1,15 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import api from '@/services/api'
+import { ref } from 'vue'
+import { usePortfolioForm } from '@/composables/usePortfolioForm'
 
-const route = useRoute()
-const router = useRouter()
-
-const editando = ref(false)
-
-const titulo = ref('')
-const categoria = ref('')
-const descricao = ref('')
-const link = ref('')
-const mostrarSucesso = ref(false)
-const salvando = ref(false)
-
-
-const imagem = ref(null)
-const preview = ref('')
-
-
-const categorias = [
-  'Website',
-  'Aplicativo',
-  'UI / UX',
-  'Branding',
-  'Social Media',
-  'Marketing',
-  'Design Gráfico'
-]
-
-
-const tags = ref([
-  'Vue.js',
-  'Figma',
-  'Photoshop',
-  'UI Design'
-])
-
-const novaTag = ref('')
-
+const {
+  editando, bloqueado, titulo, categoria, descricao, link, tags, novaTag, preview,
+  carregando, salvando, mostrarSucesso, erro, selecionarImagem,
+  adicionarTag, removerTag, enterTag, carregarProjeto, salvarProjeto, cancelar,
+} = usePortfolioForm()
 const inputImagem = ref(null)
-
-
-const abrirUpload = () => {
-  inputImagem.value.click()
-}
-
-
-const selecionarImagem = (event) => {
-  const file = event.target.files[0]
-
-  if (!file) return
-
-  imagem.value = file
-
-  preview.value = URL.createObjectURL(file)
-}
-
-
-const adicionarTag = () => {
-  const texto = novaTag.value.trim()
-
-  if (!texto) return
-
-  if (!tags.value.includes(texto)) {
-    tags.value.push(texto)
-  }
-
-  novaTag.value = ''
-}
-
-const enterTag = (event) => {
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    adicionarTag()
-  }
-}
-
-
-const removerTag = (index) => {
-  tags.value.splice(index, 1)
-}
-
-const carregarProjeto = async () => {
-  try {
-    const response = await api.get(`portfolios/${route.params.id}/`)
-
-    titulo.value = response.data.titulo
-    categoria.value = response.data.categoria
-    descricao.value = response.data.descricao
-    link.value = response.data.link || ''
-    tags.value = response.data.tags || []
-
-    if (response.data.imagem) {
-      preview.value = response.data.imagem
-    }
-
-  } catch (error) {
-    console.error('ERRO AO CARREGAR PORTFÓLIO:', error)
-  }
-}
-const salvarProjeto = async () => {
-  if (salvando.value) return
-
-  try {
-    salvando.value = true
-
-    const formData = new FormData()
-
-    formData.append('titulo', titulo.value)
-    formData.append('categoria', categoria.value)
-    formData.append('descricao', descricao.value)
-    formData.append('link', link.value)
-    formData.append('tags', JSON.stringify(tags.value))
-
-    // Só envia imagem se o usuário escolheu uma nova
-    if (imagem.value) {
-      formData.append('imagem', imagem.value)
-    }
-
-    if (editando.value) {
-      await api.patch(
-        `portfolios/${route.params.id}/`,
-        formData
-      )
-    } else {
-      await api.post(
-        'portfolios/',
-        formData
-      )
-    }
-
-    mostrarSucesso.value = true
-
-    setTimeout(() => {
-      router.push('/portfolio')
-    }, 1500)
-
-  } catch (error) {
-    console.error('ERRO AO SALVAR PORTFÓLIO:', error)
-    console.error('RESPOSTA DO SERVIDOR:', error.response?.data)
-  } finally {
-    salvando.value = false
-  }
-}
-
-const cancelar = () => {
-  router.push('/portfolio')
-}
-
-onMounted(() => {
-  if (route.params.id) {
-    editando.value = true
-    carregarProjeto()
-  }
-})
+const abrirUpload = () => inputImagem.value?.click()
+const categorias = ['Website', 'Aplicativo', 'UI / UX', 'Branding', 'Social Media', 'Marketing', 'Design Gráfico']
 </script>
 
 <template>
@@ -163,8 +17,9 @@ onMounted(() => {
     <div
   v-if="mostrarSucesso"
   class="toast-sucesso"
+  role="status"
 >
-  <FontAwesomeIcon :icon="['fas', 'check']" />
+  <span aria-hidden="true">✓</span>
   Projeto salvo com sucesso!
 </div>
 
@@ -181,7 +36,13 @@ onMounted(() => {
     </section>
 
 
-    <section class="formulario">
+    <p v-if="carregando" class="estado-form" role="status">Carregando projeto...</p>
+    <div v-if="erro" class="estado-form" role="alert">
+      <p>{{ erro }}</p>
+      <button v-if="bloqueado && !carregando" type="button" @click="carregarProjeto">Tentar carregar novamente</button>
+    </div>
+    <form class="formulario" @submit.prevent="salvarProjeto" :aria-busy="salvando || carregando">
+      <fieldset :disabled="salvando || carregando || mostrarSucesso || bloqueado">
 
       <div class="upload">
 
@@ -191,6 +52,7 @@ onMounted(() => {
             v-if="preview"
             :src="preview"
             class="preview-img"
+            alt="Imagem do projeto"
           />
 
           <FontAwesomeIcon
@@ -223,10 +85,13 @@ onMounted(() => {
       <!-- Título -->
       <div class="campo">
 
-        <label>Título do Projeto</label>
+        <label for="projeto-titulo">Título do Projeto</label>
 
         <input
+          id="projeto-titulo"
           type="text"
+          required
+          maxlength="255"
           v-model="titulo"
           placeholder="Ex: Landing Page para Restaurante"
         >
@@ -236,13 +101,14 @@ onMounted(() => {
       <!-- Categoria -->
       <div class="campo">
 
-        <label>Categoria</label>
+        <label for="projeto-categoria">Categoria</label>
 
-        <select v-model="categoria">
+        <select id="projeto-categoria" v-model="categoria" required>
 
           <option disabled value="">
             Selecione uma categoria
           </option>
+          <option v-if="categoria && !categorias.includes(categoria)" :value="categoria">{{ categoria }}</option>
 
           <option
             v-for="item in categorias"
@@ -259,10 +125,12 @@ onMounted(() => {
       <!-- Descrição -->
       <div class="campo">
 
-        <label>Descrição</label>
+        <label for="projeto-descricao">Descrição</label>
 
         <textarea
+          id="projeto-descricao"
           rows="5"
+          required
           v-model="descricao"
           placeholder="Conte um pouco sobre esse projeto..."
         ></textarea>
@@ -318,10 +186,13 @@ onMounted(() => {
       <!-- Link -->
       <div class="campo">
 
-        <label>Link do Projeto</label>
+        <label for="projeto-link">Link do Projeto (opcional)</label>
 
         <input
-          type="url"
+          id="projeto-link"
+          type="text"
+          inputmode="url"
+          maxlength="200"
           v-model="link"
           placeholder="https://..."
         >
@@ -341,16 +212,16 @@ onMounted(() => {
 
         <button
   class="salvar"
-  type="button"
-  @click="salvarProjeto"
-  :disabled="salvando"
+  type="submit"
+  :disabled="salvando || carregando || mostrarSucesso"
 >
   {{ salvando ? 'Salvando...' : (editando ? 'Salvar Alterações' : 'Salvar Projeto') }}
 </button>
 
       </div>
 
-    </section>
+      </fieldset>
+    </form>
 
   </div>
 </template>
@@ -400,6 +271,10 @@ onMounted(() => {
   padding: 24px 18px;
   box-shadow: 0 5px 20px rgba(0,0,0,.08);
 }
+
+fieldset { border: 0; min-width: 0; }
+.estado-form { margin: 16px; padding: 16px; color: #533a91; background: #f7f5fc; border-radius: 16px; overflow-wrap: anywhere; }
+button:disabled { opacity: .65; cursor: default; }
 
 .upload {
   display: flex;

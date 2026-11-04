@@ -1,6 +1,11 @@
  <script setup>
-import { ref, onMounted, computed } from 'vue'
-import api from '@/services/api'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { listarOportunidades } from '@/services/freelanceService'
+import { erroOportunidades } from '@/utils/oportunidades'
+import FavoritoButton from '@/components/FavoritoButton.vue'
+import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
+
+const { erroFavorito } = useFavoritosLocais()
 
 const jobs = ref([])
 const page = ref(1)
@@ -9,19 +14,31 @@ const totalFreelances = ref(0)
 const slideAtual = ref(0)
 const slideContainer = ref(null)
 const mostrarAvisoSenha = ref(false)
+const carregandoJobs = ref(false)
+const erroJobs = ref('')
+let controlador
 
 const buscarJobs = async () => {
+  if (carregandoJobs.value) return
+  controlador = new AbortController()
+  carregandoJobs.value = true
+  erroJobs.value = ''
   try {
-    const { data } = await api.get(`freelances/?page=${page.value}`)
+    const data = await listarOportunidades({ page: page.value }, controlador.signal)
+    if (controlador.signal.aborted) return
 
     jobs.value = [...jobs.value, ...data.results]
     totalFreelances.value = data.count
     temProximaPagina.value = data.next !== null
     page.value++
   } catch (error) {
-    console.error('Erro ao buscar freelances:', error)
+    if (!controlador.signal.aborted) erroJobs.value = erroOportunidades(error)
+  } finally {
+    if (!controlador.signal.aborted) carregandoJobs.value = false
   }
 }
+
+onBeforeUnmount(() => controlador?.abort())
 
 onMounted(() => {
   buscarJobs()
@@ -87,6 +104,16 @@ const atualizarSlide = () => {
 </button>
   </div>
 </div>
+    <p v-if="carregandoJobs" class="estado-jobs" role="status">
+      Carregando oportunidades...
+    </p>
+    <div v-else-if="erroJobs" class="estado-jobs erro-jobs" role="alert">
+      <p>{{ erroJobs }}</p>
+      <button type="button" @click="buscarJobs">Tentar novamente</button>
+    </div>
+    <p v-else-if="!jobs.length" class="estado-jobs vazio-jobs" role="status">
+      Nenhuma oportunidade disponível no momento.
+    </p>
     <section class="principais">
       <h2>Principais</h2>
 
@@ -105,12 +132,12 @@ const atualizarSlide = () => {
           :key="index"
           class="slide"
         >
-          <router-link
+          <article
             v-for="job in slide"
             :key="job.id"
-            :to="`/oportunidade/${job.id}`"
             class="card"
           >
+            <router-link :to="`/oportunidade/${job.id}`" class="card-conteudo">
             <div class="imagem">
               <img
                 v-if="job.foto"
@@ -135,7 +162,9 @@ const atualizarSlide = () => {
             </div>
 
             <div class="seta-card">›</div>
-          </router-link>
+            </router-link>
+            <FavoritoButton :id="job.id" />
+          </article>
         </div>
       </div>
 
@@ -148,6 +177,7 @@ const atualizarSlide = () => {
       </div>
     </section>
 
+    <p v-if="erroFavorito" class="erro-favorito" role="alert">{{ erroFavorito }}</p>
     <div class="chamada">
       <strong>Seu próximo trabalho pode estar aqui.</strong>
       <span>Encontre oportunidades, mostre seu talento e comece hoje.</span>
@@ -157,7 +187,7 @@ const atualizarSlide = () => {
       <div class="titulo-mais">
         <div>
           <h3>Mais oportunidades</h3>
-          <span class="contador">
+          <span v-if="!carregandoJobs && !erroJobs" class="contador">
             {{ totalFreelances }}
             {{ totalFreelances === 1 ? 'oportunidade' : 'oportunidades' }}
             para explorar
@@ -171,7 +201,10 @@ const atualizarSlide = () => {
           v-for="job in jobsHome"
           :key="job.id"
         >
-          <h4>{{ job.titulo }}</h4>
+          <div class="mini-card-topo">
+            <h4>{{ job.titulo }}</h4>
+            <FavoritoButton :id="job.id" />
+          </div>
           <p>Empresa</p>
           <span>R$ {{ job.preco }}</span>
           <p>{{ job.tempo }} horas</p>
@@ -327,6 +360,46 @@ main {
   box-shadow: 0 2px 8px rgba(72, 48, 120, 0.08);
 }
 
+.card-conteudo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+}
+.mini-card-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+.mini-card-topo h4 { min-width: 0; }
+.erro-favorito { color: #5637b4; overflow-wrap: anywhere; }
+
+.estado-jobs {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: #f7f5ff;
+  color: #5637b4;
+  overflow-wrap: anywhere;
+}
+.estado-jobs button {
+  margin-top: 12px;
+  padding: 10px 18px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 25px;
+  background: #5b3cc4;
+  color: white;
+  cursor: pointer;
+}
+.estado-jobs button:focus-visible {
+  outline: 2px solid #673fd7;
+  outline-offset: 3px;
+}
+
 .imagem {
   width: 76px;
   height: 76px;
@@ -475,7 +548,7 @@ main {
 
 .grid-oportunidades {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -484,7 +557,7 @@ main {
   border-radius: 15px;
   padding: 12px;
   min-width: 0;
-  height: 175px;
+  min-height: 205px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -515,7 +588,7 @@ main {
   color: #5b3cc4;
 }
 
-.mini-card button {
+.mini-card a button {
   width: 100%;
   border: none;
   background: #5b3cc4;
@@ -544,5 +617,14 @@ main {
   font-weight: 600;
   box-shadow: 0 4px 10px rgba(91, 60, 196, 0.2);
   cursor: pointer;
+}
+
+@media (max-width: 479px) {
+  .grid-oportunidades { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { gap: 4px; padding: 10px; }
+  .card-conteudo { gap: 8px; }
+  .imagem { width: 52px; min-width: 52px; height: 64px; }
+  .seta-card { display: none; }
+  .card .preco { flex-wrap: wrap; gap: 4px; }
 }
 </style>

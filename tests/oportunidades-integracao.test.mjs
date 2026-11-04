@@ -1,9 +1,10 @@
 // Integração do frontend com transporte Axios simulado; nenhuma API real é alterada.
-import test, { after, beforeEach } from 'node:test'
+import test, { after, afterEach, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import axios from 'axios'
 import { createServer } from 'vite'
 import { createRenderer, h, nextTick } from 'vue'
+import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import { setTimeout as esperar } from 'node:timers/promises'
 const storage = new Map()
 globalThis.localStorage = {
@@ -22,7 +23,9 @@ const vite = await createServer({
 const { useOportunidades } = await vite.ssrLoadModule('/src/composables/useOportunidades.js')
 const { obterOportunidade } = await vite.ssrLoadModule('/src/services/freelanceService.js')
 const { default: api } = await vite.ssrLoadModule('/src/services/api.js')
-let chamadas, transporte
+const { sessao } = await vite.ssrLoadModule('/src/services/authSession.js')
+const chaveFavoritos = 'marujobs:favoritos:usuario:37'
+let chamadas, transporte, pinia
 api.defaults.adapter = async (config) => {
   chamadas.push(config)
   return { config, data: await transporte(config), status: 200, headers: {}, statusText: '' }
@@ -62,14 +65,20 @@ function montar() {
       return () => h('div')
     },
   })
+  app.use(pinia)
   app.mount({ children: [] })
   return { estado, fechar: () => app.unmount() }
 }
 beforeEach(() => {
   storage.clear()
+  sessao.usuario = { id: 37 }
+  sessao.tipo = 'usuario'
+  pinia = createPinia()
+  setActivePinia(pinia)
   chamadas = []
   transporte = (config) => pagina(config.params.page)
 })
+afterEach(() => disposePinia(pinia))
 after(async () => {
   await vite.close()
   delete globalThis.localStorage
@@ -163,14 +172,14 @@ for (const status of [400, 401, 404, 500, 0])
     }
   })
 test('favoritos preservam localStorage e JSON inválido não quebra tela', async () => {
-  storage.set('favoritos', '{')
+  storage.set(chaveFavoritos, '{')
   const { estado: e, fechar } = montar()
   try {
     await esperar(20)
     e.toggleFavorito({ id: 11 })
-    assert.deepEqual(JSON.parse(storage.get('favoritos')), [11])
+    assert.deepEqual(JSON.parse(storage.get(chaveFavoritos)), [11])
     e.toggleFavorito({ id: 11 })
-    assert.deepEqual(JSON.parse(storage.get('favoritos')), [])
+    assert.deepEqual(JSON.parse(storage.get(chaveFavoritos)), [])
   } finally {
     fechar()
   }

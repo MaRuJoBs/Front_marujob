@@ -1,20 +1,12 @@
 
 import { ref, onUnmounted } from 'vue'
-import api from '@/services/api'
+import { resolverImagem } from '../utils/imagens.js'
 
 export function usePerfilImagem() {
   const imagem = ref(null)
   const previewImagem = ref(null)
 
   let urlTemporaria = null
-
-  const getImageUrl = (path) => {
-    if (!path) return null
-
-    if (path.startsWith('http')) return path
-
-    return `${api.defaults.baseURL.replace('/api/', '')}${path}`
-  }
 
   const carregarImagem = (path) => {
     if (urlTemporaria) {
@@ -23,7 +15,7 @@ export function usePerfilImagem() {
     }
 
     imagem.value = null
-    previewImagem.value = getImageUrl(path)
+    previewImagem.value = resolverImagem(path)
   }
 
   

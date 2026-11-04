@@ -1,51 +1,83 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
+import { obterPortfolio, erroPortfolio } from '@/services/portfolioService'
+import { resolverImagem } from '@/utils/imagens'
+import { sessao } from '@/services/authSession'
 
 const route = useRoute()
 const router = useRouter()
 
 const projeto = ref(null)
 const carregando = ref(true)
+const erro = ref('')
+const excluindo = ref(false)
+let controlador
+let revisao = 0
+onBeforeUnmount(() => { revisao++; controlador?.abort() })
 
 const mostrarModalExcluir = ref(false)
 
 const carregarProjeto = async () => {
+  const atual = ++revisao
+  controlador?.abort()
+  controlador = new AbortController()
+  carregando.value = true
+  projeto.value = null
+  erro.value = ''
+  mostrarModalExcluir.value = false
   try {
-    const response = await api.get(`portfolios/${route.params.id}/`)
-    projeto.value = response.data
-
-    console.log('PORTFÓLIO:', projeto.value)
+    const data = await obterPortfolio(route.params.id, controlador.signal)
+    if (atual === revisao) projeto.value = data
   } catch (error) {
-    console.error('ERRO AO BUSCAR PORTFÓLIO:', error)
+    if (atual === revisao) erro.value = erroPortfolio(error)
   } finally {
-    carregando.value = false
+    if (atual === revisao) carregando.value = false
   }
 }
 const excluirProjeto = async () => {
+  if (excluindo.value || !projeto.value) return
+  const id = projeto.value.id
+  const atual = revisao
+  excluindo.value = true
+  erro.value = ''
   try {
-    await api.delete(`portfolios/${route.params.id}/`)
+    const response = await api.delete(`portfolios/${id}/`)
+    if (atual !== revisao) return
+    if (response.status !== 204) throw new Error('O servidor não confirmou a exclusão.')
 
     mostrarModalExcluir.value = false
 
-    router.push('/portfolio')
+    await router.push('/portfolio')
   } catch (error) {
-    console.error(error)
+    if (atual === revisao) erro.value = erroPortfolio(error)
+  } finally {
+    excluindo.value = false
   }
 }
 
-onMounted(() => {
-  carregarProjeto()
-})
+watch([() => route.params.id, () => sessao.usuario?.id, () => sessao.revisao], () => {
+  if (sessao.usuario) carregarProjeto()
+  else {
+    revisao++
+    controlador?.abort()
+    projeto.value = null
+    mostrarModalExcluir.value = false
+  }
+}, { immediate: true, flush: 'sync' })
 </script>
 <template>
   <div class="portfolio-detalhe">
+    <div v-if="erro" class="carregando" role="alert">
+      <p>{{ erro }}</p>
+      <button v-if="!projeto" type="button" @click="carregarProjeto">Tentar novamente</button>
+    </div>
     <div v-if="carregando" class="carregando">Carregando projeto...</div>
 
-    <div v-else-if="!projeto" class="carregando">Projeto não encontrado.</div>
+    <div v-else-if="!projeto && !erro" class="carregando">Projeto não encontrado.</div>
 
-   <div v-else class="conteudo-projeto">
+   <div v-else-if="projeto" class="conteudo-projeto">
 
     <!-- Cabeçalho -->
     <section class="header">
@@ -58,7 +90,7 @@ onMounted(() => {
 
     <!-- Imagem -->
     <section class="imagem-projeto">
-      <img v-if="projeto.imagem" :src="projeto.imagem" alt="Projeto" />
+      <img v-if="projeto.imagem" :src="resolverImagem(projeto.imagem)" :alt="projeto.titulo" />
 
       <div v-else class="imagem-vazia">
         <FontAwesomeIcon :icon="['fas', 'image']" class="icone-imagem" />
@@ -143,9 +175,10 @@ onMounted(() => {
 
       <button
         class="confirmar-modal"
+  :disabled="excluindo"
         @click="excluirProjeto"
       >
-        Excluir
+        {{ excluindo ? 'Excluindo...' : 'Excluir' }}
       </button>
 
     </div>

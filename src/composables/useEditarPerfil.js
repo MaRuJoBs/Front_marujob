@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
+import { obterFotoGoogle } from '@/services/fotoGoogle'
 
 import { usePerfilLocalizacao } from '@/composables/usePerfilLocalizacao'
 import { usePerfilImagem } from '@/composables/usePerfilImagem'
@@ -17,6 +18,7 @@ export function useEditarPerfil() {
 
   const localizacaoPerfil = usePerfilLocalizacao()
   const imagemPerfil = usePerfilImagem()
+  let fotoAlternativa = null
   const habilidadesPerfil = usePerfilHabilidades()
 
   const carregando = ref(true)
@@ -38,7 +40,8 @@ export function useEditarPerfil() {
       telefone.value = user.telefone || ''
 
       localizacaoPerfil.carregarLocalizacao(user)
-      imagemPerfil.carregarImagem(user.profile_image)
+      fotoAlternativa = obterFotoGoogle(user.id)
+      imagemPerfil.carregarImagem(user.profile_image || fotoAlternativa)
       habilidadesPerfil.carregarHabilidades(user.habilidades)
     } catch (error) {
       console.error('Erro ao carregar perfil:', error)
@@ -130,6 +133,13 @@ export function useEditarPerfil() {
     router.push('/perfil')
   }
 
+  const falhaImagemPerfil = () => {
+    if (imagemPerfil.imagem.value) return
+    const alternativa = imagemPerfil.previewImagem.value !== fotoAlternativa ? fotoAlternativa : null
+    fotoAlternativa = null
+    imagemPerfil.carregarImagem(alternativa)
+  }
+
   onMounted(carregarPerfil)
 
   return {
@@ -149,6 +159,7 @@ export function useEditarPerfil() {
 
     carregarPerfil,
     salvarPerfil,
+    falhaImagemPerfil,
     voltar,
   }
 }
