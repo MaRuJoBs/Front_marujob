@@ -1,5 +1,4 @@
-
-<script setup>
+﻿<script setup>
 import { ref, onUnmounted, nextTick } from 'vue'
 
 const emit = defineEmits(['captured', 'close'])
@@ -10,8 +9,11 @@ const carregando = ref(false)
 const erro = ref('')
 
 let stream = null
+let geracao = 0
+let desmontado = false
 
 const pararCamera = () => {
+  geracao++
   if (stream) {
     stream.getTracks().forEach((track) => track.stop())
     stream = null
@@ -27,6 +29,7 @@ const pararCamera = () => {
 const abrirCamera = async () => {
   if (carregando.value || cameraAtiva.value) return
 
+  const atual = ++geracao
   erro.value = ''
   carregando.value = true
 
@@ -44,6 +47,10 @@ const abrirCamera = async () => {
       audio: false,
     })
 
+    if (desmontado || atual !== geracao) {
+      novoStream.getTracks().forEach((track) => track.stop())
+      return
+    }
     stream = novoStream
     cameraAtiva.value = true
 
@@ -54,7 +61,7 @@ const abrirCamera = async () => {
       await videoRef.value.play()
     }
   } catch (error) {
-    console.error('Erro ao abrir câmera:', error)
+    if (desmontado || atual !== geracao) return
 
     pararCamera()
 
@@ -94,24 +101,22 @@ const fotografar = async () => {
 
   contexto.drawImage(video, 0, 0)
 
+  const atual = geracao
   canvas.toBlob(
     (blob) => {
+      if (desmontado || atual !== geracao) return
       if (!blob) {
         erro.value = 'Não foi possível gerar a fotografia.'
         return
       }
 
-      const arquivo = new File(
-        [blob],
-        `foto-perfil-${Date.now()}.jpg`,
-        { type: 'image/jpeg' }
-      )
+      const arquivo = new File([blob], `foto-perfil-${Date.now()}.jpg`, { type: 'image/jpeg' })
 
       pararCamera()
       emit('captured', arquivo)
     },
     'image/jpeg',
-    0.9
+    0.9,
   )
 }
 
@@ -121,6 +126,7 @@ const fecharCamera = () => {
 }
 
 onUnmounted(() => {
+  desmontado = true
   pararCamera()
 })
 </script>
@@ -143,36 +149,21 @@ onUnmounted(() => {
       <p>Câmera desligada</p>
     </div>
 
-    <p v-if="erro" class="camera-erro">
+    <p role="alert" v-if="erro" class="camera-erro">
       {{ erro }}
     </p>
 
     <div class="camera-acoes">
-      <button
-        v-if="!cameraAtiva"
-        type="button"
-        :disabled="carregando"
-        @click="abrirCamera"
-      >
+      <button v-if="!cameraAtiva" type="button" :disabled="carregando" @click="abrirCamera">
         {{ carregando ? 'Abrindo...' : 'Abrir câmera' }}
       </button>
 
-      <button
-        v-if="cameraAtiva"
-        type="button"
-        @click="fotografar"
-      >
+      <button v-if="cameraAtiva" type="button" @click="fotografar">
         <i class="fa-solid fa-camera"></i>
         Fotografar
       </button>
 
-      <button
-        type="button"
-        class="btn-fechar"
-        @click="fecharCamera"
-      >
-        Fechar
-      </button>
+      <button type="button" class="btn-fechar" @click="fecharCamera">Fechar</button>
     </div>
   </div>
 </template>

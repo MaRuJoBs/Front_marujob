@@ -1,63 +1,40 @@
-// API simulada exclusivamente no teste; não publica projetos nem cria contas reais.
-import test, { beforeEach, after } from 'node:test'
+﻿import test, { after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import axios from 'axios'
-import { setImmediate as esperar } from 'node:timers/promises'
 import { createServer } from 'vite'
-import { createRenderer, h, nextTick } from 'vue'
-import { createRouter, createMemoryHistory, RouterView } from 'vue-router'
-
+import vue from '@vitejs/plugin-vue'
+import { createRenderer, h, nextTick, ssrContextKey } from 'vue'
+import { createRouter, createMemoryHistory } from 'vue-router'
+import { resolve } from 'node:path'
+import { setTimeout as esperar } from 'node:timers/promises'
 const storage = new Map()
 globalThis.localStorage = {
   getItem: (k) => storage.get(k) ?? null,
   setItem: (k, v) => storage.set(k, v),
   removeItem: (k) => storage.delete(k),
 }
-globalThis.window = new EventTarget()
 const vite = await createServer({
   configFile: false,
-  mode: 'test',
+  plugins: [vue()],
+  resolve: { alias: { '@': resolve('src') } },
   optimizeDeps: { noDiscovery: true, include: [] },
   server: { middlewareMode: true, watch: null, ws: false },
   appType: 'custom',
 })
-const { default: api } = await vite.ssrLoadModule('/src/services/api.js')
-const { sessao } = await vite.ssrLoadModule('/src/services/authSession.js')
-const { usePortfolioForm } = await vite.ssrLoadModule('/src/composables/usePortfolioForm.js')
-const { listarPortfolios, normalizarTags, obterPortfolio, salvarPortfolio } =
-  await vite.ssrLoadModule('/src/services/portfolioService.js')
-const { resolverImagem } = await vite.ssrLoadModule('/src/utils/imagens.js')
-let chamadas, transporte
-const projeto = (id = 1) => ({
-  id,
-  titulo: `Projeto ${id}`,
-  categoria: 'Website',
-  descricao: 'Descrição',
-  tags: ['Vue.js'],
-  link: '',
-  imagem: '/media/projeto.png',
-})
-api.defaults.adapter = async (config) => {
-  chamadas.push(config)
-  const { data, status = 200 } = await transporte(config)
-  return { config, data, status, headers: {}, statusText: '' }
-}
-const falhar = (config, status, data = {}) => {
-  throw new axios.AxiosError(
-    'Falha simulada',
-    'ERR_TEST',
-    config,
-    null,
-    status ? { status, data } : undefined,
-  )
-}
-const adiar = () => {
-  let resolve
-  const promise = new Promise((r) => {
-    resolve = r
-  })
-  return { promise, resolve }
-}
+const load = (p) => vite.ssrLoadModule('/src/' + p)
+const { default: api } = await load('services/api.js')
+const { sessao, limparSessao } = await load('services/authSession.js')
+const service = await load('services/perfilPortfolioService.js')
+const utils = await load('utils/perfilPortfolio.js')
+const { usePerfilPortfolio } = await load('composables/usePerfilPortfolio.js')
+const { useEditarPerfil } = await load('composables/useEditarPerfil.js')
+const { useProjetoFormulario } = await load('composables/useProjetoFormulario.js')
+const { useProjetoDetalhe } = await load('composables/useProjetoDetalhe.js')
+const { usePerfilImagem } = await load('composables/usePerfilImagem.js')
+const { usePerfilHabilidades } = await load('composables/usePerfilHabilidades.js')
+const { usePerfilLocalizacao } = await load('composables/usePerfilLocalizacao.js')
+const { default: geo } = await load('services/geocodingApi.js')
+const { default: axios } = await import('axios')
+let chamadas, transporte, user, projetos, revogadas
 const renderer = createRenderer({
   createElement: () => ({ children: [] }),
   createText: () => ({}),
@@ -67,275 +44,597 @@ const renderer = createRenderer({
   patchProp() {},
   insert(c, p) {
     p.children.push(c)
-    c.parent = p
   },
-  remove(c) {
-    if (c.parent) c.parent.children = c.parent.children.filter((item) => item !== c)
-  },
-  parentNode: (c) => c.parent,
+  remove() {},
+  parentNode: () => null,
   nextSibling: () => null,
 })
-async function montar(path = '/portfolio/adicionar') {
-  let estado
-  const componente = {
-    setup() {
-      estado = usePortfolioForm()
-      return () => h('div')
-    },
-  }
+async function montar(use, path = '/portfolio/adicionar') {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/portfolio/adicionar', component: componente },
-      { path: '/portfolio/:id/editar', component: componente },
-      { path: '/portfolio', component: { render: () => h('div') } },
+      { path: '/portfolio/adicionar', component: {} },
+      { path: '/portfolio/:id/editar', component: {} },
+      { path: '/portfolio/:id', component: {} },
+      { path: '/perfil', component: {} },
     ],
   })
-  const app = renderer.createApp({ render: () => h(RouterView) })
-  app.use(router)
   await router.push(path)
+  await router.isReady()
+  let e
+  const app = renderer.createApp({
+    setup() {
+      e = use()
+      return () => h('div')
+    },
+  })
+  app.provide(ssrContextKey, { modules: new Set() })
+  app.use(router)
   app.mount({ children: [] })
-  await esperar()
-  return { estado, router, fechar: () => app.unmount() }
+  if (e.carregar) await e.carregar()
+  if (e.carregarPerfil) await e.carregarPerfil()
+  await esperar(30)
+  return { e, router, fechar: () => app.unmount() }
 }
-function preencher(e) {
-  e.titulo.value = ' Meu projeto '
-  e.categoria.value = 'Website'
-  e.descricao.value = ' Descrição do projeto '
+function falhar(status, data = {}) {
+  const e = new Error('teste')
+  e.response = { status, data }
+  throw e
+}
+api.defaults.adapter = async (c) => {
+  chamadas.push(c)
+  const r = await transporte(c)
+  return { config: c, status: r?.status || 200, data: r?.data ?? r, headers: {}, statusText: '' }
 }
 beforeEach(() => {
-  storage.clear()
-  sessao.usuario = { id: 40 }
-  sessao.tipo = 'usuario'
-  sessao.revisao++
+  limparSessao()
+  storage.set('token', 'teste')
   chamadas = []
-  transporte = (c) => ({ data: projeto(Number(c.url.split('/').at(-2)) || 1) })
+  revogadas = []
+  user = {
+    id: 1,
+    name: 'Nome real',
+    profissao: 'Profissão real',
+    localizacao: 'Cidade, SC',
+    sobre: 'Descrição real',
+    telefone: '123',
+    email: 'e@teste.com',
+    habilidades: ['Vue'],
+    profile_image: '/media/foto.png',
+  }
+  projetos = [
+    {
+      id: 1,
+      titulo: 'Projeto real',
+      categoria: 'Categoria',
+      descricao: 'Descrição',
+      tags: ['Vue'],
+      imagem: '/media/projeto.png',
+      link: '',
+    },
+  ]
+  transporte = (c) => {
+    if (c.url === 'usuarios/me/') {
+      if (c.method === 'patch')
+        Object.assign(
+          user,
+          typeof c.data === 'string' ? JSON.parse(c.data) : Object.fromEntries(c.data),
+        )
+      return { ...user }
+    }
+    if (c.method === 'delete') {
+      projetos = []
+      return { status: 204, data: '' }
+    }
+    if (c.method === 'post') {
+      const data = typeof c.data === 'string' ? JSON.parse(c.data) : Object.fromEntries(c.data)
+      projetos.push({ id: 2, ...data })
+      return { status: 201, data: projetos.at(-1) }
+    }
+    if (c.method === 'patch') {
+      Object.assign(
+        projetos[0],
+        typeof c.data === 'string' ? JSON.parse(c.data) : Object.fromEntries(c.data),
+      )
+      return projetos[0]
+    }
+    return /portfolios\/\d+\//.test(c.url)
+      ? { ...projetos.find((p) => p.id === Number(c.url.match(/portfolios\/(\d+)\//)[1])) }
+      : { results: projetos, next: null, count: projetos.length }
+  }
+  URL.createObjectURL = () => 'blob:teste'
+  URL.revokeObjectURL = (v) => revogadas.push(v)
 })
 after(async () => {
   await vite.close()
   delete globalThis.localStorage
-  delete globalThis.window
 })
-
-test('imagens relativas usam a origem da API; URLs externas são preservadas e protocolos inválidos rejeitados', () => {
-  for (const path of ['/media/foto.png', 'media/foto.png'])
-    assert.equal(
-      resolverImagem(path, 'https://api.example/api/'),
-      'https://api.example/media/foto.png',
-    )
-  assert.equal(
-    resolverImagem('https://lh3.googleusercontent.com/a/foto'),
-    'https://lh3.googleusercontent.com/a/foto',
-  )
-  assert.equal(resolverImagem('/media/foto.png', '/api/'), 'http://localhost/media/foto.png')
-  for (const path of [
-    null,
-    {},
-    '',
-    'javascript:alert(1)',
-    'data:text/html,abc',
-    'https://user:password@example.com/photo',
-  ])
-    assert.equal(resolverImagem(path), null)
+test('perfil e portfólio carregam dados reais, quantidade e limpam no logout', async () => {
+  const { e, fechar } = await montar(usePerfilPortfolio)
+  try {
+    assert.equal(e.usuario.value.name, user.name)
+    assert.equal(e.usuario.value.profissao, user.profissao)
+    assert.equal(e.usuario.value.localizacao, user.localizacao)
+    assert.equal(e.usuario.value.sobre, user.sobre)
+    assert.equal(e.projetos.value.length, 1)
+    limparSessao()
+    assert.equal(e.usuario.value, null)
+    assert.deepEqual(e.projetos.value, [])
+  } finally {
+    fechar()
+  }
 })
-test('tags aceitam JSON e array, removendo duplicatas e dados inválidos', () => {
-  assert.deepEqual(normalizarTags('["Vue.js", " Vue.js ", null, ""]'), ['Vue.js'])
-  for (const tags of ['{', '{}', null, {}]) assert.deepEqual(normalizarTags(tags), [])
+test('resposta atrasada não atualiza outra conta nem consulta próxima página', async () => {
+  let responder
+  transporte = () => new Promise((r) => (responder = r))
+  const pendente = service.listarProjetos()
+  await esperar(5)
+  limparSessao()
+  responder({ results: projetos, next: '?page=2' })
+  await assert.rejects(pendente)
+  assert.equal(chamadas.length, 1)
 })
-test('portfólios consultam páginas posteriores com deduplicação e preservam tags', async () => {
+test('paginação completa, contagem e proteção de origem e ciclos', async () => {
   transporte = (c) => ({
-    data: {
-      results: c.url.includes('page=2')
-        ? [projeto(1), { ...projeto(27), tags: '["Figma"]' }]
-        : [projeto(1)],
-      next: c.url.includes('page=2') ? null : '?page=2',
-    },
+    results: [{ id: c.url.includes('page=2') ? 11 : 1 }],
+    next: c.url.includes('page=2') ? null : '?page=2',
+    count: 2,
   })
-  const projetos = await listarPortfolios()
   assert.deepEqual(
-    projetos.map((p) => p.id),
-    [1, 27],
+    (await service.listarProjetos()).map((p) => p.id),
+    [1, 11],
   )
-  assert.deepEqual(projetos[1].tags, ['Figma'])
-  assert.deepEqual(
-    chamadas.map((c) => c.url),
-    ['portfolios/', 'portfolios/?page=2'],
-  )
+  transporte = () => ({ results: [], next: 'https://terceiro.test/api/portfolios/' })
+  await assert.rejects(service.listarProjetos())
+  transporte = () => ({ results: [], next: '?page=2' })
+  await assert.rejects(service.listarProjetos())
 })
-for (const next of [
-  'https://externo.invalid/api/portfolios/?page=2',
-  '/api/usuarios/',
-  'portfolios/',
-])
-  test(`paginação insegura ou repetida não é seguida: ${next}`, async () => {
-    transporte = () => ({ data: { results: [projeto()], next } })
-    await assert.rejects(listarPortfolios(), /inválida|repetida/)
-    assert.equal(chamadas.length, 1)
+test('PATCH usa somente campos editáveis e preserva omitidos', async () => {
+  await service.atualizarPerfil({
+    name: 'Novo',
+    perfil_configurado: true,
+    groups: ['admin'],
+    email: 'outro',
   })
-test('lista inválida e detalhe com ID diferente são erros, sem projetos fictícios', async () => {
-  transporte = () => ({ data: {} })
-  await assert.rejects(listarPortfolios(), /inválida/)
-  transporte = () => ({ data: projeto(2) })
-  await assert.rejects(obterPortfolio(1), /outro projeto/)
+  assert.deepEqual(JSON.parse(chamadas.at(-1).data), { name: 'Novo' })
+  assert.equal((await service.consultarPerfil()).profissao, 'Profissão real')
 })
-test('lista pendente de outra sessão é descartada', async () => {
-  const bloqueio = adiar()
-  transporte = async () => {
-    await bloqueio.promise
-    return { data: [projeto()] }
-  }
-  const carga = listarPortfolios()
-  await esperar()
-  sessao.usuario = { id: 41 }
-  bloqueio.resolve()
-  await assert.rejects(carga, /sessão/)
-})
-test('campos obrigatórios, limites e link inválido não enviam POST', async () => {
-  const { estado: e, fechar } = await montar()
+test('edição perfil salva valores reais e mantém dados com erro 400', async () => {
+  const { e, fechar } = await montar(useEditarPerfil)
   try {
-    assert.deepEqual(e.tags.value, [])
-    await e.salvarProjeto()
-    assert.match(e.erro.value, /Preencha/)
-    preencher(e)
-    e.titulo.value = 'a'.repeat(256)
-    await e.salvarProjeto()
-    assert.match(e.erro.value, /255/)
-    preencher(e)
-    e.link.value = 'javascript:alert(1)'
-    await e.salvarProjeto()
-    assert.match(e.erro.value, /link/)
-    assert.equal(chamadas.length, 0)
+    e.nome.value = 'Alterado'
+    await e.salvarPerfil()
+    assert.equal(e.nome.value, 'Alterado')
+    assert.equal((await service.consultarPerfil()).name, 'Alterado')
+    e.nome.value = 'Rascunho'
+    transporte = () => falhar(400, { name: ['Inválido'] })
+    await e.salvarPerfil()
+    assert.equal(e.nome.value, 'Rascunho')
+    assert.equal(e.camposErro.value.name, 'Inválido')
   } finally {
     fechar()
   }
 })
-test('POST multipart inclui imagem, tags reais, link normalizado e só navega depois de 201', async () => {
-  transporte = () => ({ data: projeto(27), status: 201 })
-  const { estado: e, router, fechar } = await montar()
+test('sessão trocada durante salvamento não altera usuário nem navegação', async () => {
+  const { e, router, fechar } = await montar(useEditarPerfil)
   try {
-    preencher(e)
-    e.link.value = 'example.com/projeto'
-    e.novaTag.value = 'Vue.js'
-    e.selecionarImagem({
-      target: {
-        files: [new File(['teste'], 'capa.png', { type: 'image/png' })],
-        value: 'capa.png',
-      },
-    })
-    await e.salvarProjeto()
-    const c = chamadas[0]
-    assert.equal(c.method, 'post')
-    assert.equal(c.url, 'portfolios/')
-    assert.equal(c.data.get('titulo'), 'Meu projeto')
-    assert.equal(c.data.get('link'), 'https://example.com/projeto')
-    assert.deepEqual(JSON.parse(c.data.get('tags')), ['Vue.js'])
-    assert.equal(c.data.get('imagem').name, 'capa.png')
-    assert.equal(e.mostrarSucesso.value, true)
-    await e.salvarProjeto()
-    assert.equal(chamadas.length, 1)
-    await new Promise((r) => setTimeout(r, 850))
-    assert.equal(router.currentRoute.value.path, '/portfolio')
+    let responder
+    transporte = () => new Promise((r) => (responder = r))
+    const pendente = e.salvarPerfil()
+    await esperar(5)
+    limparSessao()
+    responder(user)
+    await pendente
+    assert.equal(e.nome.value, '')
+    assert.equal(sessao.usuario, null)
+    assert.equal(router.currentRoute.value.path, '/portfolio/adicionar')
   } finally {
     fechar()
   }
 })
-for (const status of [400, 403, 500, 0])
-  test(`falha ${status} na gravação mantém campos e mostra erro sem sucesso`, async () => {
-    transporte = (c) => falhar(c, status, { imagem: ['Arquivo inválido.'] })
-    const { estado: e, router, fechar } = await montar()
+for (const status of [0, 400, 401, 403, 404, 413, 500, 503])
+  test(`erro ${status} é comunicado e permite nova tentativa`, async () => {
+    transporte = () => (status ? falhar(status) : Promise.reject(new Error('rede')))
+    const { e, fechar } = await montar(usePerfilPortfolio)
     try {
-      preencher(e)
-      await e.salvarProjeto()
       assert.ok(e.erro.value)
-      if (status === 400) assert.match(e.erro.value, /Imagem: Arquivo inválido/)
-      assert.equal(e.titulo.value, ' Meu projeto ')
-      assert.equal(e.mostrarSucesso.value, false)
-      assert.equal(e.salvando.value, false)
-      assert.equal(router.currentRoute.value.path, '/portfolio/adicionar')
+      assert.equal(e.usuario.value, null)
+      if (!status) assert.match(e.erro.value, /conexão/)
     } finally {
       fechar()
     }
   })
-test('cliques concorrentes enviam somente um POST e resposta após troca de conta não redireciona', async () => {
-  const bloqueio = adiar()
-  transporte = async () => {
-    await bloqueio.promise
-    return { data: projeto(), status: 201 }
+test('foto valida formato/tamanho, preserva cancelamento e libera URLs', async () => {
+  const { e, fechar } = await montar(usePerfilImagem)
+  e.carregarImagem('/media/antiga.png')
+  const antiga = e.previewImagem.value
+  e.selecionarImagem({ target: { files: [], value: '' } })
+  assert.equal(e.previewImagem.value, antiga)
+  e.definirImagem(new File(['x'], 'x.gif', { type: 'image/gif' }))
+  assert.ok(e.erroImagem.value)
+  assert.equal(e.previewImagem.value, antiga)
+  assert.ok(utils.validarImagem({ type: 'image/png', size: 5242881 }))
+  e.definirImagem(new File(['x'], 'x.png', { type: 'image/png' }))
+  assert.equal(e.previewImagem.value, 'blob:teste')
+  e.definirImagem(new File(['y'], 'y.webp', { type: 'image/webp' }))
+  assert.equal(revogadas.length, 1)
+  fechar()
+  assert.equal(revogadas.length, 2)
+})
+test('multipart serializa habilidades e tags uma vez e omite imagem ausente', async () => {
+  const file = new File(['x'], 'x.png', { type: 'image/png' })
+  for (const [campos, lista, imagem] of [
+    [utils.camposPerfil, 'habilidades', 'profile_image'],
+    [utils.camposProjeto, 'tags', 'imagem'],
+  ]) {
+    const form = utils.payloadPermitido(
+      { [lista]: ['Vue', 'API'], [imagem]: file, usuario: 9 },
+      campos,
+    )
+    assert.deepEqual(JSON.parse(form.get(lista)), ['Vue', 'API'])
+    assert.ok(form.get(imagem) instanceof Blob)
+    assert.equal(form.get('usuario'), null)
+    assert.deepEqual(utils.payloadPermitido({ [lista]: [] }, campos), { [lista]: [] })
   }
-  const { estado: e, router, fechar } = await montar()
+})
+test('habilidades incluem, removem, rejeitam vazias, duplicadas e limites', async () => {
+  const { e, fechar } = await montar(usePerfilHabilidades)
   try {
-    preencher(e)
-    const salvar = e.salvarProjeto()
-    await e.salvarProjeto()
-    await esperar()
-    assert.equal(chamadas.length, 1)
-    sessao.usuario = { id: 41 }
-    sessao.revisao++
-    await nextTick()
-    bloqueio.resolve()
-    await salvar
-    assert.equal(e.mostrarSucesso.value, false)
-    assert.equal(router.currentRoute.value.path, '/portfolio/adicionar')
-    assert.equal(e.titulo.value, '')
+    e.carregarHabilidades(['Vue'])
+    for (const v of ['', 'vue', 'x'.repeat(101)]) {
+      e.novaHabilidade.value = v
+      e.adicionarHabilidade()
+      assert.equal(e.habilidades.value.length, 1)
+    }
+    e.novaHabilidade.value = 'API'
+    e.adicionarHabilidade()
+    assert.equal(e.habilidades.value.length, 2)
+    e.removerHabilidade('Vue')
+    assert.deepEqual(e.habilidades.value, ['API'])
+    assert.ok(utils.validarLista(Array.from({ length: 51 }, (_, i) => String(i))))
   } finally {
     fechar()
   }
 })
-test('edição busca o ID, envia PATCH sem reenviar imagem antiga e reinicia ao trocar rota', async () => {
-  const { estado: e, router, fechar } = await montar('/portfolio/27/editar')
+test('URLs de mídia e links externos aceitam HTTP/HTTPS, rejeitam protocolos e caminhos locais', () => {
+  assert.equal(
+    utils.imagemUrl('/media/x.jpg', 'https://api.test/api/'),
+    'https://api.test/media/x.jpg',
+  )
+  assert.equal(
+    utils.imagemUrl('https://res.cloudinary.com/x', '/api/'),
+    'https://res.cloudinary.com/x',
+  )
+  for (const p of ['javascript:alert(1)', 'file:///x', 'C:\\foto.jpg'])
+    assert.equal(utils.imagemUrl(p, '/api/'), '')
+  assert.equal(utils.linkSeguro('javascript:alert(1)'), '')
+  assert.ok(utils.linkSeguro('https://example.com'))
+})
+test('criação inicia tags vazias, valida e bloqueia envio repetido após 201', async () => {
+  const { e, fechar } = await montar(useProjetoFormulario)
   try {
-    assert.equal(e.titulo.value, 'Projeto 27')
-    assert.ok(e.preview.value.endsWith('/media/projeto.png'))
-    transporte = () => ({ data: projeto(27) })
+    assert.deepEqual(e.tags.value, [])
     await e.salvarProjeto()
-    const c = chamadas.at(-1)
-    assert.equal(c.method, 'patch')
-    assert.equal(c.url, 'portfolios/27/')
-    assert.equal(c.data.has('imagem'), false)
-    transporte = () => ({ data: projeto(28) })
-    await router.push('/portfolio/28/editar')
-    await esperar()
-    assert.equal(e.titulo.value, 'Projeto 28')
-    assert.equal(e.mostrarSucesso.value, false)
+    assert.equal(chamadas.length, 0)
+    e.titulo.value = 'Novo'
+    e.categoria.value = 'Web'
+    e.descricao.value = 'Descrição'
+    e.novaTag.value = 'API'
+    e.adicionarTag()
+    e.novaTag.value = 'api'
+    e.adicionarTag()
+    assert.deepEqual(e.tags.value, ['API'])
+    e.removerTag(0)
+    await e.salvarProjeto()
+    await e.salvarProjeto()
+    assert.equal(chamadas.filter((c) => c.method === 'post').length, 1)
+    assert.deepEqual(JSON.parse(chamadas.find((c) => c.method === 'post').data).tags, [])
+    assert.ok(e.mostrarSucesso.value)
+    assert.equal((await service.consultarProjeto(2)).titulo, 'Novo')
+  } finally {
+    fechar()
+  }
+})
+test('edição envia PATCH, preserva imagem omitida e permite limpar tags', async () => {
+  const { e, fechar } = await montar(useProjetoFormulario, '/portfolio/1/editar')
+  try {
+    assert.equal(e.titulo.value, 'Projeto real')
+    assert.ok(e.preview.value.endsWith('/media/projeto.png'))
+    e.tags.value = []
+    e.titulo.value = 'Editado'
+    await e.salvarProjeto()
+    const c = chamadas.find((c) => c.method === 'patch')
+    assert.equal(c.url, 'portfolios/1/')
+    assert.equal(JSON.parse(c.data).imagem, undefined)
+    assert.deepEqual(JSON.parse(c.data).tags, [])
+    assert.equal((await service.consultarProjeto(1)).imagem, '/media/projeto.png')
+  } finally {
+    fechar()
+  }
+})
+test('rotas criação, edição A, edição B e resposta atrasada mantêm estados isolados', async () => {
+  const { e, router, fechar } = await montar(useProjetoFormulario)
+  try {
+    let responder
+    transporte = () => new Promise((r) => (responder = r))
+    await router.push('/portfolio/1/editar')
+    await esperar(5)
+    assert.equal(e.pronto.value, false)
+    transporte = () => ({ id: 2, titulo: 'Segundo', tags: ['API'] })
+    await router.push('/portfolio/2/editar')
+    await esperar(10)
+    responder({ id: 1, titulo: 'Antigo', tags: ['antiga'] })
+    await esperar(5)
+    assert.equal(e.titulo.value, 'Segundo')
     await router.push('/portfolio/adicionar')
-    await esperar()
+    await esperar(5)
     assert.equal(e.titulo.value, '')
+    assert.deepEqual(e.tags.value, [])
     assert.equal(e.editando.value, false)
   } finally {
     fechar()
   }
 })
-test('resposta sem confirmação de gravação não gera sucesso', async () => {
-  transporte = () => ({ data: projeto(), status: 200 })
-  await assert.rejects(salvarPortfolio(null, new FormData()), /não confirmou/)
-})
-
-test('falha ao carregar edição mantém salvamento bloqueado até uma leitura válida', async () => {
-  transporte = (c) => falhar(c, 404)
-  const { estado: e, fechar } = await montar('/portfolio/27/editar')
+test('storage 503 mantém rascunho e não confirma sucesso', async () => {
+  const { e, fechar } = await montar(useProjetoFormulario)
   try {
-    assert.equal(e.bloqueado.value, true)
-    preencher(e)
+    e.titulo.value = 'Rascunho'
+    e.categoria.value = 'Web'
+    e.descricao.value = 'Texto'
+    transporte = () => falhar(503)
     await e.salvarProjeto()
-    assert.equal(chamadas.length, 1)
-    assert.match(e.erro.value, /não está disponível/)
-    transporte = () => ({ data: projeto(27) })
-    await e.carregarProjeto()
-    assert.equal(e.bloqueado.value, false)
-    assert.equal(e.titulo.value, 'Projeto 27')
+    assert.equal(e.titulo.value, 'Rascunho')
+    assert.match(e.erro.value, /Armazenamento/)
+    assert.equal(e.mostrarSucesso.value, false)
   } finally {
     fechar()
   }
 })
-
-test('revalidar o perfil da mesma conta não apaga o projeto em preenchimento', async () => {
-  const { estado: e, fechar } = await montar()
+test('exclusão cancelada não envia; confirmação bloqueia duplicatas e aguarda 204', async () => {
+  const { e, fechar } = await montar(useProjetoDetalhe, '/portfolio/1')
   try {
-    preencher(e)
-    sessao.usuario = { id: 40, name: 'Nome atualizado' }
-    await nextTick()
-    assert.equal(e.titulo.value, ' Meu projeto ')
-    assert.equal(chamadas.length, 0)
+    await e.excluirProjeto()
+    assert.equal(chamadas.filter((c) => c.method === 'delete').length, 0)
+    e.mostrarModalExcluir.value = true
+    let responder
+    transporte = () => new Promise((r) => (responder = r))
+    const pendente = e.excluirProjeto()
+    await e.excluirProjeto()
+    await esperar(5)
+    assert.equal(e.projeto.value.id, 1)
+    responder({ status: 204, data: '' })
+    await pendente
+    assert.equal(e.projeto.value, null)
+    assert.ok(e.sucesso.value)
+    assert.equal(chamadas.filter((c) => c.method === 'delete').length, 1)
+  } finally {
+    fechar()
+  }
+})
+test('projeto de terceiro 403 não habilita formulário', async () => {
+  transporte = () => falhar(403)
+  const { e, fechar } = await montar(useProjetoFormulario, '/portfolio/1/editar')
+  try {
+    assert.equal(e.pronto.value, false)
+    assert.match(e.erro.value, /permissão/)
+  } finally {
+    fechar()
+  }
+})
+test('busca manual, GPS, geocoder e troca manual limpam metadados', async () => {
+  const search = geo.search,
+    reverse = geo.reverse
+  const nav = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: {
+      geolocation: {
+        getCurrentPosition: (ok) =>
+          ok({ coords: { latitude: -26, longitude: -48, accuracy: 5 }, timestamp: Date.now() }),
+      },
+    },
+  })
+  geo.search = async () => [{ nome: 'Cidade, SC' }]
+  geo.reverse = async () => ({ label: 'Cidade GPS, SC' })
+  const { e, fechar } = await montar(usePerfilLocalizacao)
+  try {
+    e.pesquisaCidade.value = 'Cidade'
+    await e.buscarCidades()
+    assert.equal(e.resultadosCidades.value.length, 1)
+    await e.usarLocalizacaoAtual()
+    assert.equal(e.latitude.value, -26)
+    assert.equal(e.localizacao.value, 'Cidade GPS, SC')
+    assert.ok(e.dataLocalizacao.value)
+    e.selecionarCidade({ nome: 'Manual, SC' })
+    assert.equal(e.localizacao.value, 'Manual, SC')
+    for (const v of [e.latitude, e.longitude, e.precisao, e.dataLocalizacao])
+      assert.equal(v.value, null)
+    e.carregarLocalizacao({ localizacao: 'Manual, SC', latitude: null })
+    assert.equal(e.localizacao.value, 'Manual, SC')
+    geo.reverse = async () => {
+      throw Error('rede')
+    }
+    await e.usarLocalizacaoAtual()
+    assert.ok(e.erroLocalizacao.value)
+    assert.equal(e.localizacao.value, 'Manual, SC')
+    globalThis.navigator.geolocation.getCurrentPosition = (_, erro) => erro({ code: 1 })
+    await e.usarLocalizacaoAtual()
+    assert.match(e.locationError.value, /negou/)
+  } finally {
+    fechar()
+    geo.search = search
+    geo.reverse = reverse
+    if (nav) Object.defineProperty(globalThis, 'navigator', nav)
+    else delete globalThis.navigator
+  }
+})
+test('Nominatim usa cliente externo sem Authorization do MaRuJoB', async () => {
+  const original = axios.defaults.adapter
+  let config
+  axios.defaults.adapter = async (c) => {
+    config = c
+    return { status: 200, data: [], headers: {}, config: c }
+  }
+  try {
+    await geo.search('Cidade')
+    assert.equal(config.headers.Authorization, undefined)
+    assert.equal(config.withCredentials, false)
+    assert.match(config.url, /nominatim/)
+  } finally {
+    axios.defaults.adapter = original
+  }
+})
+test('componentes de perfil, portfólio e câmera compilam sem erros', async () => {
+  const { parse, compileScript, compileTemplate } = await import('@vue/compiler-sfc')
+  const { readFileSync } = await import('node:fs')
+  for (const nome of [
+    'PerfilComponent',
+    'EditarPerfil',
+    'PortfolioComponent',
+    'PortfolioAdicionarComponent',
+    'PortfolioDetalheComponent',
+    'CameraCapture',
+    'ConfirmarExclusaoProjeto',
+  ]) {
+    const file = resolve('src/components/' + nome + '.vue')
+    const { descriptor, errors } = parse(readFileSync(file, 'utf8'))
+    assert.deepEqual(errors, [])
+    const script = compileScript(descriptor, { id: nome })
+    assert.ok(script.content)
+    assert.deepEqual(
+      compileTemplate({ source: descriptor.template.content, filename: file, id: nome }).errors,
+      [],
+    )
+  }
+})
+test('upload perfil e projeto persistem URLs do servidor, listas e substituições após GET', async () => {
+  let perfil = { ...user },
+    projeto = { ...projetos[0] }
+  transporte = (c) => {
+    const alvo = c.url === 'usuarios/me/' ? perfil : projeto
+    if (c.method === 'patch') {
+      const dados = typeof c.data === 'string' ? JSON.parse(c.data) : Object.fromEntries(c.data)
+      for (const campo of ['habilidades', 'tags'])
+        if (typeof dados[campo] === 'string') dados[campo] = JSON.parse(dados[campo])
+      for (const campo of ['profile_image', 'imagem'])
+        if (dados[campo] instanceof Blob)
+          dados[campo] = 'https://res.cloudinary.com/test/' + dados[campo].name
+      Object.assign(alvo, dados)
+    }
+    return { ...alvo }
+  }
+  const file = new File(['conteudo'], 'nova.webp', { type: 'image/webp' })
+  await service.atualizarPerfil({ profile_image: file, habilidades: ['API'] })
+  assert.deepEqual((await service.consultarPerfil()).habilidades, ['API'])
+  assert.match((await service.consultarPerfil()).profile_image, /nova.webp$/)
+  await service.salvarProjeto(1, { imagem: file, tags: [] })
+  assert.deepEqual((await service.consultarProjeto(1)).tags, [])
+  assert.match((await service.consultarProjeto(1)).imagem, /nova.webp$/)
+  const segunda = new File(['outra'], 'segunda.png', { type: 'image/png' })
+  await service.salvarProjeto(1, { imagem: segunda, tags: ['API'] })
+  assert.match((await service.consultarProjeto(1)).imagem, /segunda.png$/)
+  await service.salvarProjeto(1, { titulo: 'Mantém imagem' })
+  assert.match((await service.consultarProjeto(1)).imagem, /segunda.png$/)
+})
+test('falha na verificação após POST não libera criação duplicada', async () => {
+  const { e, fechar } = await montar(useProjetoFormulario)
+  try {
+    e.titulo.value = 'Novo'
+    e.categoria.value = 'Web'
+    e.descricao.value = 'Texto'
+    transporte = (c) =>
+      c.method === 'post'
+        ? { status: 201, data: { id: 2, titulo: 'Novo', tags: [] } }
+        : Promise.reject(Error('rede'))
+    await e.salvarProjeto()
+    assert.ok(e.mostrarSucesso.value)
+    await e.salvarProjeto()
+    assert.equal(chamadas.filter((c) => c.method === 'post').length, 1)
+    assert.match(e.erro.value, /salvo/)
+  } finally {
+    fechar()
+  }
+})
+test('câmera trata permissão, indisponibilidade, captura, fechamento e stream atrasado', async () => {
+  const { default: Camera } = await load('components/CameraCapture.vue')
+  const nav = Object.getOwnPropertyDescriptor(globalThis, 'navigator'),
+    doc = globalThis.document
+  let paradas = 0,
+    emitidos = []
+  const stream = () => ({ getTracks: () => [{ stop: () => paradas++ }] })
+  const media = {
+    getUserMedia: async () => {
+      const e = Error()
+      e.name = 'NotAllowedError'
+      throw e
+    },
+  }
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: { mediaDevices: media },
+  })
+  const { e, fechar } = await montar(() =>
+    Camera.setup({}, { expose() {}, emit: (...args) => emitidos.push(args) }),
+  )
+  try {
+    await e.abrirCamera()
+    assert.match(e.erro.value, /negada/)
+    media.getUserMedia = undefined
+    await e.abrirCamera()
+    assert.match(e.erro.value, /disponível/)
+    media.getUserMedia = async () => stream()
+    e.videoRef.value = { srcObject: null, play: async () => {}, videoWidth: 10, videoHeight: 10 }
+    await e.abrirCamera()
+    assert.equal(e.cameraAtiva.value, true)
+    globalThis.document = {
+      createElement: () => ({
+        getContext: () => ({ drawImage() {} }),
+        toBlob: (callback) => callback(new Blob(['foto'], { type: 'image/jpeg' })),
+      }),
+    }
+    await e.fotografar()
+    assert.equal(emitidos[0][0], 'captured')
+    assert.equal(emitidos[0][1].type, 'image/jpeg')
+    assert.equal(paradas, 1)
+    await e.abrirCamera()
+    e.fecharCamera()
+    assert.equal(paradas, 2)
+    assert.equal(emitidos.at(-1)[0], 'close')
+    let responder
+    media.getUserMedia = () => new Promise((r) => (responder = r))
+    const pendente = e.abrirCamera()
+    fechar()
+    responder(stream())
+    await pendente
+    assert.equal(paradas, 3)
+  } finally {
+    fechar()
+    if (nav) Object.defineProperty(globalThis, 'navigator', nav)
+    else delete globalThis.navigator
+    globalThis.document = doc
+  }
+})
+test('troca de sessão antes do interceptor não envia mutação com novas credenciais', async () => {
+  const pendente = service.atualizarPerfil({ name: 'Conta anterior' })
+  limparSessao()
+  storage.set('token', 'nova-conta')
+  await assert.rejects(pendente)
+  assert.equal(chamadas.length, 0)
+})
+test('vazio é distinto de erro e tentativa posterior recupera os dados reais', async () => {
+  transporte = (c) => (c.url === 'usuarios/me/' ? user : { results: [], next: null, count: 0 })
+  const { e, fechar } = await montar(usePerfilPortfolio)
+  try {
+    assert.deepEqual(e.projetos.value, [])
+    assert.equal(e.erro.value, '')
+    transporte = () => falhar(500)
+    await e.carregar()
+    assert.ok(e.erro.value)
+    transporte = (c) =>
+      c.url === 'usuarios/me/' ? user : { results: projetos, next: null, count: 1 }
+    await e.carregar()
+    assert.equal(e.projetos.value.length, 1)
+    assert.equal(e.erro.value, '')
   } finally {
     fechar()
   }

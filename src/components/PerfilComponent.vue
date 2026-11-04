@@ -1,212 +1,195 @@
 <script setup>
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
-import { logout as encerrarSessao, sessao } from '@/services/authService'
-import { listarPortfolios, erroPortfolio } from '@/services/portfolioService'
-import { resolverImagem } from '@/utils/imagens'
+import { logout as encerrarSessao } from '@/services/authService'
+import { resolverImagem as getImageUrl } from '@/services/perfilPortfolioService'
+import { usePerfilPortfolio } from '@/composables/usePerfilPortfolio'
 import PerfilAvatar from './PerfilAvatar.vue'
-
-const user = ref(sessao.usuario)
-const email = computed(() => user.value?.email || '')
 const router = useRouter()
-const portfolio = ref([])
-const carregandoProjetos = ref(true)
-const erroProjetos = ref('')
-const erroPerfil = ref('')
-let controlador
-let revisao = 0
-const getImageUrl = resolverImagem
-
-async function carregarUsuario() {
-  const carga = revisao
-  const atual = () => carga === revisao && !controlador.signal.aborted
-  try {
-    const { data } = await api.get('usuarios/me/', { signal: controlador.signal })
-    if (!atual()) return
-    user.value = data
-    sessao.usuario = data
-    erroPerfil.value = ''
-  } catch {
-    if (atual()) erroPerfil.value = 'Não foi possível atualizar os dados do perfil.'
-  }
+const { usuario: user, projetos: portfolio, carregando, erro, carregar } = usePerfilPortfolio()
+const email = computed(() => user.value?.email || '')
+const logout = () => {
+  encerrarSessao()
+  router.replace('/')
 }
-async function carregarProjetos() {
-  const carga = revisao
-  const atual = () => carga === revisao && !controlador.signal.aborted
-  carregandoProjetos.value = true
-  erroProjetos.value = ''
-  try {
-    const dados = await listarPortfolios(controlador.signal)
-    if (atual()) portfolio.value = dados
-  } catch (error) {
-    if (atual()) erroProjetos.value = erroPortfolio(error)
-  } finally {
-    if (atual()) carregandoProjetos.value = false
-  }
-}
-watch([() => sessao.usuario?.id, () => sessao.revisao], () => {
-  revisao++
-  controlador?.abort()
-  controlador = new AbortController()
-  user.value = sessao.usuario
-  portfolio.value = []
-  erroPerfil.value = erroProjetos.value = ''
-  carregandoProjetos.value = false
-  if (sessao.usuario) { carregarUsuario(); carregarProjetos() }
-}, { immediate: true, flush: 'sync' })
-onBeforeUnmount(() => { revisao++; controlador?.abort() })
-const logout = () => { encerrarSessao(); router.replace('/') }
+onMounted(carregar)
 </script>
 <template>
   <div class="perfil">
-    <p v-if="erroPerfil" class="aviso-perfil" role="alert">{{ erroPerfil }}</p>
-    <section class="header-perfil">
-      <div class="separacao"></div>
-
-      <div class="profile-content">
-        <div class="img-usu">
-          <PerfilAvatar :usuario="user" class="avatar" />
-
-          <button class="icone" aria-label="Alterar foto de perfil" @click="router.push('/editar-perfil')">
-            <i class="fa-solid fa-camera"></i>
-          </button>
-        </div>
-
-        <div class="info">
-          <h2>{{ user?.name }}</h2>
-          <span>{{ user?.profissao || 'Profissão não informada' }}</span>
-          <div class="loc">
-            <i class="fa-solid fa-loc-dot"></i>
-            <p>{{ user?.localizacao || 'Localização não informada' }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="status">
-        <div class="card">
-          <i class="fa-regular fa-folder"></i>
-          <h3>{{ carregandoProjetos ? '…' : erroProjetos ? '—' : portfolio.length }}</h3>
-          <p>Projetos</p>
-        </div>
-
-        <div class="card">
-          <i class="fa-regular fa-clock"></i>
-          <h3>falta alterar</h3>
-          <p>Horas</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="box">
-      <div class="titulo">
-        <i class="fa-regular fa-user"></i>
-        <h3>Sobre</h3>
-      </div>
-      <p>
-        {{ user?.sobre || 'Nenhuma informação adicionada.' }}
-      </p>
-    </section>
-
-    <section class="box">
-      <div class="titulo">
-        <i class="fa-regular fa-folder"></i>
-        <h3>Habilidades</h3>
-      </div>
-
-      <div class="hab">
-        <span v-for="habilidade in user?.habilidades || []" :key="habilidade">
-          {{ habilidade }}
-        </span>
-
-        <span v-if="!user?.habilidades?.length"> Nenhuma habilidade adicionada. </span>
-      </div>
-    </section>
-
-    <section class="box">
-      <div class="superior-port">
-        <router-link to="/portfolio" class="titulo-link">
-          <div class="titulo">
-            <i class="fa-regular fa-folder-open"></i>
-            <h3>Portfólio</h3>
-          </div>
-        </router-link>
-
-        <router-link to="/portfolio" class="ver-todos"> Ver todos > </router-link>
-      </div>
-
-      <div class="portfolio">
-        <p v-if="carregandoProjetos" role="status">Carregando projetos...</p>
-        <div v-else-if="erroProjetos" role="alert">
-          <p>{{ erroProjetos }}</p>
-          <button type="button" @click="carregarProjetos">Tentar novamente</button>
-        </div>
-        <div v-for="item in portfolio" :key="item.id" class="portfolio-card">
-          <img
-            v-if="item.imagem"
-            :src="getImageUrl(item.imagem)"
-            class="portfolio-image"
-            :alt="item.titulo"
-          />
-
-          <div v-else class="portfolio-image"></div>
-
-          <h4>{{ item.titulo }}</h4>
-          <p>{{ item.categoria }}</p>
-        </div>
-
-        <p v-if="!carregandoProjetos && !erroProjetos && portfolio.length === 0" class="sem-portfolio">
-          Você ainda não possui projetos no portfólio.
-        </p>
-      </div>
-    </section>
-
-    <div class="last-info">
-      <section class="last-card">
-        <div class="titulo">
-          <i class="fa-regular fa-envelope"></i>
-          <h3>E-mail</h3>
-        </div>
-
-        <p>{{ email }}</p>
-      </section>
-
-      <section class="last-card">
-        <div class="titulo">
-          <i class="fa-solid fa-phone"></i>
-          <h3>Telefone</h3>
-        </div>
-
-        <p>{{ user?.telefone || 'Telefone não informado' }}</p>
-      </section>
+    <p v-if="carregando" role="status">Carregando perfil...</p>
+    <div v-else-if="erro" role="alert">
+      {{ erro }} <button @click="carregar">Tentar novamente</button>
     </div>
+    <template v-else-if="user"
+      ><section class="header-perfil">
+        <div class="separacao"></div>
 
-    <button class="btn-editar" @click="router.push('/editar-perfil')">Editar Perfil</button>
-    <section class="configuracoes">
-      <h3>Configurações da conta</h3>
+        <div class="profile-content">
+          <div class="img-usu">
+            <PerfilAvatar :usuario="user" class="avatar" />
 
-      <button class="config-item" @click="router.push('/trocar-senha')">
-        <div>
-          <i class="fa-solid fa-lock"></i>
-          <span>Alterar senha</span>
+            <button class="icone" aria-label="Alterar foto" @click="router.push('/editar-perfil')">
+              <i class="fa-solid fa-camera"></i>
+            </button>
+          </div>
+
+          <div class="info">
+            <h2>{{ user?.name }}</h2>
+            <span>{{ user?.profissao || 'Profissão não informada' }}</span>
+            <div class="loc">
+              <i class="fa-solid fa-loc-dot"></i>
+              <p>{{ user?.localizacao || 'Localização não informada' }}</p>
+            </div>
+          </div>
         </div>
 
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
+        <div class="status">
+          <div class="card">
+            <i class="fa-regular fa-folder"></i>
+            <h3>{{ portfolio.length }}</h3>
+            <p>Projetos</p>
+          </div>
+        </div>
+      </section>
 
-      <button class="config-item sair" @click="logout">
-        <div>
-          <i class="fa-solid fa-right-from-bracket"></i>
-          <span>Sair da conta</span>
+      <section class="box">
+        <div class="titulo">
+          <i class="fa-regular fa-user"></i>
+          <h3>Sobre</h3>
+        </div>
+        <p>
+          {{ user?.sobre || 'Nenhuma informação adicionada.' }}
+        </p>
+      </section>
+
+      <section class="box">
+        <div class="titulo">
+          <i class="fa-regular fa-folder"></i>
+          <h3>Habilidades</h3>
         </div>
 
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
-    </section>
+        <div class="hab">
+          <span v-for="habilidade in user?.habilidades || []" :key="habilidade">
+            {{ habilidade }}
+          </span>
+
+          <span v-if="!user?.habilidades?.length"> Nenhuma habilidade adicionada. </span>
+        </div>
+      </section>
+
+      <section class="box">
+        <div class="superior-port">
+          <router-link to="/portfolio" class="titulo-link">
+            <div class="titulo">
+              <i class="fa-regular fa-folder-open"></i>
+              <h3>Portfólio</h3>
+            </div>
+          </router-link>
+
+          <router-link to="/portfolio" class="ver-todos"> Ver todos > </router-link>
+        </div>
+
+        <div class="portfolio">
+          <router-link
+            v-for="item in portfolio"
+            :key="item.id"
+            :to="`/portfolio/${item.id}`"
+            class="portfolio-card"
+          >
+            <img
+              @load="
+                (event) => {
+                  event.target.hidden = false
+                }
+              "
+              @error="
+                (event) => {
+                  event.target.hidden = true
+                }
+              "
+              v-if="item.imagem"
+              :src="getImageUrl(item.imagem)"
+              class="portfolio-image"
+              :alt="item.titulo"
+            />
+
+            <div v-else class="portfolio-image"></div>
+
+            <h4>{{ item.titulo }}</h4>
+            <p>{{ item.categoria }}</p>
+          </router-link>
+
+          <p v-if="portfolio.length === 0" class="sem-portfolio">
+            Você ainda não possui projetos no portfólio.
+          </p>
+        </div>
+      </section>
+
+      <div class="last-info">
+        <section class="last-card">
+          <div class="titulo">
+            <i class="fa-regular fa-envelope"></i>
+            <h3>E-mail</h3>
+          </div>
+
+          <p>{{ email }}</p>
+        </section>
+
+        <section class="last-card">
+          <div class="titulo">
+            <i class="fa-solid fa-phone"></i>
+            <h3>Telefone</h3>
+          </div>
+
+          <p>{{ user?.telefone || 'Telefone não informado' }}</p>
+        </section>
+      </div>
+
+      <button class="btn-editar" @click="router.push('/editar-perfil')">Editar Perfil</button>
+      <section class="configuracoes">
+        <h3>Configurações da conta</h3>
+
+        <button class="config-item" @click="router.push('/trocar-senha')">
+          <div>
+            <i class="fa-solid fa-lock"></i>
+            <span>Alterar senha</span>
+          </div>
+
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+
+        <button class="config-item sair" @click="logout">
+          <div>
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Sair da conta</span>
+          </div>
+
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </section>
+    </template>
   </div>
 </template>
 
 <style scoped>
+.info,
+.last-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.avatar,
+.portfolio-image {
+  object-fit: cover;
+}
+@media (max-width: 375px) {
+  .header-perfil {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .last-info {
+    grid-template-columns: 1fr;
+  }
+}
 * {
   margin: 0;
   padding: 0;
@@ -258,8 +241,6 @@ const logout = () => { encerrarSessao(); router.replace('/') }
   background: #8c8c8c;
   border-radius: 50%;
 }
-
-.aviso-perfil { padding: 16px; color: #533a91; overflow-wrap: anywhere; }
 
 .icone {
   position: absolute;

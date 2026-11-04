@@ -1,232 +1,213 @@
 <script setup>
 import { ref } from 'vue'
-import { usePortfolioForm } from '@/composables/usePortfolioForm'
-
+import { useProjetoFormulario } from '@/composables/useProjetoFormulario'
 const {
-  editando, bloqueado, titulo, categoria, descricao, link, tags, novaTag, preview,
-  carregando, salvando, mostrarSucesso, erro, selecionarImagem,
-  adicionarTag, removerTag, enterTag, carregarProjeto, salvarProjeto, cancelar,
-} = usePortfolioForm()
+  titulo,
+  categoria,
+  descricao,
+  link,
+  tags,
+  novaTag,
+  editando,
+  pronto,
+  salvando,
+  mostrarSucesso,
+  camposErro,
+  projetoSalvo,
+  carregando,
+  erro,
+  erroImagem,
+  preview,
+  selecionarImagem,
+  adicionarTag,
+  removerTag,
+  enterTag,
+  carregarProjeto,
+  salvarProjeto,
+  cancelar,
+} = useProjetoFormulario()
 const inputImagem = ref(null)
 const abrirUpload = () => inputImagem.value?.click()
-const categorias = ['Website', 'Aplicativo', 'UI / UX', 'Branding', 'Social Media', 'Marketing', 'Design Gráfico']
+const categorias = [
+  'Website',
+  'Aplicativo',
+  'UI / UX',
+  'Branding',
+  'Social Media',
+  'Marketing',
+  'Design Gráfico',
+]
 </script>
 
 <template>
   <div class="portfolio-add">
-    <div
-  v-if="mostrarSucesso"
-  class="toast-sucesso"
-  role="status"
->
-  <span aria-hidden="true">✓</span>
-  Projeto salvo com sucesso!
-</div>
+    <div v-if="mostrarSucesso" role="status" class="toast-sucesso">
+      <FontAwesomeIcon :icon="['fas', 'check']" />
+      Projeto salvo com sucesso!
+      <router-link :to="`/portfolio/${projetoSalvo}`">Consultar projeto</router-link>
+      <router-link to="/portfolio">Ver portfólio</router-link>
+    </div>
 
     <section class="header">
-
       <router-link to="/portfolio" class="voltar">
         <FontAwesomeIcon :icon="['fas', 'arrow-left']" />
       </router-link>
 
       <h2>
-  {{ editando ? 'Editar Portfólio' : 'Adicionar Portfólio' }}
-</h2>
-
+        {{ editando ? 'Editar Portfólio' : 'Adicionar Portfólio' }}
+      </h2>
     </section>
 
-
-    <p v-if="carregando" class="estado-form" role="status">Carregando projeto...</p>
-    <div v-if="erro" class="estado-form" role="alert">
-      <p>{{ erro }}</p>
-      <button v-if="bloqueado && !carregando" type="button" @click="carregarProjeto">Tentar carregar novamente</button>
+    <p v-if="carregando && !salvando" role="status">Carregando projeto...</p>
+    <div v-if="erro" role="alert">
+      {{ erro }} <button v-if="!pronto" @click="carregarProjeto">Tentar novamente</button>
     </div>
-    <form class="formulario" @submit.prevent="salvarProjeto" :aria-busy="salvando || carregando">
-      <fieldset :disabled="salvando || carregando || mostrarSucesso || bloqueado">
-
+    <fieldset v-if="pronto" class="formulario" :disabled="salvando || mostrarSucesso">
       <div class="upload">
-
         <div class="preview">
-
           <img
+            @load="
+              (event) => {
+                event.target.hidden = false
+              }
+            "
+            @error="
+              (event) => {
+                event.target.hidden = true
+              }
+            "
             v-if="preview"
             :src="preview"
+            alt="Prévia da imagem do projeto"
             class="preview-img"
-            alt="Imagem do projeto"
           />
 
-          <FontAwesomeIcon
-            v-else
-            :icon="['fas', 'image']"
-            class="icone-preview"
-          />
-
+          <FontAwesomeIcon v-else :icon="['fas', 'image']" class="icone-preview" />
         </div>
 
         <input
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           ref="inputImagem"
           @change="selecionarImagem"
           hidden
-        >
+        />
 
-        <button
-          class="btn-upload"
-          type="button"
-          @click="abrirUpload"
-        >
+        <button class="btn-upload" type="button" @click="abrirUpload">
           <FontAwesomeIcon :icon="['fas', 'camera']" />
           Escolher imagem
         </button>
-
       </div>
 
       <!-- Título -->
       <div class="campo">
-
-        <label for="projeto-titulo">Título do Projeto</label>
+        <label>Título do Projeto</label>
+        <p v-if="camposErro.titulo" role="alert">{{ camposErro.titulo }}</p>
 
         <input
-          id="projeto-titulo"
+          aria-label="Título do Projeto"
           type="text"
-          required
-          maxlength="255"
           v-model="titulo"
           placeholder="Ex: Landing Page para Restaurante"
-        >
-
+        />
       </div>
 
       <!-- Categoria -->
       <div class="campo">
+        <label>Categoria</label>
+        <p v-if="camposErro.categoria" role="alert">{{ camposErro.categoria }}</p>
 
-        <label for="projeto-categoria">Categoria</label>
-
-        <select id="projeto-categoria" v-model="categoria" required>
-
-          <option disabled value="">
-            Selecione uma categoria
-          </option>
-          <option v-if="categoria && !categorias.includes(categoria)" :value="categoria">{{ categoria }}</option>
-
-          <option
-            v-for="item in categorias"
-            :key="item"
-            :value="item"
-          >
+        <input
+          aria-label="Categoria"
+          v-model="categoria"
+          maxlength="100"
+          list="categorias-projeto"
+        /><datalist id="categorias-projeto">
+          <option v-for="item in categorias" :key="item" :value="item">
             {{ item }}
           </option>
-
-        </select>
-
+        </datalist>
       </div>
 
       <!-- Descrição -->
       <div class="campo">
-
-        <label for="projeto-descricao">Descrição</label>
+        <label>Descrição</label>
+        <p v-if="camposErro.descricao" role="alert">{{ camposErro.descricao }}</p>
 
         <textarea
-          id="projeto-descricao"
+          aria-label="Descrição"
           rows="5"
-          required
           v-model="descricao"
           placeholder="Conte um pouco sobre esse projeto..."
         ></textarea>
-
       </div>
 
       <!-- Tags -->
       <div class="campo">
-
         <label>Tecnologias / Tags</label>
+        <p v-if="camposErro.tags" role="alert">{{ camposErro.tags }}</p>
 
         <div class="tags">
-
-          <div
-            class="tag"
-            v-for="(tag, index) in tags"
-            :key="index"
-          >
-
+          <div class="tag" v-for="(tag, index) in tags" :key="index">
             {{ tag }}
 
-            <button
-              type="button"
-              @click="removerTag(index)"
-            >
-              ×
-            </button>
-
+            <button type="button" @click="removerTag(index)">×</button>
           </div>
-
         </div>
 
         <div class="nova-tag">
-
           <input
+            aria-label="Tecnologias / Tags"
             type="text"
             v-model="novaTag"
             @keydown="enterTag"
             placeholder="Digite uma tag"
-          >
+          />
 
-          <button
-            type="button"
-            @click="adicionarTag"
-          >
-            Adicionar
-          </button>
-
+          <button type="button" @click="adicionarTag">Adicionar</button>
         </div>
-
       </div>
 
       <!-- Link -->
       <div class="campo">
+        <label>Link do Projeto</label>
+        <p v-if="camposErro.link" role="alert">{{ camposErro.link }}</p>
 
-        <label for="projeto-link">Link do Projeto (opcional)</label>
-
-        <input
-          id="projeto-link"
-          type="text"
-          inputmode="url"
-          maxlength="200"
-          v-model="link"
-          placeholder="https://..."
-        >
-
+        <input aria-label="Link do Projeto" type="url" v-model="link" placeholder="https://..." />
       </div>
 
+      <p v-if="erroImagem" role="alert">{{ erroImagem }}</p>
       <!-- Botões -->
       <div class="acoes">
+        <button class="cancelar" type="button" @click="cancelar">Cancelar</button>
 
-        <button
-          class="cancelar"
-          type="button"
-          @click="cancelar"
-        >
-          Cancelar
+        <button class="salvar" type="button" @click="salvarProjeto" :disabled="salvando">
+          {{ salvando ? 'Salvando...' : editando ? 'Salvar Alterações' : 'Salvar Projeto' }}
         </button>
-
-        <button
-  class="salvar"
-  type="submit"
-  :disabled="salvando || carregando || mostrarSucesso"
->
-  {{ salvando ? 'Salvando...' : (editando ? 'Salvar Alterações' : 'Salvar Projeto') }}
-</button>
-
       </div>
-
-      </fieldset>
-    </form>
-
+    </fieldset>
   </div>
 </template>
 
 <style scoped>
+fieldset.formulario {
+  border: 0;
+  min-width: 0;
+}
+.campo,
+.nova-tag {
+  min-width: 0;
+}
+input,
+textarea,
+select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.tag {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
 * {
   margin: 0;
   padding: 0;
@@ -269,12 +250,8 @@ const categorias = ['Website', 'Aplicativo', 'UI / UX', 'Branding', 'Social Medi
   background: #f7f5fc;
   border-radius: 22px;
   padding: 24px 18px;
-  box-shadow: 0 5px 20px rgba(0,0,0,.08);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
 }
-
-fieldset { border: 0; min-width: 0; }
-.estado-form { margin: 16px; padding: 16px; color: #533a91; background: #f7f5fc; border-radius: 16px; overflow-wrap: anywhere; }
-button:disabled { opacity: .65; cursor: default; }
 
 .upload {
   display: flex;
@@ -316,7 +293,7 @@ button:disabled { opacity: .65; cursor: default; }
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: .25s;
+  transition: 0.25s;
 }
 
 .btn-upload:hover {
@@ -357,7 +334,7 @@ button:disabled { opacity: .65; cursor: default; }
 .campo input:focus,
 .campo textarea:focus,
 .campo select:focus {
-  box-shadow: 0 0 0 3px rgba(122,63,242,.15);
+  box-shadow: 0 0 0 3px rgba(122, 63, 242, 0.15);
 }
 
 .tags {
@@ -404,7 +381,7 @@ button:disabled { opacity: .65; cursor: default; }
   border-radius: 14px;
   cursor: pointer;
   font-weight: 600;
-  transition: .25s;
+  transition: 0.25s;
 }
 
 .nova-tag button:hover {
@@ -426,7 +403,7 @@ button:disabled { opacity: .65; cursor: default; }
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: .25s;
+  transition: 0.25s;
 }
 
 .cancelar {
@@ -447,13 +424,15 @@ button:disabled { opacity: .65; cursor: default; }
   background: #4f30b7;
 }
 
-
-
+.toast-sucesso a {
+  color: white;
+  text-decoration: underline;
+}
 .toast-sucesso {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: static;
+  margin: 16px;
+  max-width: calc(100% - 32px);
+  flex-wrap: wrap;
 
   background: #5b3cc4;
   color: white;
@@ -473,7 +452,6 @@ button:disabled { opacity: .65; cursor: default; }
   z-index: 2000;
 }
 @media (max-width: 420px) {
-
   .preview {
     width: 150px;
     height: 150px;

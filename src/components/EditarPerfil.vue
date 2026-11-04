@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 import CameraCapture from '@/components/CameraCapture.vue'
 import { useEditarPerfil } from '@/composables/useEditarPerfil'
@@ -42,6 +42,11 @@ const {
   erro,
   sucesso,
 
+  pronto,
+  camposErro,
+  erroImagem,
+  erroHabilidade,
+  carregarPerfil,
   salvarPerfil,
   falhaImagemPerfil,
   voltar,
@@ -83,12 +88,22 @@ const receberFotoCamera = (arquivo) => {
       <h2>Editar Perfil</h2>
     </header>
 
-    <div v-if="carregando" class="carregando">Carregando perfil...</div>
+    <div v-if="carregando && !salvando" role="status" class="carregando">Carregando perfil...</div>
 
-    <main v-else class="conteudo">
+    <div v-else-if="!pronto" role="alert">
+      {{ erro }} <button @click="carregarPerfil">Tentar novamente</button>
+    </div>
+    <fieldset v-else class="conteudo" :disabled="salvando">
       <section class="foto-section">
         <div class="foto-container">
-          <img v-if="previewImagem" :src="previewImagem" class="foto" alt="Foto de perfil" referrerpolicy="no-referrer" @error="falhaImagemPerfil" />
+          <img
+            @error="falhaImagemPerfil"
+            v-if="previewImagem"
+            :src="previewImagem"
+            class="foto"
+            alt="Foto de perfil"
+            referrerpolicy="no-referrer"
+          />
 
           <div v-else class="foto foto-vazia">
             <i class="fa-solid fa-user"></i>
@@ -115,7 +130,7 @@ const receberFotoCamera = (arquivo) => {
 
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               @change="
                 (event) => {
                   selecionarImagem(event)
@@ -131,7 +146,7 @@ const receberFotoCamera = (arquivo) => {
 
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               capture="user"
               @change="
                 (event) => {
@@ -161,22 +176,31 @@ const receberFotoCamera = (arquivo) => {
       <section class="formulario">
         <div class="campo">
           <label>Nome</label>
-          <input v-model="nome" type="text" placeholder="Digite seu nome" />
+          <p v-if="camposErro.name" role="alert">{{ camposErro.name }}</p>
+          <input aria-label="Nome" v-model="nome" type="text" placeholder="Digite seu nome" />
         </div>
 
         <div class="campo">
           <label>Profissão</label>
-          <input v-model="profissao" type="text" placeholder="Ex.: Designer Gráfico" />
+          <p v-if="camposErro.profissao" role="alert">{{ camposErro.profissao }}</p>
+          <input
+            aria-label="Profissão"
+            v-model="profissao"
+            type="text"
+            placeholder="Ex.: Designer Gráfico"
+          />
         </div>
 
         <div class="campo">
           <label>Localização</label>
+          <p v-if="camposErro.localizacao" role="alert">{{ camposErro.localizacao }}</p>
 
           <p class="localizacao-descricao">
             Escolha sua cidade e estado. Sua localização exata não será exibida no perfil público.
           </p>
 
           <input
+            aria-label="Localização"
             :value="localizacao"
             type="text"
             placeholder="Nenhuma cidade selecionada"
@@ -254,19 +278,33 @@ const receberFotoCamera = (arquivo) => {
 
         <div class="campo">
           <label>Telefone</label>
-          <input v-model="telefone" type="tel" placeholder="(47) 99999-9999" />
+          <p v-if="camposErro.telefone" role="alert">{{ camposErro.telefone }}</p>
+          <input
+            aria-label="Telefone"
+            v-model="telefone"
+            type="tel"
+            placeholder="(47) 99999-9999"
+          />
         </div>
 
         <div class="campo">
           <label>Sobre você</label>
-          <textarea v-model="sobre" rows="5" placeholder="Conte um pouco sobre você..."></textarea>
+          <p v-if="camposErro.sobre" role="alert">{{ camposErro.sobre }}</p>
+          <textarea
+            aria-label="Sobre você"
+            v-model="sobre"
+            rows="5"
+            placeholder="Conte um pouco sobre você..."
+          ></textarea>
         </div>
 
         <div class="campo">
           <label>Habilidades</label>
+          <p v-if="camposErro.habilidades" role="alert">{{ camposErro.habilidades }}</p>
 
           <div class="adicionar-habilidade">
             <input
+              aria-label="Habilidades"
               v-model="novaHabilidade"
               type="text"
               placeholder="Ex.: Photoshop"
@@ -285,11 +323,13 @@ const receberFotoCamera = (arquivo) => {
           </div>
         </div>
 
-        <p v-if="erro" class="mensagem erro">
+        <p v-if="erroImagem" role="alert">{{ erroImagem }}</p>
+        <p v-if="erroHabilidade" role="alert">{{ erroHabilidade }}</p>
+        <p v-if="erro" role="alert" class="mensagem erro">
           {{ erro }}
         </p>
 
-        <p v-if="sucesso" class="mensagem sucesso">
+        <p v-if="sucesso" role="status" class="mensagem sucesso">
           {{ sucesso }}
         </p>
 
@@ -297,11 +337,24 @@ const receberFotoCamera = (arquivo) => {
           {{ salvando ? 'Salvando...' : 'Salvar alterações' }}
         </button>
       </section>
-    </main>
+    </fieldset>
   </div>
 </template>
 
 <style scoped>
+fieldset.conteudo {
+  border: 0;
+  min-width: 0;
+}
+input,
+textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.habilidade {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 * {
   margin: 0;
   padding: 0;
@@ -629,7 +682,6 @@ const receberFotoCamera = (arquivo) => {
   background: #ede5ff;
 }
 
-
 .opcoes-foto {
   width: 100%;
   max-width: 340px;
@@ -687,5 +739,4 @@ const receberFotoCamera = (arquivo) => {
   max-width: 440px;
   margin-top: 16px;
 }
-
 </style>

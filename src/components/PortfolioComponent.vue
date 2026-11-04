@@ -1,56 +1,18 @@
 <script setup>
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
-import api from '@/services/api'
+import { usePerfilPortfolio } from '@/composables/usePerfilPortfolio'
+import { resolverImagem } from '@/services/perfilPortfolioService'
 import FiltrosPortifolio from './FiltrosPortifolio.vue'
 import PerfilAvatar from './PerfilAvatar.vue'
-import { sessao } from '@/services/authSession'
-import { listarPortfolios, erroPortfolio } from '@/services/portfolioService'
-import { resolverImagem } from '@/utils/imagens'
-
 
 const pesquisa = ref('')
-const projetos = ref([])
-const usuario = ref(sessao.usuario)
+const { usuario, projetos, carregando, erro, carregar } = usePerfilPortfolio()
 const projetosExibidos = ref([])
-const carregando = ref(true)
-const erro = ref('')
-let controlador
-let revisao = 0
-onBeforeUnmount(() => { revisao++; controlador?.abort() })
-
-const carregarUsuario = async () => {
-  const carga = revisao
-  const atual = () => carga === revisao && !controlador.signal.aborted
-  try {
-    const response = await api.get('usuarios/me/', { signal: controlador.signal })
-    if (!atual()) return
-    usuario.value = response.data
-    sessao.usuario = response.data
-  } catch {
-    // Mantém o perfil já validado pela autenticação se a atualização falhar.
-  }
-}
-
-const carregarProjetos = async () => {
-  const carga = revisao
-  const atual = () => carga === revisao && !controlador.signal.aborted
-  carregando.value = true
-  erro.value = ''
-  try {
-    const dados = await listarPortfolios(controlador.signal)
-    if (!atual()) return
-    projetos.value = dados
-    projetosExibidos.value = projetos.value
-
-
-  } catch (error) {
-    if (atual()) erro.value = erroPortfolio(error)
-  } finally {
-    if (atual()) carregando.value = false
-  }
-}
-
+watch(projetos, (lista) => {
+  projetosExibidos.value = lista
+  pesquisa.value = ''
+})
 const aplicarFiltros = (resultado) => {
   projetosExibidos.value = resultado
 }
@@ -69,141 +31,127 @@ const projetosPesquisados = computed(() => {
   return projetosExibidos.value.filter((projeto) => {
     const titulo = String(projeto.titulo || '').toLowerCase()
     const categoria = String(projeto.categoria || '').toLowerCase()
-    const tags = (projeto.tags || []).map(tag =>
-      String(tag).toLowerCase()
-    )
+    const tags = (projeto.tags || []).map((tag) => String(tag).toLowerCase())
 
     return (
-      titulo.includes(termo) ||
-      categoria.includes(termo) ||
-      tags.some(tag => tag.includes(termo))
+      titulo.includes(termo) || categoria.includes(termo) || tags.some((tag) => tag.includes(termo))
     )
   })
 })
 
-watch([() => sessao.usuario?.id, () => sessao.revisao], () => {
-  revisao++
-  controlador?.abort()
-  controlador = new AbortController()
-  usuario.value = sessao.usuario
-  projetos.value = projetosExibidos.value = []
-  pesquisa.value = erro.value = ''
-  carregando.value = false
-  if (sessao.usuario) { carregarProjetos(); carregarUsuario() }
-}, { immediate: true, flush: 'sync' })
-
-
+onMounted(carregar)
 </script>
 
 <template>
   <div class="portfolio">
     <!-- Cabeçalho -->
-    <section class="header">
-      <div class="perfil">
-        <div class="avatar">
-          <PerfilAvatar :usuario="usuario"><FontAwesomeIcon :icon="['fas', 'user']" /></PerfilAvatar>
-        </div>
-
-        <div class="dados">
-          <h2>{{ usuario?.name || 'Usuário' }}</h2>
-          <p>{{ usuario?.profissao || 'Profissão não informada' }}</p>
-          <!--Trocar pra informacao do usuario, quando disponivel em PerfilComponent-->
-
-          <div class="localizacao">
-            <FontAwesomeIcon :icon="['fas', 'location-dot']" />
-            <span>{{ usuario?.localizacao || 'Localização não informada' }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Barra de pesquisa -->
-    <section class="pesquisa">
-      <div class="input-busca">
-        <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" class="icone" />
-
-        <input type="text" v-model="pesquisa" placeholder="Pesquisar projeto..." />
-      </div>
-
-      <FiltrosPortifolio
-      :projetos="projetos"
-      :pesquisa="pesquisa"
-      @aplicar-filtros="aplicarFiltros"
-      @limpar-filtros="limparFiltros"
-      />
-    </section>
-
-    <!-- Título -->
-    <section class="titulo">
-      <h3>Meus Projetos</h3>
-
-      <span v-if="!carregando && !erro">{{ projetosPesquisados.length }} projetos</span>
-    </section>
-
-    <p v-if="carregando" class="estado" role="status">Carregando projetos...</p>
-    <div v-else-if="erro" class="estado" role="alert">
-      <p>{{ erro }}</p>
-      <button type="button" @click="carregarProjetos">Tentar novamente</button>
+    <p v-if="carregando" role="status">Carregando portfólio...</p>
+    <div v-else-if="erro" role="alert">
+      {{ erro }} <button @click="carregar">Tentar novamente</button>
     </div>
-    <p v-else-if="!projetosPesquisados.length" class="estado" role="status">Nenhum projeto encontrado. Use o botão + para adicionar um projeto.</p>
-    <!-- Grid -->
-    <section class="grid">
-      <router-link
-        v-for="projeto in projetosPesquisados"
-        :key="projeto.id"
-        :to="`/portfolio/${projeto.id}`"
-        class="card"
-      >
-        <div class="imagem">
-          <img v-if="projeto.imagem" :src="resolverImagem(projeto.imagem)" :alt="projeto.titulo" />
+    <template v-else-if="usuario"
+      ><section class="header">
+        <div class="perfil">
+          <div class="avatar">
+            <PerfilAvatar :usuario="usuario"><FontAwesomeIcon :icon="['fas', 'user']" /></PerfilAvatar>
+          </div>
 
-          <FontAwesomeIcon v-else :icon="['fas', 'image']" class="img-icon" />
-        </div>
+          <div class="dados">
+            <h2>{{ usuario?.name || 'Usuário' }}</h2>
+            <p>{{ usuario.profissao || 'Profissão não informada' }}</p>
 
-        <div class="conteudo">
-          <h4>{{ projeto.titulo }}</h4>
-
-          <p>{{ projeto.categoria }}</p>
-
-          <div class="tags">
-            <span v-for="tag in projeto.tags" :key="tag">
-              {{ tag }}
-            </span>
+            <div class="localizacao">
+              <FontAwesomeIcon :icon="['fas', 'location-dot']" />
+              <span>{{ usuario.localizacao || 'Localização não informada' }}</span>
+            </div>
           </div>
         </div>
-      </router-link>
-    </section>
+      </section>
+
+      <!-- Barra de pesquisa -->
+      <section class="pesquisa">
+        <div class="input-busca">
+          <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" class="icone" />
+
+          <input type="text" v-model="pesquisa" placeholder="Pesquisar projeto..." />
+        </div>
+
+        <FiltrosPortifolio
+          :projetos="projetos"
+          :pesquisa="pesquisa"
+          @aplicar-filtros="aplicarFiltros"
+          @limpar-filtros="limparFiltros"
+        />
+      </section>
+
+      <!-- Título -->
+      <section class="titulo">
+        <h3>Meus Projetos</h3>
+        <router-link to="/portfolio/adicionar">Adicionar projeto</router-link>
+
+        <span>{{ projetosPesquisados.length }} projetos</span>
+      </section>
+
+      <!-- Grid -->
+      <section class="grid">
+        <router-link
+          v-for="projeto in projetosPesquisados"
+          :key="projeto.id"
+          :to="`/portfolio/${projeto.id}`"
+          class="card"
+        >
+          <div class="imagem">
+            <img
+              @load="
+                (event) => {
+                  event.target.hidden = false
+                }
+              "
+              @error="
+                (event) => {
+                  event.target.hidden = true
+                }
+              "
+              v-if="projeto.imagem"
+              :src="resolverImagem(projeto.imagem)"
+              :alt="projeto.titulo"
+            />
+
+            <FontAwesomeIcon v-else :icon="['fas', 'image']" class="img-icon" />
+          </div>
+
+          <div class="conteudo">
+            <h4>{{ projeto.titulo }}</h4>
+
+            <p>{{ projeto.categoria }}</p>
+
+            <div class="tags">
+              <span v-for="tag in projeto.tags" :key="tag">
+                {{ tag }}
+              </span>
+            </div>
+          </div>
+        </router-link>
+      </section>
+      <p v-if="!projetosPesquisados.length" role="status">Nenhum projeto encontrado.</p></template
+    >
   </div>
-  <!-- FOOTER -->
-  <footer class="footer">
-    <router-link to="/home" class="footer-item">
-      <FontAwesomeIcon :icon="['fas', 'house']" />
-      <span>Início</span>
-    </router-link>
-
-    <router-link to="/freelances" class="footer-item">
-      <FontAwesomeIcon :icon="['fas', 'briefcase']" />
-      <span>Freelances</span>
-    </router-link>
-
-    <!-- BOTÃO + CENTRAL -->
-    <router-link to="/portfolio/adicionar" class="btn-add">
-      <FontAwesomeIcon :icon="['fas', 'plus']" />
-    </router-link>
-
-    <router-link to="/mensagens" class="footer-item">
-      <FontAwesomeIcon :icon="['fas', 'comment']" />
-      <span>Mensagens</span>
-    </router-link>
-
-    <router-link to="/perfil" class="footer-item">
-      <FontAwesomeIcon :icon="['fas', 'user']" />
-      <span>Perfil</span>
-    </router-link>
-  </footer>
 </template>
 
 <style scoped>
+.dados,
+.conteudo,
+.card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.avatar {
+  flex-shrink: 0;
+}
+.titulo {
+  flex-wrap: wrap;
+  gap: 12px;
+}
 * {
   margin: 0;
   padding: 0;
@@ -253,8 +201,6 @@ watch([() => sessao.usuario?.id, () => sessao.revisao], () => {
   height: 100%;
   object-fit: cover;
 }
-.avatar > span { width: 100%; height: 100%; }
-.estado { margin: 16px; padding: 16px; background: #f7f5fc; border-radius: 16px; color: #533a91; overflow-wrap: anywhere; }
 
 .dados h2 {
   color: white;
@@ -293,7 +239,7 @@ watch([() => sessao.usuario?.id, () => sessao.revisao], () => {
   align-items: center;
   padding: 0 15px;
   height: 50px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
 .input-busca input {
@@ -308,8 +254,6 @@ watch([() => sessao.usuario?.id, () => sessao.revisao], () => {
 .icone {
   color: #888;
 }
-
-
 
 /* TÍTULO */
 

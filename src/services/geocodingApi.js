@@ -1,3 +1,4 @@
+import axios from 'axios'
 
 import { extractAddressLabel } from '@/utils/location'
 
@@ -7,10 +8,7 @@ const SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
 const geocodingApi = {
   // Identifica a cidade utilizando as coordenadas do GPS
   async reverse(latitude, longitude) {
-    if (
-      !Number.isFinite(latitude) ||
-      !Number.isFinite(longitude)
-    ) {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       throw new Error('Coordenadas inválidas.')
     }
 
@@ -23,15 +21,11 @@ const geocodingApi = {
       'accept-language': 'pt-BR',
     })
 
-    const response = await fetch(
-      `${REVERSE_URL}?${params.toString()}`
-    )
-
-    if (!response.ok) {
-      throw new Error('Não foi possível consultar o endereço.')
-    }
-
-    const result = await response.json()
+    const { data: result } = await axios.get(REVERSE_URL, {
+      params,
+      timeout: 15000,
+      withCredentials: false,
+    })
 
     return {
       label: extractAddressLabel(result),
@@ -56,15 +50,11 @@ const geocodingApi = {
       'accept-language': 'pt-BR',
     })
 
-    const response = await fetch(
-      `${SEARCH_URL}?${params.toString()}`
-    )
-
-    if (!response.ok) {
-      throw new Error('Não foi possível buscar as cidades.')
-    }
-
-    const resultados = await response.json()
+    const { data: resultados } = await axios.get(SEARCH_URL, {
+      params,
+      timeout: 15000,
+      withCredentials: false,
+    })
 
     return resultados
       .map((resultado) => ({
@@ -76,7 +66,7 @@ const geocodingApi = {
         (resultado) =>
           resultado.nome &&
           Number.isFinite(resultado.latitude) &&
-          Number.isFinite(resultado.longitude)
+          Number.isFinite(resultado.longitude),
       )
   },
 }

@@ -1,319 +1,229 @@
-// Componentes, router e Axios reais; contas, projetos e imagens simulados somente neste teste.
-import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { setTimeout as aguardar } from 'node:timers/promises'
+﻿// Navegador local com API simulada: não acessa contas ou storage de produção.
 import { createServer } from 'vite'
 import vue from '@vitejs/plugin-vue'
-
+import { resolve } from 'node:path'
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { spawn } from 'node:child_process'
+import assert from 'node:assert/strict'
+import { setTimeout as esperar } from 'node:timers/promises'
 const chrome = process.env.CHROME_BIN || 'C:/Program Files/Google/Chrome/Application/chrome.exe'
-assert.ok(existsSync(chrome), 'Configure CHROME_BIN com o caminho do Chrome.')
-const artefatos = resolve('node_modules/.cache/perfil-portfolio-navegador')
-mkdirSync(artefatos, { recursive: true })
-const png = readFileSync(resolve('public/icons/icon-192.png')).toString('base64')
+assert.ok(existsSync(chrome), 'Configure CHROME_BIN.')
+const pasta = resolve('node_modules/.cache/feat40-browser')
+mkdirSync(pasta, { recursive: true })
 const roteiro = `
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import { createRouter, createMemoryHistory } from 'vue-router'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { fas } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import axios from 'axios'
-import App from '/src/App.vue'
-import { routes } from '/src/router/routes.js'
-import { instalarProtecao } from '/src/router/authGuard.js'
-import { loginComGoogle, logout } from '/src/services/authService.js'
-import { sessao } from '/src/services/authSession.js'
-import api from '/src/services/api.js'
+import {createApp,nextTick} from 'vue'
+import {createRouter,createMemoryHistory} from 'vue-router'
+import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
+import {library} from '@fortawesome/fontawesome-svg-core'
+import {fas} from '@fortawesome/free-solid-svg-icons'
 import '/src/assets/main.css'
 import '@fortawesome/fontawesome-free/css/all.min.css'
+import App from '/src/App.vue'
+import Perfil from '/src/components/PerfilComponent.vue'
+import Editar from '/src/components/EditarPerfil.vue'
+import Portfolio from '/src/components/PortfolioComponent.vue'
+import Formulario from '/src/components/PortfolioAdicionarComponent.vue'
+import Detalhe from '/src/components/PortfolioDetalheComponent.vue'
+import Camera from '/src/components/CameraCapture.vue'
+import api from '/src/services/api.js'
+import {sessao} from '/src/services/authSession.js'
 library.add(fas)
-let conta=440, foto=null, falha=null, atraso=0
-const consultas=[]
-const projeto=id=>({id,titulo:'Projeto de teste #'+id,categoria:'Website',descricao:'Descricao exclusiva do teste',tags:['Vue.js'],link:'https://example.com',imagem:'/media/projeto.png'})
-const projetos=[projeto(1),projeto(27)]
-localStorage.removeItem('token');localStorage.removeItem('refresh')
-localStorage.removeItem('marujobs:foto-google:usuario:440')
-localStorage.removeItem('marujobs:foto-google:usuario:441')
+api.defaults.baseURL='/api/'
+const user={id:1,name:'Nome de teste visual',profissao:'Profissão cadastrada',localizacao:'Cidade cadastrada, SC',sobre:'Descrição profissional de teste visual. '.repeat(10),email:'email.longo@exemplo.test',telefone:'123',habilidades:['Vue','API'],profile_image:'/__imagem40?aspect=portrait'}
+const projeto={id:1,titulo:'Projeto com título longo '.repeat(5),categoria:'Categoria cadastrada',descricao:'Descrição longa. '.repeat(30),tags:['Vue','API'],link:'https://example.com',imagem:'/__imagem40?aspect=wide'}
+sessao.usuario=user;sessao.tipo='usuario';localStorage.setItem('token','somente-teste')
+let deletes=0
 api.defaults.adapter=async config=>{
- const url=new URL(config.url,'https://teste.invalid/api/'), path=url.pathname
- consultas.push({path,method:config.method,form:config.data instanceof FormData,campos:config.data instanceof FormData?Object.fromEntries([...config.data.entries()].map(([k,v])=>[k,v instanceof File?v.name:v])):null})
- if(atraso) await new Promise(r=>setTimeout(r,atraso))
- if(path.endsWith('/portfolios/') && config.method==='post' && falha!==null) throw new axios.AxiosError('Falha simulada','ERR_TEST',config,null,falha?{status:falha,data:{imagem:['Arquivo recusado no teste.']}}:undefined)
  let data,status=200
- if(path.endsWith('/auth/google/'))data={access:'access-exclusivo-teste',refresh:'refresh-exclusivo-teste'}
- else if(path.endsWith('/usuarios/me/'))data={id:conta,name:'Conta de teste',email:'teste@example.com',groups:['Usuário'],profile_image:foto}
- else if(path.endsWith('/freelances/'))data={count:0,next:null,previous:null,results:[]}
- else if(path.endsWith('/portfolios/')){
-  if(config.method==='post'){
-   data={id:100,...Object.fromEntries(config.data.entries()),tags:JSON.parse(config.data.get('tags')),imagem:config.data.has('imagem')?'/media/projeto.png':null};projetos.push(data);status=201
-  }else{const page=Number(url.searchParams.get('page')||1);data={count:projetos.length,next:page===1?'?page=2':null,previous:page===2?'?page=1':null,results:page===1?projetos.slice(0,1):projetos.slice(1)}}
- }else if(/\\/portfolios\\/\\d+\\/$/.test(path)){
-  const id=Number(path.split('/').at(-2)), item=projetos.find(p=>p.id===id)
-  if(config.method==='patch'){Object.assign(item,Object.fromEntries(config.data.entries()),{tags:JSON.parse(config.data.get('tags'))})}
-  data=item
- }else throw Error('Consulta inesperada: '+path)
- return {config,data,status,headers:{},statusText:''}
+ if(config.url==='usuarios/me/') data=user
+ else if(config.method==='delete'){deletes++;data='';status=204}
+ else if(config.url.includes('/1/'))data=projeto
+ else data={count:2,next:config.url.includes('page=2')?null:'?page=2',results:[{...projeto,id:config.url.includes('page=2')?2:1}]}
+ return {config,status,data,headers:{},statusText:''}
 }
-await loginComGoogle('e30.'+btoa(JSON.stringify({iss:'https://accounts.google.com',picture:'https://lh3.googleusercontent.com/a/foto-teste'}))+'.assinaturaDeTeste')
-const app=createApp(App);app.component('FontAwesomeIcon',FontAwesomeIcon);app.use(createPinia())
-const router=createRouter({history:createMemoryHistory(),routes});instalarProtecao(router);app.use(router)
-await router.push('/perfil');await router.isReady();app.mount('#app')
-window.testePerfil={consultas,projetos,ir:p=>router.push(p),rota:()=>router.currentRoute.value.path,falhar:s=>{falha=s},atrasar:s=>{atraso=s},foto:v=>{foto=v},sessao,
- conta:async id=>{logout();conta=id;await loginComGoogle('credencial-sem-foto-do-teste');await router.push('/perfil')},
-}
+const routes=[{path:'/perfil',component:Perfil},{path:'/editar-perfil',component:Editar},{path:'/portfolio',component:Portfolio},{path:'/portfolio/adicionar',component:Formulario},{path:'/portfolio/:id/editar',component:Formulario},{path:'/portfolio/:id',component:Detalhe},{path:'/camera',component:Camera,meta:{hideFooter:true}}]
+const router=createRouter({history:createMemoryHistory(),routes})
+await router.push(new URLSearchParams(location.search).get('route')||'/perfil');await router.isReady()
+const app=createApp(App);app.use(router);app.component('FontAwesomeIcon',FontAwesomeIcon);app.mount('#app')
+await new Promise(r=>setTimeout(r,150));await nextTick();await document.fonts.ready
+await Promise.all([...document.images].map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=r;img.onerror=r})))
+if([...document.images].some(img=>!img.naturalWidth)) throw Error('Fixture de imagem não carregou')
+window.teste={router,get deletes(){return deletes}}
 document.body.dataset.pronto='sim'
 `
 const vite = await createServer({
   configFile: false,
-  mode: 'test',
   plugins: [
     vue(),
     {
-      name: 'perfil-portfolio-teste',
-      configureServer(server) {
-        server.middlewares.use('/__perfil', (_req, res) => {
-          res.setHeader('Content-Type', 'text/html')
-          res.end(
-            '<!doctype html><html lang="pt-BR"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0"><div id="app"></div><script type="module" src="/@id/virtual:perfil"></script></body></html>',
-          )
-        })
-      },
+      name: 'feat40-harness',
       resolveId(id) {
-        if (id === 'virtual:perfil') return '\0perfil'
+        if (id === '/__runner40.js') return '\0feat40-runner'
       },
       load(id) {
-        if (id === '\0perfil') return roteiro
+        if (id === '\0feat40-runner') return roteiro
+      },
+      configureServer(s) {
+        s.middlewares.use('/__imagem40', (req, res) => {
+          const portrait = req.url.includes('portrait')
+          res.setHeader('Content-Type', 'image/svg+xml')
+          res.end(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="' +
+              (portrait ? 40 : 300) +
+              '" height="' +
+              (portrait ? 120 : 80) +
+              '"><rect width="100%" height="100%" fill="#b9a0e8"/><circle cx="20" cy="30" r="15" fill="#663399"/></svg>',
+          )
+        })
+        s.middlewares.use('/__feat40', (req, res) => {
+          res.setHeader('Content-Type', 'text/html; charset=utf-8')
+          res.end(
+            '<!doctype html><html lang="pt-BR"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}*{box-sizing:border-box}</style><body><div id="app"></div><script type="module" src="/__runner40.js"></script></body></html>',
+          )
+        })
       },
     },
   ],
   resolve: { alias: { '@': resolve('src') } },
-  server: { host: '127.0.0.1', port: 5189, strictPort: true, hmr: false },
+  server: { host: '127.0.0.1', port: 5190, strictPort: true },
+  appType: 'custom',
 })
 await vite.listen()
-const navegador = spawn(
+const proc = spawn(
   chrome,
   [
     '--headless=new',
     '--disable-gpu',
     '--no-first-run',
     '--no-default-browser-check',
-    '--remote-debugging-port=9343',
-    '--user-data-dir=' + resolve(artefatos, 'perfil'),
+    `--user-data-dir=${pasta}/chrome-profile`,
+    '--remote-debugging-port=19440',
     'about:blank',
   ],
   { windowsHide: true, stdio: 'ignore' },
 )
-let socket
+let ws,
+  id = 0
+const pendentes = new Map()
+async function cdp(method, params = {}) {
+  const numero = ++id
+  return new Promise((resolve, reject) => {
+    pendentes.set(numero, { resolve, reject })
+    ws.send(JSON.stringify({ id: numero, method, params }))
+  })
+}
+async function avaliar(expression) {
+  const r = await cdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
+  if (r.exceptionDetails) throw Error(JSON.stringify(r.exceptionDetails))
+  return r.result.value
+}
 try {
-  let targets
-  for (let i = 0; i < 100; i++) {
+  let target
+  for (let i = 0; i < 80; i++) {
     try {
-      targets = await (await fetch('http://127.0.0.1:9343/json/list')).json()
-      break
-    } catch {
-      await aguardar(100)
-    }
-  }
-  assert.ok(targets, 'Chrome indisponível')
-  socket = new WebSocket(targets.find((t) => t.type === 'page').webSocketDebuggerUrl)
-  await new Promise((r, j) => {
-    socket.addEventListener('open', r, { once: true })
-    socket.addEventListener('error', j, { once: true })
-  })
-  let seq = 0
-  const pendentes = new Map(),
-    erros = []
-  function enviar(method, params = {}) {
-    return new Promise((r, j) => {
-      const id = ++seq,
-        t = setTimeout(() => {
-          pendentes.delete(id)
-          j(Error('Timeout CDP: ' + method))
-        }, 20000)
-      pendentes.set(id, {
-        resolve: (v) => {
-          clearTimeout(t)
-          r(v)
-        },
-        reject: (e) => {
-          clearTimeout(t)
-          j(e)
-        },
-      })
-      socket.send(JSON.stringify({ id, method, params }))
-    })
-  }
-  socket.addEventListener('message', (event) => {
-    const m = JSON.parse(event.data)
-    if (m.id) {
-      const p = pendentes.get(m.id)
-      pendentes.delete(m.id)
-      if (m.error) p?.reject(Error(m.error.message))
-      else p?.resolve(m.result)
-    }
-    if (m.method === 'Runtime.exceptionThrown')
-      erros.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text)
-    if (m.method === 'Fetch.requestPaused')
-      enviar('Fetch.fulfillRequest', {
-        requestId: m.params.requestId,
-        responseCode: m.params.request.url.includes('ausente') ? 404 : 200,
-        responseHeaders: [{ name: 'Content-Type', value: 'image/png' }],
-        body: m.params.request.url.includes('ausente') ? '' : png,
-      }).catch((e) => erros.push(e.message))
-  })
-  const avaliar = async (expression) => {
-    const r = await enviar('Runtime.evaluate', {
-      expression,
-      returnByValue: true,
-      awaitPromise: true,
-    })
-    if (r.exceptionDetails)
-      throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text)
-    return r.result.value
-  }
-  async function esperar(expression) {
-    for (let i = 0; i < 150; i++) {
-      if (await avaliar(expression)) return
-      await aguardar(100)
-    }
-    throw Error(
-      'Tempo esgotado: ' +
-        expression +
-        ' ' +
-        JSON.stringify(
-          await avaliar(
-            "({imagem:document.querySelector('.img-usu')?.innerHTML,erros:document.querySelector('[role=alert]')?.textContent})",
-          ),
-        ),
-    )
-  }
-  const clicar = (s) => avaliar(`document.querySelector(${JSON.stringify(s)}).click()`)
-  const ir = async (path, pronto) => {
-    await avaliar(`testePerfil.ir(${JSON.stringify(path)})`)
-    await esperar(pronto)
-  }
-  await enviar('Runtime.enable')
-  await enviar('Page.enable')
-  await enviar('Fetch.enable', {
-    patterns: [{ urlPattern: '*googleusercontent.com/*' }, { urlPattern: '*/media/*' }],
-  })
-  await enviar('Page.navigate', { url: 'http://127.0.0.1:5189/__perfil' })
-  await esperar(
-    "document.body?.dataset.pronto==='sim' && !!document.querySelector('.img-usu img') && document.querySelectorAll('.portfolio-card').length===2",
-  )
-  assert.equal(
-    await avaliar("document.querySelector('.img-usu img').src"),
-    'https://lh3.googleusercontent.com/a/foto-teste',
-  )
-  assert.equal(
-    await avaliar("document.querySelector('.img-usu img').referrerPolicy"),
-    'no-referrer',
-  )
-  await avaliar("testePerfil.foto('/media/enviada.png')")
-  await ir('/portfolio', "document.querySelectorAll('.grid .card').length===2")
-  assert.ok(
-    (await avaliar("document.querySelector('.avatar img').src")).endsWith('/media/enviada.png'),
-  )
-  await avaliar("testePerfil.foto('/media/ausente.png')")
-  await ir('/perfil', "document.querySelector('.img-usu img')?.src.includes('googleusercontent')")
-  console.log(
-    'PASSOU: foto Google no perfil, foto enviada prioritária, fallback de imagem quebrada e projetos da página 2.',
-  )
-  await ir(
-    '/editar-perfil',
-    "document.querySelector('.foto-container img')?.src.includes('googleusercontent')",
-  )
-
-  await ir('/portfolio/adicionar', "!!document.querySelector('.formulario')")
-  assert.equal(await avaliar("document.querySelectorAll('.tags .tag').length"), 0)
-  await avaliar(
-    "document.querySelector('#projeto-titulo').value='Projeto do navegador';document.querySelector('#projeto-titulo').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('#projeto-categoria').value='Website';document.querySelector('#projeto-categoria').dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('#projeto-descricao').value='Descricao do projeto';document.querySelector('#projeto-descricao').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('#projeto-link').value='example.com/projeto';document.querySelector('#projeto-link').dispatchEvent(new Event('input',{bubbles:true}))",
-  )
-  await avaliar(
-    `{const data=new DataTransfer();data.items.add(new File([Uint8Array.from(atob('${png}'),c=>c.charCodeAt(0))],'capa.png',{type:'image/png'}));const input=document.querySelector('input[type=file]');input.files=data.files;input.dispatchEvent(new Event('change',{bubbles:true}))}`,
-  )
-  await avaliar('testePerfil.falhar(400)')
-  await clicar('.salvar')
-  await esperar(
-    "document.querySelector('[role=alert]')?.textContent.includes('Imagem: Arquivo recusado')",
-  )
-  assert.equal(
-    await avaliar("document.querySelector('#projeto-titulo').value"),
-    'Projeto do navegador',
-  )
-  assert.equal(await avaliar("!!document.querySelector('.toast-sucesso')"), false)
-  await avaliar('testePerfil.falhar(null);testePerfil.atrasar(300)')
-  await avaliar("{const b=document.querySelector('.salvar');b.click();b.click()}")
-  await esperar("!!document.querySelector('.toast-sucesso')")
-  await esperar(
-    "testePerfil.rota()==='/portfolio' && document.querySelectorAll('.grid .card').length===3",
-  )
-  assert.equal(
-    await avaliar(
-      "testePerfil.consultas.filter(c=>c.method==='post' && c.path.endsWith('/portfolios/')).length",
-    ),
-    2,
-  )
-  assert.equal(
-    await avaliar("testePerfil.consultas.findLast(c=>c.method==='post').campos.imagem"),
-    'capa.png',
-  )
-  assert.equal(
-    await avaliar("testePerfil.consultas.findLast(c=>c.method==='post').campos.link"),
-    'https://example.com/projeto',
-  )
-  await avaliar('testePerfil.atrasar(0)')
-  await clicar('.grid a[href="/portfolio/100"]')
-  await esperar("document.querySelector('.cabecalho h1')?.textContent==='Projeto do navegador'")
-  await clicar('.editar')
-  await esperar("document.querySelector('#projeto-titulo')?.value==='Projeto do navegador'")
-  await avaliar(
-    "{const input=document.querySelector('#projeto-titulo');input.value='Projeto editado';input.dispatchEvent(new Event('input',{bubbles:true}))}",
-  )
-  await clicar('.salvar')
-  await esperar(
-    "testePerfil.rota()==='/portfolio' && document.body.textContent.includes('Projeto editado')",
-  )
-  await ir('/perfil', "document.body.textContent.includes('Projeto editado')")
-  console.log(
-    'PASSOU: upload multipart, erro 400 visível, campos preservados, POST único, gravação 201, edição PATCH e atualização de perfil/lista.',
-  )
-  await avaliar('testePerfil.conta(441)')
-  await esperar("!!document.querySelector('.img-usu span')")
-  assert.equal(await avaliar("!!document.querySelector('.img-usu img')"), false)
-  await avaliar('testePerfil.conta(440)')
-  await esperar("document.querySelector('.img-usu img')?.src.includes('googleusercontent')")
-  console.log('PASSOU: foto isolada entre contas e restaurada ao retornar ao usuário.')
-  for (const largura of [320, 375, 768, 1440]) {
-    await enviar('Emulation.setDeviceMetricsOverride', {
-      width: largura,
-      height: 950,
-      deviceScaleFactor: 1,
-      mobile: largura < 768,
-    })
-    for (const [nome, path, seletor] of [
-      ['perfil', '/perfil', '.img-usu'],
-      ['portfolio', '/portfolio', '.grid .card'],
-      ['adicionar', '/portfolio/adicionar', '.formulario'],
-    ]) {
-      await ir(path, `!!document.querySelector(${JSON.stringify(seletor)})`)
-      assert.equal(
-        await avaliar('document.documentElement.scrollWidth<=innerWidth'),
-        true,
-        `${nome}: overflow em ${largura}px`,
+      target = (await (await fetch('http://127.0.0.1:19440/json/list')).json()).find(
+        (t) => t.type === 'page',
       )
-      const shot = await enviar('Page.captureScreenshot', { format: 'png' })
-      writeFileSync(resolve(artefatos, `${nome}-${largura}.png`), Buffer.from(shot.data, 'base64'))
+      if (target) break
+    } catch {}
+    await esperar(100)
+  }
+  assert.ok(target, 'Depuração Chrome indisponível')
+  ws = new WebSocket(target.webSocketDebuggerUrl)
+  await new Promise((r, j) => {
+    ws.onopen = r
+    ws.onerror = j
+  })
+  ws.onmessage = (event) => {
+    const m = JSON.parse(event.data)
+    if (m.method === 'Runtime.exceptionThrown')
+      console.error(JSON.stringify(m.params.exceptionDetails))
+    const p = pendentes.get(m.id)
+    if (p) {
+      pendentes.delete(m.id)
+      m.error ? p.reject(Error(JSON.stringify(m.error))) : p.resolve(m.result)
     }
   }
-  assert.deepEqual(erros, [])
-  console.log(
-    'PASSOU: 12 verificações de layout em Chrome, sem exceções JavaScript. Capturas: ' + artefatos,
-  )
+  await cdp('Page.enable')
+  await cdp('Runtime.enable')
+  let total = 0
+  for (const largura of [320, 375, 768, 1280])
+    for (const route of [
+      '/perfil',
+      '/editar-perfil',
+      '/portfolio',
+      '/portfolio/adicionar',
+      '/portfolio/1/editar',
+      '/portfolio/1',
+    ]) {
+      await cdp('Emulation.setDeviceMetricsOverride', {
+        width: largura,
+        height: 900,
+        deviceScaleFactor: 1,
+        mobile: largura < 500,
+      })
+      await cdp('Page.navigate', {
+        url: 'http://127.0.0.1:5190/__feat40?route=' + encodeURIComponent(route),
+      })
+      let pronto = false
+      for (let i = 0; i < 100; i++) {
+        await esperar(100)
+        pronto = await avaliar("document.body.dataset.pronto==='sim'")
+        if (pronto) break
+      }
+      assert.ok(pronto, route + ' carregamento')
+      const medidas = await avaliar(
+        '({largura:innerWidth,scroll:document.documentElement.scrollWidth,texto:document.body.innerText})',
+      )
+      assert.ok(
+        medidas.scroll <= medidas.largura,
+        route + ' overflow ' + largura + ' ' + medidas.scroll,
+      )
+      assert.ok(!medidas.texto.includes('falta alterar'))
+      assert.equal(await avaliar("document.querySelectorAll('footer').length"), 1)
+      if (route === '/editar-perfil' && largura < 500) {
+        await cdp('Emulation.setDeviceMetricsOverride', {
+          width: largura,
+          height: 400,
+          deviceScaleFactor: 1,
+          mobile: true,
+        })
+        assert.ok(
+          await avaliar(
+            "document.querySelector('input').focus();document.querySelector('input').scrollIntoView();document.documentElement.scrollWidth<=innerWidth",
+          ),
+        )
+        await cdp('Emulation.setDeviceMetricsOverride', {
+          width: largura,
+          height: 900,
+          deviceScaleFactor: 1,
+          mobile: true,
+        })
+        await avaliar('scrollTo(0,0)')
+      }
+      if (route === '/portfolio/1') {
+        await avaliar("document.querySelector('button.excluir').click()")
+        assert.equal(await avaliar("document.querySelector('dialog').open"), true)
+        assert.equal(await avaliar('document.activeElement.textContent.trim()'), 'Cancelar')
+        const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+        writeFileSync(
+          resolve(pasta, 'dialogo-' + largura + '.png'),
+          Buffer.from(shot.data, 'base64'),
+        )
+        await avaliar("document.querySelector('dialog button').click()")
+        assert.equal(await avaliar('window.teste.deletes'), 0)
+      }
+      const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+      writeFileSync(
+        resolve(pasta, route.replaceAll('/', '-') + '-' + largura + '.png'),
+        Buffer.from(shot.data, 'base64'),
+      )
+      console.log('PASSOU', route, largura)
+      total++
+    }
+  console.log(total + '/24 cenários responsivos aprovados; capturas: ' + pasta)
 } finally {
-  socket?.close()
-  navegador.kill()
+  ws?.close()
+  proc.kill()
   await vite.close()
 }

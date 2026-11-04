@@ -1,61 +1,34 @@
-
-import { ref, onUnmounted } from 'vue'
-import { resolverImagem } from '../utils/imagens.js'
-
+﻿import { ref, onUnmounted } from 'vue'
+import { resolverImagem } from '@/services/perfilPortfolioService'
+import { validarImagem } from '@/utils/perfilPortfolio'
 export function usePerfilImagem() {
-  const imagem = ref(null)
-  const previewImagem = ref(null)
-
-  let urlTemporaria = null
-
-  const carregarImagem = (path) => {
-    if (urlTemporaria) {
-      URL.revokeObjectURL(urlTemporaria)
-      urlTemporaria = null
-    }
-
+  const imagem = ref(null),
+    previewImagem = ref(''),
+    erroImagem = ref('')
+  let temporaria
+  function liberar() {
+    if (temporaria) URL.revokeObjectURL(temporaria)
+    temporaria = null
+  }
+  function carregarImagem(path) {
+    liberar()
     imagem.value = null
     previewImagem.value = resolverImagem(path)
+    erroImagem.value = ''
   }
-
-  
-    const selecionarImagem = (event) => {
-    const arquivo = event.target.files?.[0]
-
-    if (!arquivo) return
-
-    definirImagem(arquivo)
-
-    // Permite selecionar novamente o mesmo arquivo.
+  function definirImagem(file) {
+    if (!file) return
+    erroImagem.value = validarImagem(file)
+    if (erroImagem.value) return
+    liberar()
+    imagem.value = file
+    temporaria = URL.createObjectURL(file)
+    previewImagem.value = temporaria
+  }
+  function selecionarImagem(event) {
+    definirImagem(event.target.files?.[0])
     event.target.value = ''
-    }
-
-
-  
-    const definirImagem = (arquivo) => {
-    if (!arquivo) return
-
-    if (urlTemporaria) {
-        URL.revokeObjectURL(urlTemporaria)
-    }
-
-    imagem.value = arquivo
-    urlTemporaria = URL.createObjectURL(arquivo)
-    previewImagem.value = urlTemporaria
-    }
-
-
-  onUnmounted(() => {
-    if (urlTemporaria) {
-      URL.revokeObjectURL(urlTemporaria)
-    }
-  })
-
-  return {
-    imagem,
-    previewImagem,
-    carregarImagem,
-    selecionarImagem,
-    definirImagem,
   }
+  onUnmounted(liberar)
+  return { imagem, previewImagem, erroImagem, carregarImagem, definirImagem, selecionarImagem }
 }
