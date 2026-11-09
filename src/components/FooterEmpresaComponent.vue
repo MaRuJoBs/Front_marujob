@@ -1,6 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { logout } from '@/services/authService'
+import { faBuilding } from '@fortawesome/free-solid-svg-icons'
 
 const router = useRouter()
 const sair = () => {
@@ -25,11 +26,11 @@ const sair = () => {
       <p>Mensagens</p>
     </router-link>
 
-    <router-link to="/trocar-senha" class="item">
+    <router-link to="/empresa/perfil" class="item">
       <span class="icon">
-        <FontAwesomeIcon :icon="['fas', 'lock']" />
+        <FontAwesomeIcon :icon="faBuilding" />
       </span>
-      <p>Alterar senha</p>
+      <p>Perfil</p>
     </router-link>
 
     <button type="button" class="item" @click="sair">
