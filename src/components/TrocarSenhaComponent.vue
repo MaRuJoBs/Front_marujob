@@ -1,10 +1,18 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { sessao } from '@/services/authSession'
 import { trocarSenha as salvarSenha, paginaInicial } from '@/services/authService'
 import { mensagensErro } from '@/utils/authErrors'
 
 const router = useRouter()
+const route = useRoute()
+const voltar = () =>
+  router.replace(
+    sessao.tipo === 'empresa' && route.query.origem === 'configuracoes-empresa'
+      ? '/empresa/configuracoes'
+      : paginaInicial(),
+  )
 
 const senhaAtual = ref('')
 const novaSenha = ref('')
@@ -60,7 +68,7 @@ const trocarSenha = async () => {
 <template>
   <div class="trocar-senha">
     <div class="topo">
-      <button type="button" :disabled="carregando" @click="router.replace(paginaInicial())">
+      <button type="button" :disabled="carregando" @click="voltar">
         <i class="fa-solid fa-arrow-left"></i>
       </button>
 

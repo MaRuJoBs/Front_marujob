@@ -1,5 +1,17 @@
 export const routes = [
   {
+    path: '/empresa/configuracoes',
+    name: 'configuracoes-empresa',
+    component: () => import('../views/ConfiguracoesEmpresaView.vue'),
+    meta: { requiresAuth: true, tipo: 'empresa' },
+  },
+  {
+    path: '/empresa/perfil',
+    name: 'perfil-empresa',
+    component: () => import('../views/PerfilEmpresaView.vue'),
+    meta: { requiresAuth: true, tipo: 'empresa' },
+  },
+  {
     path: '/',
     alias: '/login',
     name: 'login',
