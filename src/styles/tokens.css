@@ -1,0 +1,52 @@
+/* Contrato provisório FEAT-48: identidade existente, não extraído do Figma.
+   Escopo opt-in: nenhum token é publicado em :root. Ver docs/FEAT-48-design-system.md. */
+.mrj-ui {
+  --mrj-color-primary: #6e4ab7;
+  --mrj-color-primary-hover: #63369e;
+  --mrj-color-primary-active: #4f2ba5;
+  --mrj-color-secondary: #eae1f3;
+  --mrj-color-secondary-hover: #dfd1ee;
+  --mrj-color-background: #eee7f4;
+  --mrj-color-surface: #f6f1fa;
+  --mrj-color-text: #533581;
+  --mrj-color-text-secondary: #5c3a8b;
+  --mrj-color-border: #796197;
+  --mrj-color-border-subtle: #dcd0e8;
+  --mrj-color-on-primary: #ffffff;
+  --mrj-color-danger: #b30000;
+  --mrj-color-success: #195539;
+  --mrj-color-warning: #694b8b;
+  --mrj-color-focus: var(--mrj-color-primary-hover);
+  --mrj-font-family: Arial, Helvetica, sans-serif;
+  --mrj-font-size-sm: 0.875rem;
+  --mrj-font-size-md: 1rem;
+  --mrj-font-size-lg: 1.125rem;
+  --mrj-font-weight-regular: 400;
+  --mrj-font-weight-semibold: 600;
+  --mrj-line-height: 1.5;
+  --mrj-space-1: 0.25rem;
+  --mrj-space-2: 0.5rem;
+  --mrj-space-3: 0.75rem;
+  --mrj-space-4: 1rem;
+  --mrj-space-6: 1.5rem;
+  --mrj-space-8: 2rem;
+  --mrj-radius-sm: 0.5rem;
+  --mrj-radius-md: 0.75rem;
+  --mrj-radius-lg: 1rem;
+  --mrj-radius-pill: 999px;
+  --mrj-border-width: 1px;
+  --mrj-shadow-card: 0 2px 3px #4c356719;
+  --mrj-focus-width: 3px;
+  --mrj-focus-offset: 3px;
+  --mrj-control-height-sm: 2.5rem;
+  --mrj-control-height-md: 2.75rem;
+  --mrj-control-height-lg: 3rem;
+  --mrj-disabled-opacity: 0.65;
+  --mrj-motion-duration: 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mrj-ui {
+    --mrj-motion-duration: 0ms;
+  }
+}
