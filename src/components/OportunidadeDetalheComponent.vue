@@ -15,8 +15,20 @@ import FavoritoButton from '@/components/FavoritoButton.vue'
 import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
 import { obterOportunidade } from '@/services/freelanceService'
 import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
+import { useCandidatura } from '@/composables/useCandidatura'
 const route = useRoute()
 const job = ref(null)
+const {
+  candidatura,
+  carregando: consultandoCandidatura,
+  enviando: enviandoCandidatura,
+  permitida: candidaturaPermitida,
+  podeEnviar: podeCandidatar,
+  erro: erroCandidatura,
+  feedback: feedbackCandidatura,
+  consultar: consultarCandidatura,
+  enviar: candidatar,
+} = useCandidatura(() => job.value?.id)
 const { erroFavorito } = useFavoritosLocais()
 const carregando = ref(false)
 const erro = ref('')
@@ -107,12 +119,40 @@ onBeforeUnmount(() => {
         </section>
       </div>
       <section class="acoes" aria-label="Candidatura">
-        <button class="btn-candidatar" aria-describedby="candidatura-ajuda">
-          <FontAwesomeIcon :icon="faPaperPlane" aria-hidden="true" /> Quero me candidatar
+        <button
+          class="btn-candidatar"
+          aria-describedby="candidatura-ajuda"
+          :disabled="!podeCandidatar"
+          :aria-busy="consultandoCandidatura || enviandoCandidatura"
+          @click="candidatar"
+        >
+          <FontAwesomeIcon :icon="faPaperPlane" aria-hidden="true" />
+          {{ enviandoCandidatura ? 'Confirmando candidatura...' : 'Quero me candidatar' }}
         </button>
-        <p id="candidatura-ajuda" class="ajuda">
-          Candidatura ainda não disponível nesta interface.
+        <p id="candidatura-ajuda" class="ajuda" role="status">
+          <template v-if="!candidaturaPermitida"
+            >A candidatura é exclusiva para usuários autenticados.</template
+          >
+          <template v-else-if="consultandoCandidatura">Consultando sua candidatura...</template>
+          <template v-else-if="enviandoCandidatura">Aguarde a confirmação do envio.</template>
+          <template v-else-if="candidatura"
+            >Sua candidatura está {{ candidatura.status }}.</template
+          >
+          <template v-else-if="podeCandidatar"
+            >Você pode se candidatar a esta oportunidade.</template
+          >
+          <template v-else>Consulte sua candidatura para continuar.</template>
         </p>
+        <p v-if="feedbackCandidatura" class="ajuda" role="status">{{ feedbackCandidatura }}</p>
+        <p v-if="erroCandidatura" class="ajuda" role="alert">{{ erroCandidatura }}</p>
+        <button
+          v-if="candidaturaPermitida && erroCandidatura"
+          class="btn-candidatar"
+          :disabled="consultandoCandidatura || enviandoCandidatura"
+          @click="consultarCandidatura"
+        >
+          Consultar candidatura novamente
+        </button>
       </section>
     </template>
   </main>
@@ -288,6 +328,10 @@ h2 {
 }
 .btn-candidatar svg {
   font-size: 13px;
+}
+.acoes .btn-candidatar:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 .ajuda {
   margin: 10px 12px 0;
