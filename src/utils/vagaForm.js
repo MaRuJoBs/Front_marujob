@@ -161,6 +161,14 @@ export function montarPayloadEdicao(form, original) {
     else if (!textoCampo(form[nome]).trim())
       payload[nome] = ['date', 'moeda'].includes(tipo) ? null : ''
   }
+  // B47 não distingue vazio legado de remoção intencional. Ao limpar explicitamente,
+  // retire apenas o prefixo reconhecido, preservando o corpo intacto da descrição.
+  if (
+    payload.modalidade === '' &&
+    anterior.descricao !== textoCampo(original.descricao) &&
+    form.descricao === anterior.descricao
+  )
+    payload.descricao = anterior.descricao
   return payload
 }
 
@@ -199,9 +207,14 @@ export function validarVaga(form) {
     ...camposEstruturadosVaga,
   ]) {
     const valor = textoCampo(form[nome]).trim()
-    if (!valor) continue
+    if (!valor) {
+      if (['modalidade', 'uf', 'status'].includes(nome) && textoCampo(form[nome]))
+        erros[nome] = `Selecione uma opção válida para ${rotulo.toLowerCase()}.`
+      continue
+    }
     if (limite && [...valor].length > limite) erros[nome] = `Use até ${limite} caracteres.`
-    if (opcoes && !opcoes.includes(valor))
+    const opcao = ['modalidade', 'uf', 'status'].includes(nome) ? textoCampo(form[nome]) : valor
+    if (opcoes && !opcoes.includes(opcao))
       erros[nome] = `Selecione uma opção válida para ${rotulo.toLowerCase()}.`
     if (tipo === 'moeda' && normalizarPagamento(valor) === null)
       erros[nome] = 'Informe um valor válido em reais, com até 2 casas decimais.'
@@ -231,7 +244,11 @@ function dataPublicacaoValida(valor) {
 }
 
 export function camposNaoConfirmados(vaga, payload) {
-  return [...camposComplementaresVaga, ...camposEstruturadosVaga]
+  const campos = [...camposComplementaresVaga, ...camposEstruturadosVaga]
+  // Na remoção legada, confirmar só modalidade vazia permitiria o prefixo reaparecer.
+  if (payload.modalidade === '' && Object.hasOwn(payload, 'descricao'))
+    campos.push({ nome: 'descricao', rotulo: 'Descrição' })
+  return campos
     .filter(({ nome, tipo }) => {
       if (!Object.hasOwn(payload, nome)) return false
       if (!Object.hasOwn(vaga || {}, nome)) return true
@@ -239,6 +256,8 @@ export function camposNaoConfirmados(vaga, payload) {
         return vaga[nome] != null && vaga[nome] !== ''
       if (tipo === 'moeda') return normalizarPagamento(vaga[nome]) !== payload[nome]
       if (tipo === 'date') return textoCampo(vaga[nome]).slice(0, 10) !== payload[nome]
+      if (nome === 'descricao')
+        return textoCampo(vaga[nome]).trim() !== textoCampo(payload[nome]).trim()
       return textoCampo(vaga[nome]).trim().normalize('NFC') !== payload[nome]
     })
     .map(({ rotulo }) => rotulo)

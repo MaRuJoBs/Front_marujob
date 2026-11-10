@@ -764,6 +764,105 @@ test('formulário de edição carrega dados reais, valida, preserva erro e bloqu
   tela.desmontar()
 })
 
+test('F47 edição remove modalidade legada via PATCH e mantém remoção após novo GET', async () => {
+  autenticar()
+  let persistida = propria()
+  useGerenciamentoVagas().vagas = [persistida]
+  const descricao = 'Descrição original'
+  transporte = async (c) => {
+    if (c.method === 'patch') persistida = { ...persistida, ...corpo(c) }
+    return resposta(c, persistida, 200)
+  }
+  const tela = await montarEdicao()
+  try {
+    tela.estado.form.modalidade = ''
+    await tela.estado.publicar()
+    assert.deepEqual(corpo(chamadas.find((c) => c.method === 'patch')), {
+      modalidade: '', descricao,
+    })
+    assert.equal(tela.router.currentRoute.value.path, '/homeEmpresa')
+    assert.equal(useGerenciamentoVagas().vagas.find((v) => v.id === 12).descricao, descricao)
+  } finally {
+    tela.desmontar()
+  }
+  const recarregada = await montarEdicao()
+  try {
+    assert.equal(recarregada.estado.form.modalidade, '')
+    assert.equal(recarregada.estado.form.descricao, descricao)
+  } finally {
+    recarregada.desmontar()
+  }
+})
+
+test('F47 remoção legada ignorada pelo servidor não confirma sucesso', async () => {
+  autenticar()
+  transporte = async (c) => resposta(c, propria(), 200)
+  const tela = await montarEdicao()
+  try {
+    tela.estado.form.modalidade = ''
+    await tela.estado.publicar()
+    assert.equal(tela.estado.publicada.value, false)
+    assert.match(tela.estado.erroGeral.value, /Descrição/)
+    assert.equal(tela.estado.form.modalidade, '')
+    assert.equal(tela.router.currentRoute.value.path, '/editar-vaga/12')
+  } finally {
+    tela.desmontar()
+  }
+})
+
+test('F47 candidaturas continuam permitidas para todos os status informativos', async () => {
+  const { useCandidatura } = await vite.ssrLoadModule('/src/composables/useCandidatura.js')
+  for (const status of ['publicada', 'encerrada', 'cancelada']) {
+    autenticar('usuario', 7)
+    const oportunidade = { id: 12, status }
+    transporte = async (c) => c.method === 'get'
+      ? resposta(c, { count: 0, results: [], next: null }, 200)
+      : resposta(c, { id: 1, freelancer: 7, oportunidade: 12, status: 'pendente' }, 201)
+    let estado
+    const app = renderer.createApp({
+      setup() {
+        estado = useCandidatura(() => oportunidade.id)
+        return () => h('div')
+      },
+    })
+    app.mount({ children: [] })
+    try {
+      await aguardar()
+      assert.equal(estado.podeEnviar.value, true, status)
+      const antes = chamadas.length
+      await estado.enviar()
+      await estado.enviar()
+      const posts = chamadas.slice(antes).filter((c) => c.method === 'post')
+      assert.equal(posts.length, 1)
+      assert.equal(posts[0].url, 'candidaturas/')
+      assert.deepEqual(corpo(posts[0]), { oportunidade: 12 })
+      assert.equal(estado.candidatura.value.status, 'pendente')
+      assert.equal(estado.podeEnviar.value, false)
+    } finally {
+      app.unmount()
+    }
+  }
+})
+
+test('F47 erros 400 estruturados na edição preservam formulário e status', async () => {
+  autenticar()
+  transporte = async (c) => c.method === 'get' ? resposta(c, propria(), 200)
+    : falhar(c, 400, { modalidade: ['Revise modalidade'], cidade: ['Revise cidade'],
+      uf: ['Revise UF'], status: ['Revise status'] })
+  const tela = await montarEdicao()
+  try {
+    Object.assign(tela.estado.form, { modalidade: 'Híbrido', cidade: 'Curitiba', uf: 'PR', status: 'encerrada' })
+    await tela.estado.publicar()
+    assert.deepEqual(tela.estado.erros.value, { modalidade: 'Revise modalidade', cidade: 'Revise cidade',
+      uf: 'Revise UF', status: 'Revise status' })
+    assert.equal(tela.estado.form.status, 'encerrada')
+    assert.equal(tela.estado.form.cidade, 'Curitiba')
+    assert.equal(tela.estado.publicada.value, false)
+  } finally {
+    tela.desmontar()
+  }
+})
+
 test('rota de edição exige empresa e mantém rotas freelancer', () => {
   const rota = routes.find((r) => r.name === 'editar-vaga')
   assert.equal(rota.meta.tipo, 'empresa')

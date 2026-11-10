@@ -196,6 +196,10 @@ function alterarModalidade() {
               </select>
               <p id="modalidade-ajuda" class="ajuda">
                 A modalidade será exibida separadamente da descrição.
+                <template v-if="editando">
+                  Ao selecionar Não informada, uma indicação antiga no início da descrição
+                  também será removida ao salvar. O restante do texto será mantido.
+                </template>
               </p>
               <p v-if="erros.modalidade" id="modalidade-erro" class="msg-erro">
                 {{ erros.modalidade }}

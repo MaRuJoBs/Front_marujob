@@ -106,6 +106,85 @@ test('F47 compatibilidade: modalidade legada só como fallback sem regravar desc
   )
 })
 
+test('F47 remoção explícita de modalidade legada não reaparece após recarga', () => {
+  for (const modalidade of ['', 'Híbrido']) {
+    const original = {
+      ...vagas.montarPayloadVaga(formValido()),
+      modalidade,
+      descricao: 'Modalidade: Remoto\n\n  Texto original.\nSegunda linha.  ',
+    }
+    const form = vagas.formularioDaVaga(original)
+    form.modalidade = ''
+    assert.deepEqual(vagas.validarEdicaoVaga(form, original), {})
+    const payload = vagas.montarPayloadEdicao(form, original)
+    assert.deepEqual(payload, {
+      modalidade: '',
+      descricao: '  Texto original.\nSegunda linha.  ',
+    })
+    const recarregada = { ...original, ...payload }
+    assert.equal(vagas.formularioDaVaga(recarregada).modalidade, '')
+    assert.equal(vagas.formularioDaVaga(recarregada).descricao, payload.descricao)
+    assert.deepEqual(vagas.montarPayloadEdicao(vagas.formularioDaVaga(recarregada), recarregada), {})
+    assert.deepEqual(vagas.camposNaoConfirmados(recarregada, payload), [])
+    assert.ok(vagas.camposNaoConfirmados({ ...recarregada, descricao: original.descricao }, payload)
+      .includes('Descrição'))
+  }
+})
+
+test('F47 preserva descrição sem prefixo, edição simultânea e alterações sem limpar modalidade', () => {
+  const original = { ...vagas.montarPayloadVaga(formValido()), descricao: 'Texto sem prefixo' }
+  const form = vagas.formularioDaVaga(original)
+  form.modalidade = ''
+  assert.deepEqual(vagas.montarPayloadEdicao(form, original), { modalidade: '' })
+  const legado = { ...original, modalidade: '', descricao: 'Modalidade: Remoto\n\nTexto antigo' }
+  const edicao = vagas.formularioDaVaga(legado)
+  edicao.cidade = 'Curitiba'
+  assert.deepEqual(vagas.montarPayloadEdicao(edicao, legado), { cidade: 'Curitiba' })
+  edicao.modalidade = ''
+  edicao.descricao = 'Novo texto escrito pelo proprietário'
+  assert.deepEqual(vagas.montarPayloadEdicao(edicao, legado), {
+    modalidade: '', cidade: 'Curitiba', descricao: edicao.descricao,
+  })
+})
+
+test('F47 cidade normalizada respeita limite e enums enviados correspondem à validação', () => {
+  const form = { ...formValido(), cidade: 'a'.repeat(98) + 'a\u0303' }
+  assert.deepEqual(vagas.validarVaga(form), {})
+  assert.equal(vagas.montarPayloadVaga(form).cidade, 'a'.repeat(98) + 'ã')
+  for (const [campo, valor] of [['uf', ' SP '], ['status', ' publicada '], ['uf', ' '], ['status', ' ']]) {
+    assert.ok(vagas.validarVaga({ ...formValido(), [campo]: valor })[campo])
+  }
+})
+
+test('F47 status permite todas as transições, incluindo reabertura, sem enviar campos intactos', () => {
+  for (const anterior of Object.keys(vagas.statusVaga)) {
+    for (const seguinte of Object.keys(vagas.statusVaga)) {
+      const original = { ...vagas.montarPayloadVaga(formValido()), status: anterior }
+      const form = { ...vagas.formularioDaVaga(original), status: seguinte }
+      assert.deepEqual(vagas.validarEdicaoVaga(form, original), {})
+      assert.deepEqual(vagas.montarPayloadEdicao(form, original),
+        anterior === seguinte ? {} : { status: seguinte })
+    }
+  }
+})
+
+test('F47 detalhes toleram opcionais vazios/nulos e exibem complementos e status informativo', () => {
+  assert.deepEqual(vagas.detalhesComplementaresVaga(null), [])
+  assert.deepEqual(vagas.detalhesComplementaresVaga({ modalidade: null, cidade: null, uf: null }), [])
+  for (const status of Object.keys(vagas.statusVaga)) {
+    const detalhes = Object.fromEntries(vagas.detalhesComplementaresVaga({
+      ...vagas.montarPayloadVaga(formValido()), status,
+      tipo_contratacao: 'PJ', jornada_trabalho: '40 horas', nivel_experiencia: 'Pleno',
+    }))
+    assert.equal(detalhes.Modalidade, 'Remoto')
+    assert.equal(detalhes.Localização, 'São Paulo / SP')
+    assert.equal(detalhes.Status, vagas.statusVaga[status])
+    assert.equal(detalhes['Tipo de contratação'], 'PJ')
+    assert.equal(detalhes['Jornada de trabalho'], '40 horas')
+    assert.ok(detalhes['Faixa salarial'])
+  }
+})
+
 test('F47 regressão: ações F42/F38 intactas e componentes Vue compiláveis', () => {
   const path = 'src/components/OportunidadeDetalheComponent.vue'
   const atual = readFileSync(path, 'utf8')
