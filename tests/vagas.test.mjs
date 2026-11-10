@@ -41,6 +41,9 @@ const falhar = (config, status, data = {}) => {
 }
 const corpo = (config) => (typeof config.data === 'string' ? JSON.parse(config.data) : config.data)
 const formularioValido = () => ({
+  cidade: '',
+  uf: '',
+  status: 'publicada',
   requisitos: '',
   beneficios: '',
   tipo_contratacao: '',
@@ -57,6 +60,10 @@ const formularioValido = () => ({
   tempo: '40',
 })
 const vagaCriada = {
+  modalidade: 'Remoto',
+  cidade: '',
+  uf: '',
+  status: 'publicada',
   id: 923,
   titulo: 'Criar uma página responsiva',
   descricao: 'Desenvolver a apresentação dos serviços com formulário de contato.',
@@ -175,6 +182,9 @@ test('formulário começa vazio, incluindo select e pagamento', () => {
     titulo: '',
     categoria: '',
     modalidade: '',
+    cidade: '',
+    uf: '',
+    status: 'publicada',
     descricao: '',
     preco: '',
     tempo: '',
@@ -187,7 +197,7 @@ test('formulário começa vazio, incluindo select e pagamento', () => {
     salario_minimo: '',
     salario_maximo: '',
   })
-  assert.equal(Object.keys(formUtils.validarVaga(formUtils.novoRascunhoVaga())).length, 6)
+  assert.equal(Object.keys(formUtils.validarVaga(formUtils.novoRascunhoVaga())).length, 5)
 })
 
 test('campos obrigatórios e textos somente com espaços são recusados', () => {
@@ -196,7 +206,7 @@ test('campos obrigatórios e textos somente com espaços são recusados', () => 
   assert.ok(erros.titulo)
   assert.ok(erros.descricao)
   assert.ok(erros.categoria)
-  assert.ok(erros.modalidade)
+  assert.equal(erros.modalidade, undefined)
   assert.ok(erros.preco)
   assert.ok(erros.tempo)
 })
@@ -227,7 +237,7 @@ test('categoria aceita os valores dos filtros existentes e rejeita seleção des
   )
 })
 
-test('modalidade exige uma opção conhecida e é salva na descrição dentro do limite da API', () => {
+test('modalidade opcional é salva em campo próprio dentro do contrato da API', () => {
   for (const modalidade of ['Remoto', 'Híbrido', 'Presencial']) {
     const form = {
       ...formularioValido(),
@@ -236,16 +246,16 @@ test('modalidade exige uma opção conhecida e é salva na descrição dentro do
     }
     assert.deepEqual(formUtils.validarVaga(form), {})
     const payload = formUtils.montarPayloadVaga(form)
-    assert.ok(payload.descricao.startsWith(`Modalidade: ${modalidade}\n\n`))
+    assert.equal(payload.descricao, form.descricao)
     assert.equal([...payload.descricao].length, 200)
-    assert.equal('modalidade' in payload, false)
+    assert.equal(payload.modalidade, modalidade)
   }
-  for (const modalidade of ['', 'Outro', 'remoto']) {
+  for (const modalidade of ['Outro', 'remoto']) {
     assert.ok(formUtils.validarVaga({ ...formularioValido(), modalidade }).modalidade)
   }
 })
 
-test('troca de modalidade valida o novo limite sem truncar o texto digitado', () => {
+test('troca de modalidade mantém o limite independente e não trunca o texto digitado', () => {
   const form = {
     ...formularioValido(),
     descricao: 'a'.repeat(formUtils.limiteDescricaoVaga('Remoto')),
@@ -253,7 +263,7 @@ test('troca de modalidade valida o novo limite sem truncar o texto digitado', ()
   const descricao = form.descricao
   assert.deepEqual(formUtils.validarVaga(form), {})
   form.modalidade = 'Presencial'
-  assert.ok(formUtils.validarVaga(form).descricao)
+  assert.equal(formUtils.validarVaga(form).descricao, undefined)
   assert.equal(form.descricao, descricao)
 })
 
@@ -307,7 +317,11 @@ test('payload sem complementos preserva os cinco campos existentes, com textos n
   })
   assert.deepEqual(payload, {
     titulo: 'Título',
-    descricao: 'Modalidade: Remoto\n\nDescrição',
+    descricao: 'Descrição',
+    modalidade: 'Remoto',
+    cidade: '',
+    uf: '',
+    status: 'publicada',
     tag: 'Desenvolvimento Web',
     preco: '1500.50',
     tempo: '2.5',
@@ -331,7 +345,7 @@ test('formulário inválido não faz requisição', async () => {
   try {
     await tela.estado.publicar()
     assert.equal(chamadas.length, 0)
-    assert.equal(Object.keys(tela.estado.erros.value).length, 6)
+    assert.equal(Object.keys(tela.estado.erros.value).length, 5)
   } finally {
     tela.desmontar()
   }
@@ -529,6 +543,7 @@ test('resposta após logout não exibe publicação nem redireciona a conta segu
 
 const propria = (id = 12, empresa = 7) => ({
   ...vagaCriada,
+  modalidade: '',
   id,
   empresa,
   descricao: 'Modalidade: Remoto\n\nDescrição original',
@@ -623,14 +638,14 @@ test('edição extrai somente prefixo exato, preserva categoria, duração e des
     const dados = formUtils.formularioDaVaga(legado)
     assert.equal(dados.descricao, descricao)
     assert.equal(dados.modalidade, '')
-    assert.ok(formUtils.validarEdicaoVaga(dados, legado).modalidade)
+    assert.equal(formUtils.validarEdicaoVaga(dados, legado).modalidade, undefined)
     assert.equal(dados.categoria, legado.tag)
     assert.equal(dados.tempo, legado.tempo)
   }
   form.modalidade = 'Presencial'
   assert.equal(
-    formUtils.montarPayloadEdicao(form, vaga).descricao,
-    'Modalidade: Presencial\n\nDescrição original',
+    formUtils.montarPayloadEdicao(form, vaga).modalidade,
+    'Presencial',
   )
   assert.equal(formUtils.formatarTempo('2 dias'), '2 dias')
 })
@@ -647,9 +662,9 @@ test('detalhe e mutações alheias são bloqueadas antes de PATCH ou DELETE', as
 test('PATCH envia somente contrato e exige 200; não transfere empresa', async () => {
   autenticar()
   transporte = async (c) => resposta(c, propria(), 200)
-  await servicoGestao.editarVaga(12, { titulo: 'Novo', empresa: 9, status: 'ativo' })
+  await servicoGestao.editarVaga(12, { titulo: 'Novo', empresa: 9, status: 'encerrada' })
   assert.equal(chamadas[1].url, 'freelances/12/')
-  assert.deepEqual(corpo(chamadas[1]), { titulo: 'Novo' })
+  assert.deepEqual(corpo(chamadas[1]), { titulo: 'Novo', status: 'encerrada' })
   transporte = async (c) => resposta(c, propria(), c.method === 'patch' ? 202 : 200)
   await assert.rejects(servicoGestao.editarVaga(12, {}))
 })
@@ -925,7 +940,7 @@ test('complementos são opcionais, normalizados e independentes da descrição',
   assert.equal(payload.salario_minimo, '2000.50')
   assert.equal(payload.salario_maximo, '3500.00')
   assert.equal(payload.data_publicacao, '2026-10-30')
-  assert.equal(payload.descricao, 'Modalidade: Remoto\n\n' + form.descricao)
+  assert.equal(payload.descricao, form.descricao)
   assert.equal(Object.hasOwn(payload, 'empresa'), false)
   assert.equal(formUtils.formatarDataPublicacao('2026-10-30T00:00:00Z'), '30/10/2026')
   assert.equal(formUtils.formatarDataPublicacao('2026-02-30'), 'Não disponível')
@@ -983,17 +998,17 @@ test('edição preenche, preserva e limpa complementos sem alterar campos alheio
   })
 })
 
-test('serviço PATCH permite os complementos e continua bloqueando empresa/status', async () => {
+test('serviço PATCH permite complementos e status e continua bloqueando empresa', async () => {
   autenticar()
   const payload = formUtils.montarPayloadVaga({ ...formularioValido(), ...complementosValidos() })
   transporte = async (c) => resposta(c, { ...propria(), ...payload }, 200)
-  await servicoGestao.editarVaga(12, { ...payload, empresa: 9, status: 'ativo' })
+  await servicoGestao.editarVaga(12, { ...payload, empresa: 9 })
   assert.deepEqual(corpo(chamadas.find((c) => c.method === 'patch')), payload)
 })
 
 test('campos complementares ignorados ou alterados pelo servidor não são confirmados', () => {
   const payload = formUtils.montarPayloadVaga({ ...formularioValido(), ...complementosValidos() })
-  assert.equal(formUtils.camposNaoConfirmados(propria(), payload).length, 8)
+  assert.equal(formUtils.camposNaoConfirmados(propria(), payload).length, 9)
   assert.deepEqual(
     formUtils.camposNaoConfirmados(
       { ...payload, salario_minimo: '2000.5', data_publicacao: '2026-10-30T00:00:00Z' },
@@ -1210,7 +1225,7 @@ test('SPA bloqueia POST duplicado ao sair e voltar enquanto a publicação está
   transporte = async (c) => {
     if (c.method === 'get') return resposta(c, propria(), 200)
     await atraso.promise
-    return resposta(c, propria(), 201)
+    return resposta(c, vagaCriada, 201)
   }
   const tela = await montarRotasFormulario()
   try {

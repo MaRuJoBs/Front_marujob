@@ -7,6 +7,7 @@ import Filtros from '@/components/Filtros.vue'
 import FavoritoButton from '@/components/FavoritoButton.vue'
 import { useOportunidades } from '@/composables/useOportunidades'
 import { formatarPreco } from '@/utils/oportunidades'
+import { formularioDaVaga, statusVaga } from '@/utils/vagaForm'
 const painelFiltros = ref(null)
 const {
   jobs,
@@ -118,9 +119,23 @@ const {
               <FavoritoButton :id="job.id" />
             </header>
             <div class="info">
+              <p
+                v-if="formularioDaVaga(job).modalidade || job.cidade || job.uf || job.status"
+                class="tag"
+              >
+                {{
+                  [
+                    formularioDaVaga(job).modalidade,
+                    [job.cidade, job.uf].filter(Boolean).join(' / '),
+                    statusVaga[job.status],
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                }}
+              </p>
               <p v-if="job.descricao" class="descricao">
                 <FontAwesomeIcon :icon="faAlignLeft" aria-hidden="true" /><span>{{
-                  job.descricao
+                  formularioDaVaga(job).descricao
                 }}</span>
               </p>
               <div class="linha-final">

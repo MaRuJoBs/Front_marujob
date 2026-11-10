@@ -7,6 +7,8 @@ import EmpresaHeader from '@/components/EmpresaHeader.vue'
 import { useCriarVaga } from '@/composables/useCriarVaga'
 import {
   categoriasVaga,
+  camposEstruturadosVaga,
+  statusVaga,
   modalidadesVaga,
   limiteDescricaoVaga,
   limitesVaga,
@@ -27,7 +29,7 @@ const formulario = ref(null)
 const feedback = ref(null)
 const preenchidos = computed(
   () =>
-    ['titulo', 'categoria', 'modalidade', 'descricao', 'preco', 'tempo'].filter(
+    ['titulo', 'categoria', 'descricao', 'preco', 'tempo'].filter(
       (campo) => String(form[campo]).trim() && !validar(form)[campo],
     ).length,
 )
@@ -175,12 +177,11 @@ function alterarModalidade() {
             </div>
 
             <div class="campo">
-              <label for="vaga-modalidade">Modalidade <span aria-hidden="true">*</span></label>
+              <label for="vaga-modalidade">Modalidade (opcional)</label>
               <select
                 id="vaga-modalidade"
                 v-model="form.modalidade"
                 name="modalidade"
-                required
                 :class="{ placeholder: !form.modalidade }"
                 :aria-invalid="Boolean(erros.modalidade)"
                 :aria-describedby="
@@ -188,16 +189,54 @@ function alterarModalidade() {
                 "
                 @change="alterarModalidade"
               >
-                <option value="" disabled>Selecione a modalidade</option>
+                <option value="">Não informada</option>
                 <option v-for="modalidade in modalidadesVaga" :key="modalidade" :value="modalidade">
                   {{ modalidade }}
                 </option>
               </select>
               <p id="modalidade-ajuda" class="ajuda">
-                A modalidade aparecerá no início da descrição publicada.
+                A modalidade será exibida separadamente da descrição.
               </p>
               <p v-if="erros.modalidade" id="modalidade-erro" class="msg-erro">
                 {{ erros.modalidade }}
+              </p>
+            </div>
+
+            <div
+              v-for="campo in camposEstruturadosVaga.filter((c) => c.nome !== 'modalidade')"
+              :key="campo.nome"
+              class="campo"
+            >
+              <label :for="'vaga-' + campo.nome"
+                >{{ campo.rotulo }}{{ campo.nome !== 'status' ? ' (opcional)' : '' }}</label
+              >
+              <select
+                v-if="campo.tipo === 'select'"
+                :id="'vaga-' + campo.nome"
+                v-model="form[campo.nome]"
+                :name="campo.nome"
+                :aria-invalid="Boolean(erros[campo.nome])"
+                :aria-describedby="erros[campo.nome] ? campo.nome + '-erro' : undefined"
+                @change="validarCampo(campo.nome)"
+              >
+                <option v-if="campo.nome !== 'status'" value="">Não informado</option>
+                <option v-for="opcao in campo.opcoes" :key="opcao" :value="opcao">
+                  {{ campo.nome === 'status' ? statusVaga[opcao] : opcao }}
+                </option>
+              </select>
+              <input
+                v-else
+                :id="'vaga-' + campo.nome"
+                v-model="form[campo.nome]"
+                :name="campo.nome"
+                type="text"
+                :maxlength="campo.limite"
+                :aria-invalid="Boolean(erros[campo.nome])"
+                :aria-describedby="erros[campo.nome] ? campo.nome + '-erro' : undefined"
+                @blur="validarCampo(campo.nome)"
+              />
+              <p v-if="erros[campo.nome]" :id="campo.nome + '-erro'" class="msg-erro">
+                {{ erros[campo.nome] }}
               </p>
             </div>
 
@@ -401,11 +440,11 @@ function alterarModalidade() {
             </div>
             <div class="progresso">
               <div>
-                <span>Informações preenchidas</span><strong>{{ preenchidos }} de 6</strong>
+                <span>Informações preenchidas</span><strong>{{ preenchidos }} de 5</strong>
               </div>
               <progress
                 :value="preenchidos"
-                max="6"
+                max="5"
                 aria-label="Campos válidos preenchidos"
               ></progress>
             </div>

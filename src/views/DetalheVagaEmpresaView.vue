@@ -8,6 +8,7 @@ import { useGerenciamentoVagas } from '@/stores/gerenciamentoVagas'
 import { sessao } from '@/services/authSession'
 import {
   formularioDaVaga,
+  detalhesComplementaresVaga,
   formatarPagamento,
   formatarTempo,
   formatarDataPublicacao,
@@ -27,34 +28,39 @@ const router = useRouter()
 const store = useGerenciamentoVagas()
 const { vaga, carregando, erro, recarregar } = useDetalheVagaEmpresa()
 const informacoes = computed(() => (vaga.value ? formularioDaVaga(vaga.value) : null))
-const detalhes = computed(() => [
-  {
-    rotulo: 'Data de publicação',
-    valor: formatarDataPublicacao(vaga.value?.data_publicacao),
-    icone: faCalendar,
-  },
-  { rotulo: 'Categoria', valor: vaga.value?.tag || 'Não informada', icone: faTag },
-  {
-    rotulo: 'Faixa salarial',
-    valor: formatarFaixaSalarial(vaga.value?.salario_minimo, vaga.value?.salario_maximo),
-    icone: faDollarSign,
-  },
-  {
-    rotulo: 'Tipo de trabalho',
-    valor: vaga.value?.tipo_contratacao || 'Não disponível',
-    icone: faBriefcase,
-  },
-  {
-    rotulo: 'Nível de experiência',
-    valor: vaga.value?.nivel_experiencia || 'Não disponível',
-    icone: faChartLine,
-  },
-  {
-    rotulo: 'Jornada de trabalho',
-    valor: vaga.value?.jornada_trabalho || 'Não disponível',
-    icone: faClock,
-  },
-])
+const detalhes = computed(() =>
+  [
+    ...detalhesComplementaresVaga(vaga.value)
+      .filter(([rotulo]) => ['Localização', 'Status'].includes(rotulo))
+      .map(([rotulo, valor]) => ({ rotulo, valor, icone: faHouse })),
+    {
+      rotulo: 'Data de publicação',
+      valor: formatarDataPublicacao(vaga.value?.data_publicacao),
+      icone: faCalendar,
+    },
+    { rotulo: 'Categoria', valor: vaga.value?.tag || 'Não informada', icone: faTag },
+    {
+      rotulo: 'Faixa salarial',
+      valor: formatarFaixaSalarial(vaga.value?.salario_minimo, vaga.value?.salario_maximo),
+      icone: faDollarSign,
+    },
+    {
+      rotulo: 'Tipo de trabalho',
+      valor: vaga.value?.tipo_contratacao || 'Não disponível',
+      icone: faBriefcase,
+    },
+    {
+      rotulo: 'Nível de experiência',
+      valor: vaga.value?.nivel_experiencia || 'Não disponível',
+      icone: faChartLine,
+    },
+    {
+      rotulo: 'Jornada de trabalho',
+      valor: vaga.value?.jornada_trabalho || 'Não disponível',
+      icone: faClock,
+    },
+  ].filter(({ valor }) => valor && !['Não disponível', 'Não informada'].includes(valor)),
+)
 </script>
 
 <template>
@@ -97,14 +103,14 @@ const detalhes = computed(() => [
           <p>{{ informacoes.descricao || 'Descrição não informada.' }}</p>
         </section>
 
-        <section class="bloco-descricao" aria-labelledby="requisitos-titulo">
+        <section v-if="vaga.requisitos" class="bloco-descricao" aria-labelledby="requisitos-titulo">
           <h2 id="requisitos-titulo">Requisitos</h2>
           <p :class="{ indisponivel: !vaga.requisitos }">
             {{ vaga.requisitos || 'Não disponível.' }}
           </p>
         </section>
 
-        <section class="bloco-descricao" aria-labelledby="beneficios-titulo">
+        <section v-if="vaga.beneficios" class="bloco-descricao" aria-labelledby="beneficios-titulo">
           <h2 id="beneficios-titulo">Benefícios</h2>
           <p :class="{ indisponivel: !vaga.beneficios }">
             {{ vaga.beneficios || 'Não disponível.' }}

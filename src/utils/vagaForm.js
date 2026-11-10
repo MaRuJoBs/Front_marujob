@@ -12,7 +12,21 @@ export const categoriasVaga = [
 
 export const limitesVaga = { titulo: 100, descricao: 200, tag: 50, tempo: 50 }
 export const modalidadesVaga = ['Remoto', 'Híbrido', 'Presencial']
-// Contrato conferido no model/serializer da DEV do backend (PR #17).
+// Contrato B47 conferido no PR #20 do backend.
+export const ufsVaga =
+  'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ')
+export const statusVaga = { publicada: 'Publicada', encerrada: 'Encerrada', cancelada: 'Cancelada' }
+export const camposEstruturadosVaga = [
+  { nome: 'modalidade', rotulo: 'Modalidade', tipo: 'select', opcoes: modalidadesVaga },
+  { nome: 'cidade', rotulo: 'Cidade da oportunidade', tipo: 'text', limite: 100 },
+  { nome: 'uf', rotulo: 'Estado (UF)', tipo: 'select', opcoes: ufsVaga },
+  {
+    nome: 'status',
+    rotulo: 'Situação da oportunidade',
+    tipo: 'select',
+    opcoes: Object.keys(statusVaga),
+  },
+]
 export const camposComplementaresVaga = [
   {
     nome: 'requisitos',
@@ -64,13 +78,15 @@ export const camposComplementaresVaga = [
 const textoCampo = (valor) => String(valor ?? '')
 const prefixoModalidade = (modalidade) =>
   modalidadesVaga.includes(modalidade) ? `Modalidade: ${modalidade}\n\n` : ''
-export const limiteDescricaoVaga = (modalidade) =>
-  limitesVaga.descricao - [...prefixoModalidade(modalidade)].length
+export const limiteDescricaoVaga = () => limitesVaga.descricao
 
 export const novoRascunhoVaga = () => ({
   titulo: '',
   categoria: '',
   modalidade: '',
+  cidade: '',
+  uf: '',
+  status: 'publicada',
   descricao: '',
   preco: '',
   tempo: '',
@@ -88,13 +104,17 @@ export function normalizarPagamento(valor) {
 
 export function formularioDaVaga(vaga) {
   const descricao = String(vaga.descricao ?? '')
-  const modalidade =
+  const legado =
     modalidadesVaga.find((valor) => descricao.startsWith(prefixoModalidade(valor))) || ''
+  const modalidade = textoCampo(vaga.modalidade) || legado
   return {
     titulo: String(vaga.titulo ?? ''),
     categoria: String(vaga.tag ?? ''),
     modalidade,
-    descricao: modalidade ? descricao.slice(prefixoModalidade(modalidade).length) : descricao,
+    cidade: textoCampo(vaga.cidade),
+    uf: textoCampo(vaga.uf),
+    status: textoCampo(vaga.status) || 'publicada',
+    descricao: legado ? descricao.slice(prefixoModalidade(legado).length) : descricao,
     preco: String(vaga.preco ?? ''),
     tempo: String(vaga.tempo ?? ''),
     ...Object.fromEntries(
@@ -110,7 +130,7 @@ export function validarEdicaoVaga(form, original) {
   const erros = validarVaga(form)
   if (!original) return erros
   const anterior = formularioDaVaga(original)
-  for (const { nome } of camposComplementaresVaga) {
+  for (const { nome } of [...camposComplementaresVaga, ...camposEstruturadosVaga]) {
     if (
       !['salario_minimo', 'salario_maximo'].includes(nome) &&
       textoCampo(form[nome]) === anterior[nome]
@@ -120,12 +140,7 @@ export function validarEdicaoVaga(form, original) {
   for (const campo of ['titulo', 'categoria', 'preco', 'tempo']) {
     if (form[campo] === anterior[campo] && form[campo].trim()) delete erros[campo]
   }
-  if (
-    form.descricao === anterior.descricao &&
-    form.modalidade === anterior.modalidade &&
-    anterior.modalidade
-  )
-    delete erros.descricao
+  if (form.descricao === anterior.descricao) delete erros.descricao
   return erros
 }
 
@@ -140,9 +155,8 @@ export function montarPayloadEdicao(form, original) {
   })) {
     if (form[campo] === anterior[campo]) delete payload[api]
   }
-  if (form.descricao === anterior.descricao && form.modalidade === anterior.modalidade)
-    delete payload.descricao
-  for (const { nome, tipo } of camposComplementaresVaga) {
+  if (form.descricao === anterior.descricao) delete payload.descricao
+  for (const { nome, tipo } of [...camposComplementaresVaga, ...camposEstruturadosVaga]) {
     if (textoCampo(form[nome]) === anterior[nome]) delete payload[nome]
     else if (!textoCampo(form[nome]).trim())
       payload[nome] = ['date', 'moeda'].includes(tipo) ? null : ''
@@ -162,11 +176,11 @@ export function validarVaga(form) {
     erros.titulo = 'Use até 100 caracteres no título.'
   if (!categoriasVaga.some((categoria) => categoria.value === form.categoria))
     erros.categoria = 'Selecione uma categoria válida.'
-  if (!modalidadesVaga.includes(form.modalidade))
+  if (form.modalidade && !modalidadesVaga.includes(form.modalidade))
     erros.modalidade = 'Selecione Remoto, Híbrido ou Presencial.'
   if (!form.descricao.trim()) erros.descricao = 'Descreva a oportunidade.'
   else if ([...form.descricao.trim()].length > limiteDescricaoVaga(form.modalidade))
-    erros.descricao = `Use até ${limiteDescricaoVaga(form.modalidade)} caracteres na descrição para incluir a modalidade.`
+    erros.descricao = `Use até ${limiteDescricaoVaga()} caracteres na descrição.`
   if (!String(form.preco).trim()) erros.preco = 'Informe o pagamento da oportunidade.'
   else if (normalizarPagamento(form.preco) === null)
     erros.preco = 'Informe de 0 a 99.999.999,99, com até 2 casas decimais. Ex.: 1500,00.'
@@ -180,7 +194,10 @@ export function validarVaga(form) {
   ) {
     erros.tempo = 'Informe uma duração maior que zero, em horas. Ex.: 40 ou 2,5.'
   }
-  for (const { nome, rotulo, limite, opcoes, tipo } of camposComplementaresVaga) {
+  for (const { nome, rotulo, limite, opcoes, tipo } of [
+    ...camposComplementaresVaga,
+    ...camposEstruturadosVaga,
+  ]) {
     const valor = textoCampo(form[nome]).trim()
     if (!valor) continue
     if (limite && [...valor].length > limite) erros[nome] = `Use até ${limite} caracteres.`
@@ -190,6 +207,10 @@ export function validarVaga(form) {
       erros[nome] = 'Informe um valor válido em reais, com até 2 casas decimais.'
     if (tipo === 'date' && !dataPublicacaoValida(valor)) erros[nome] = 'Informe uma data válida.'
   }
+  const cidade = textoCampo(form.cidade).trim().normalize('NFC')
+  if (cidade && (!/\p{L}/u.test(cidade) || /[^\p{L} .’'\-]/u.test(cidade)))
+    erros.cidade = 'Informe uma cidade com letras, espaços, hífens, pontos ou apóstrofos.'
+  if (form.status === '') erros.status = 'Selecione uma situação válida.'
   const minimo = textoCampo(form.salario_minimo).trim()
   const maximo = textoCampo(form.salario_maximo).trim()
   if (minimo && !maximo) erros.salario_maximo = 'Informe também o valor máximo da faixa.'
@@ -210,7 +231,7 @@ function dataPublicacaoValida(valor) {
 }
 
 export function camposNaoConfirmados(vaga, payload) {
-  return camposComplementaresVaga
+  return [...camposComplementaresVaga, ...camposEstruturadosVaga]
     .filter(({ nome, tipo }) => {
       if (!Object.hasOwn(payload, nome)) return false
       if (!Object.hasOwn(vaga || {}, nome)) return true
@@ -218,7 +239,7 @@ export function camposNaoConfirmados(vaga, payload) {
         return vaga[nome] != null && vaga[nome] !== ''
       if (tipo === 'moeda') return normalizarPagamento(vaga[nome]) !== payload[nome]
       if (tipo === 'date') return textoCampo(vaga[nome]).slice(0, 10) !== payload[nome]
-      return textoCampo(vaga[nome]).trim() !== payload[nome]
+      return textoCampo(vaga[nome]).trim().normalize('NFC') !== payload[nome]
     })
     .map(({ rotulo }) => rotulo)
 }
@@ -240,7 +261,11 @@ export function formatarFaixaSalarial(minimo, maximo) {
 export function montarPayloadVaga(form) {
   return {
     titulo: form.titulo.trim(),
-    descricao: prefixoModalidade(form.modalidade) + form.descricao.trim(),
+    descricao: form.descricao.trim(),
+    modalidade: textoCampo(form.modalidade),
+    cidade: textoCampo(form.cidade).trim().normalize('NFC'),
+    uf: textoCampo(form.uf),
+    ...(form.status ? { status: form.status } : {}),
     tag: form.categoria,
     preco: normalizarPagamento(form.preco),
     tempo: String(form.tempo).trim().replace(',', '.'),
@@ -259,7 +284,9 @@ const camposApi = {
   tag: 'categoria',
   preco: 'preco',
   tempo: 'tempo',
-  ...Object.fromEntries(camposComplementaresVaga.map(({ nome }) => [nome, nome])),
+  ...Object.fromEntries(
+    [...camposComplementaresVaga, ...camposEstruturadosVaga].map(({ nome }) => [nome, nome]),
+  ),
 }
 
 export function interpretarErroPublicacao(error) {
@@ -303,4 +330,31 @@ export const formatarPagamento = (valor) => {
   return Number.isFinite(numero)
     ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(numero)
     : 'Pagamento não informado'
+}
+
+// Somente apresentação: nunca altera o texto persistido pela API.
+export function detalhesComplementaresVaga(vaga) {
+  if (!vaga) return []
+  const form = formularioDaVaga(vaga)
+  return [
+    ['Modalidade', form.modalidade],
+    ['Localização', [vaga.cidade, vaga.uf].filter(Boolean).join(' / ')],
+    ['Status', statusVaga[vaga.status] || vaga.status],
+    ['Tipo de contratação', vaga.tipo_contratacao],
+    ['Nível de experiência', vaga.nivel_experiencia],
+    ['Jornada de trabalho', vaga.jornada_trabalho],
+    [
+      'Data de publicação',
+      vaga.data_publicacao ? formatarDataPublicacao(vaga.data_publicacao) : '',
+    ],
+    [
+      'Faixa salarial',
+      vaga.salario_minimo != null &&
+      vaga.salario_minimo !== '' &&
+      vaga.salario_maximo != null &&
+      vaga.salario_maximo !== ''
+        ? formatarFaixaSalarial(vaga.salario_minimo, vaga.salario_maximo)
+        : '',
+    ],
+  ].filter(([, valor]) => valor && valor !== 'Não disponível')
 }

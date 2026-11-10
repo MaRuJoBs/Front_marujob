@@ -10,12 +10,15 @@ import {
   faPaperPlane,
   faTag,
 } from '@fortawesome/free-solid-svg-icons'
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import FavoritoButton from '@/components/FavoritoButton.vue'
 import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
 import { obterOportunidade } from '@/services/freelanceService'
 import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
 import { useCandidatura } from '@/composables/useCandidatura'
+import { formularioDaVaga, detalhesComplementaresVaga } from '@/utils/vagaForm'
+const informacoes = computed(() => (job.value ? formularioDaVaga(job.value) : null))
+const complementos = computed(() => detalhesComplementaresVaga(job.value))
 const route = useRoute()
 const job = ref(null)
 const {
@@ -77,11 +80,11 @@ onBeforeUnmount(() => {
     </div>
     <template v-else-if="job">
       <div class="blocos">
-        <section v-if="job.descricao" class="card sobre">
+        <section v-if="informacoes.descricao" class="card sobre">
           <div class="icone-card"><FontAwesomeIcon :icon="faFileLines" aria-hidden="true" /></div>
           <div class="conteudo-card">
             <h2>Sobre a oportunidade</h2>
-            <p class="texto">{{ job.descricao }}</p>
+            <p class="texto">{{ informacoes.descricao }}</p>
           </div>
         </section>
         <section class="card informacoes-card">
@@ -107,6 +110,14 @@ onBeforeUnmount(() => {
                 </dt>
                 <dd>Tempo informado: {{ job.tempo }}</dd>
               </div>
+              <div
+                v-for="[rotulo, valor] in complementos"
+                :key="rotulo"
+                class="info-item complemento"
+              >
+                <dt>{{ rotulo }}:</dt>
+                <dd>{{ valor }}</dd>
+              </div>
             </dl>
             <div class="valor">
               <span class="sr-only">Preço informado: </span
@@ -115,6 +126,17 @@ onBeforeUnmount(() => {
                 {{ formatarPreco(job.preco) }}</span
               >
             </div>
+          </div>
+        </section>
+        <section
+          v-for="campo in ['requisitos', 'beneficios'].filter((c) => job[c])"
+          :key="campo"
+          class="card"
+        >
+          <div class="icone-card"><FontAwesomeIcon :icon="faFileLines" aria-hidden="true" /></div>
+          <div class="conteudo-card">
+            <h2>{{ campo === 'requisitos' ? 'Requisitos' : 'Benefícios' }}</h2>
+            <p class="texto">{{ job[campo] }}</p>
           </div>
         </section>
       </div>
@@ -281,6 +303,15 @@ h2 {
 }
 .info-item dd {
   margin: 0;
+}
+.complemento {
+  flex-wrap: wrap;
+}
+.complemento dt {
+  width: auto;
+  justify-content: start;
+  padding-top: 0;
+  flex-shrink: 1;
 }
 .valor {
   display: flex;
