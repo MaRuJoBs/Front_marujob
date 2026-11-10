@@ -90,6 +90,10 @@ export async function editarVaga(id, payload) {
       'tag',
       'preco',
       'tempo',
+      'modalidade',
+      'cidade',
+      'uf',
+      'status',
       ...camposComplementaresVaga.map(({ nome }) => nome),
     ]
       .filter((campo) => Object.hasOwn(payload, campo))
