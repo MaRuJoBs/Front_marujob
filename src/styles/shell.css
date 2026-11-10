@@ -1,0 +1,60 @@
+/* Shell F49: 48rem acompanha o breakpoint existente dos componentes F48.
+   Limites locais de páginas continuam sob responsabilidade de F50/F51. */
+.app {
+  --mrj-shell-width: 75rem;
+  --mrj-navigation-height: 85px;
+  width: 100%;
+  max-width: var(--mrj-shell-width);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.app--navigation {
+  padding-bottom: calc(var(--mrj-navigation-height) + env(safe-area-inset-bottom, 0px));
+}
+
+.app .app-navigation {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--mrj-shell-width);
+  height: calc(var(--mrj-navigation-height) + env(safe-area-inset-bottom, 0px));
+  padding: var(--mrj-space-2) var(--mrj-space-2)
+    calc(var(--mrj-space-2) + env(safe-area-inset-bottom, 0px));
+  gap: var(--mrj-space-1);
+}
+
+.app-navigation .item {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--mrj-control-height-md);
+  justify-content: center;
+}
+
+.app-navigation .item:focus-visible {
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
+  outline-offset: var(--mrj-focus-offset);
+  border-radius: var(--mrj-radius-sm);
+}
+
+@media (min-width: 48rem) {
+  .app .app-navigation {
+    padding-inline: var(--mrj-space-8);
+  }
+  .app-navigation .item {
+    flex-direction: row;
+    gap: var(--mrj-space-2);
+    font-size: var(--mrj-font-size-sm);
+  }
+  .app-navigation .icon {
+    margin-bottom: 0;
+  }
+}

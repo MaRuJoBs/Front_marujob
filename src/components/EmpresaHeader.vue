@@ -110,7 +110,7 @@ a:focus-visible {
   outline: 3px solid #4e268b;
   outline-offset: 3px;
 }
-@media (max-width: 359px) {
+@media (max-width: 479px) {
   .empresa-header {
     padding-inline: 12px;
   }

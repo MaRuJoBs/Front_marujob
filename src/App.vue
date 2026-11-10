@@ -2,11 +2,15 @@
 import Footer from './components/Footer.vue'
 import FooterEmpresa from './components/FooterEmpresaComponent.vue'
 import { sessao } from './services/authService'
+import './styles/tokens.css'
+import './styles/shell.css'
 </script>
 
 <template>
-  <div class="app">
-    <router-view />
+  <div class="app mrj-ui" :class="{ 'app--navigation': !$route.meta.hideFooter && sessao.usuario }">
+    <div class="app-content">
+      <router-view />
+    </div>
 
     <template v-if="!$route.meta.hideFooter && sessao.usuario">
       <FooterEmpresa v-if="sessao.tipo === 'empresa'" />
@@ -14,21 +18,3 @@ import { sessao } from './services/authService'
     </template>
   </div>
 </template>
-
-<style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Poppins', sans-serif;
-  background: #f3f0ff;
-}
-
-.app {
-  max-width: 420px;
-  margin: 0 auto;
-}
-</style>
