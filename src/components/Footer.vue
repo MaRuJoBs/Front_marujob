@@ -3,7 +3,7 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 </script>
 
 <template>
-  <footer class="footer app-navigation" aria-label="Navegação do freelancer">
+  <footer class="footer app-navigation mrj-ui" aria-label="Navegação do freelancer">
 
     <router-link to="/home" class="item">
       <span class="icon">

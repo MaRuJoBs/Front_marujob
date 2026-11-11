@@ -2,7 +2,9 @@
    Limites locais de páginas continuam sob responsabilidade de F50/F51. */
 .app {
   --mrj-shell-width: 75rem;
+  --mrj-content-width: 26.25rem;
   --mrj-navigation-height: 85px;
+  --mrj-page-reserve: 0px;
   width: 100%;
   max-width: var(--mrj-shell-width);
   min-height: 100vh;
@@ -15,26 +17,39 @@
 .app-content {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  max-width: var(--mrj-content-width);
+  margin-inline: auto;
 }
 
 .app--navigation {
-  padding-bottom: calc(var(--mrj-navigation-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(
+    0px,
+    calc(var(--mrj-navigation-height) + env(safe-area-inset-bottom, 0px) - var(--mrj-page-reserve))
+  );
+}
+.app--empresa {
+  --mrj-navigation-height: 76px;
+}
+.app--page-reserve {
+  --mrj-page-reserve: 100px;
+}
+.app--favorites {
+  /* Favoritos usa 25vh, que pode ser menor que 100px em viewports baixas. */
+  --mrj-page-reserve: 25vh;
 }
 
 .app .app-navigation {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: var(--mrj-shell-width);
+  max-width: var(--mrj-content-width);
   height: calc(var(--mrj-navigation-height) + env(safe-area-inset-bottom, 0px));
-  padding: var(--mrj-space-2) var(--mrj-space-2)
-    calc(var(--mrj-space-2) + env(safe-area-inset-bottom, 0px));
-  gap: var(--mrj-space-1);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .app-navigation .item {
-  flex: 1;
-  min-width: 0;
+  min-width: var(--mrj-control-height-md);
   min-height: var(--mrj-control-height-md);
   justify-content: center;
 }
@@ -46,15 +61,21 @@
 }
 
 @media (min-width: 48rem) {
-  .app .app-navigation {
+  /* Opt-in estrutural: ativar apenas quando F50/F51 adaptarem a página.
+     Não obriga telas mobile existentes a preencherem o shell amplo. */
+  .app--wide {
+    --mrj-content-width: var(--mrj-shell-width);
+  }
+  .app--wide .app-navigation {
     padding-inline: var(--mrj-space-8);
   }
-  .app-navigation .item {
+  .app--wide .app-navigation .item {
+    flex: 1;
     flex-direction: row;
     gap: var(--mrj-space-2);
     font-size: var(--mrj-font-size-sm);
   }
-  .app-navigation .icon {
+  .app--wide .app-navigation .icon {
     margin-bottom: 0;
   }
 }

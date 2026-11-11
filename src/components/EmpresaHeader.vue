@@ -110,7 +110,7 @@ a:focus-visible {
   outline: 3px solid #4e268b;
   outline-offset: 3px;
 }
-@media (max-width: 479px) {
+@media (max-width: 359px) {
   .empresa-header {
     padding-inline: 12px;
   }
@@ -118,6 +118,19 @@ a:focus-visible {
     font-size: 23px;
   }
   .marca img {
+    width: 46px;
+    height: 46px;
+  }
+}
+/* Só a combinação marca + Voltar excedia o espaço disponível nesses celulares. */
+@media (min-width: 360px) and (max-width: 419px) {
+  .empresa-header:has(.voltar) {
+    padding-inline: 12px;
+  }
+  .empresa-header:has(.voltar) .marca > span {
+    font-size: 23px;
+  }
+  .empresa-header:has(.voltar) .marca img {
     width: 46px;
     height: 46px;
   }

@@ -1,5 +1,9 @@
 # FEAT-49 — Responsividade global
 
+> Registro da implementação inicial do PR #97. A auditoria posterior identificou
+> regressões de proporção e reserva inferior. O comportamento corrigido e as novas
+> evidências estão em [Auditoria de regressões](FEAT-49-auditoria-regressoes.md).
+
 ## Preparação e auditoria
 
 Repositório MaRuJoBs/Front_marujob, worktree única, inicialmente limpa na FEAT-47.

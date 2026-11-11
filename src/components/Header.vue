@@ -3,7 +3,7 @@ import { sessao } from '@/services/authService'
 </script>
 
 <template>
-  <header class="header">
+  <header class="header mrj-ui">
     <!-- <div class="desfoque"></div> -->
     <img src="@/assets/images/logo.png" class="logo-top" alt="MaRuJoB's" />
 
@@ -25,8 +25,7 @@ import { sessao } from '@/services/authService'
 <style scoped>
 .header {
   width: 100%;
-  height: clamp(200px, 33vh, 320px);
-  padding: 64px var(--mrj-space-4) var(--mrj-space-4);
+  height: 33vh;
   position: relative;
   background: url('@/assets/images/fundo.png') no-repeat center top;
   background-size: cover;
@@ -49,8 +48,8 @@ import { sessao } from '@/services/authService'
 
 .logo-top {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: -3px;
+  left: -7px;
   width: 100px;
   z-index: 3;
   animation: fadeDown 0.8s ease;
@@ -79,8 +78,8 @@ import { sessao } from '@/services/authService'
 }
 
 .slogan {
-  display: block;
   width: min(100%, 370px);
+  margin-top: min(10vw, 42px);
   margin-inline: auto;
   opacity: 0.95;
 }

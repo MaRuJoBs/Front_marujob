@@ -11,7 +11,7 @@ const sair = () => {
 </script>
 
 <template>
-  <footer class="footer app-navigation" aria-label="Navegação da empresa">
+  <footer class="footer app-navigation mrj-ui" aria-label="Navegação da empresa">
     <router-link to="/homeEmpresa" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'house']" />
