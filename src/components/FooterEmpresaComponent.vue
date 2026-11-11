@@ -11,7 +11,7 @@ const sair = () => {
 </script>
 
 <template>
-  <footer class="footer">
+  <footer class="footer app-navigation mrj-ui" aria-label="Navegação da empresa">
     <router-link to="/homeEmpresa" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'house']" />
@@ -55,11 +55,7 @@ const sair = () => {
 .footer {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(100%, 420px);
-  min-height: 76px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  width: 100%;
   /* padding-bottom: env(safe-area-inset-bottom); */
   background: #cbbcd9;
   border-radius: 25px 25px 0 0;

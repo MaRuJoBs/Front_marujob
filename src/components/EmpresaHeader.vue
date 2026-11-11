@@ -122,4 +122,17 @@ a:focus-visible {
     height: 46px;
   }
 }
+/* Só a combinação marca + Voltar excedia o espaço disponível nesses celulares. */
+@media (min-width: 360px) and (max-width: 419px) {
+  .empresa-header:has(.voltar) {
+    padding-inline: 12px;
+  }
+  .empresa-header:has(.voltar) .marca > span {
+    font-size: 23px;
+  }
+  .empresa-header:has(.voltar) .marca img {
+    width: 46px;
+    height: 46px;
+  }
+}
 </style>
