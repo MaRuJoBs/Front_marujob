@@ -44,6 +44,7 @@ async function confirmar() {
 
 <template>
   <dialog
+    class="mrj-ui"
     ref="dialogo"
     aria-labelledby="excluir-titulo"
     aria-describedby="excluir-descricao"
@@ -73,20 +74,24 @@ dialog {
   width: min(480px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
   overflow: auto;
-  padding: 24px;
-  border: 1px solid #d8c4ed;
-  border-radius: 18px;
-  background: #faf7fe;
-  color: #493260;
+  padding: var(--mrj-space-6);
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-lg);
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-text-secondary);
   overflow-wrap: anywhere;
+  font-family: var(--mrj-font-family);
+  line-height: var(--mrj-line-height);
+  box-shadow: var(--mrj-shadow-card);
 }
 h3 {
-  color: #4e2b7c;
+  font-weight: var(--mrj-font-weight-semibold);
+  color: var(--mrj-color-text);
   font-size: 18px;
 }
 p {
-  margin-top: 16px;
-  font-size: 14px;
+  margin-top: var(--mrj-space-4);
+  font-size: var(--mrj-font-size-sm);
   line-height: 1.6;
 }
 dialog::backdrop {
@@ -95,31 +100,42 @@ dialog::backdrop {
 .acoes-vaga {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--mrj-space-2);
+  margin-top: var(--mrj-space-6);
 }
 button {
   min-height: 44px;
   padding: 9px 14px;
-  border: 1px solid #9a73ca;
-  border-radius: 9px;
-  background: #faf7fe;
-  color: #5a348c;
+  border: 1px solid var(--mrj-color-border);
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-text-secondary);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--mrj-font-size-sm);
   cursor: pointer;
 }
 button:last-child {
-  background: #7548bd;
-  border-color: #7548bd;
-  color: white;
+  background: var(--mrj-color-primary);
+  border-color: var(--mrj-color-primary);
+  color: var(--mrj-color-on-primary);
 }
 button:disabled {
-  opacity: 0.65;
+  opacity: var(--mrj-disabled-opacity);
   cursor: wait;
 }
 button:focus-visible {
-  outline: 3px solid #63369e;
-  outline-offset: 3px;
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
+  outline-offset: var(--mrj-focus-offset);
+}
+button {
+  flex: 1 1 120px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+[role='alert'] {
+  color: var(--mrj-color-danger);
+}
+button:hover:not(:disabled) {
+  filter: brightness(0.95);
 }
 </style>

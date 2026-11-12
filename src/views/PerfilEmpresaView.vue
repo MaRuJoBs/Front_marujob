@@ -88,14 +88,21 @@ function editar() {
           <fieldset :disabled="salvando">
             <legend>Editar informações da empresa</legend>
             <label for="logo-empresa">Logotipo</label>
-            <input
-              id="logo-empresa"
-              type="file"
-              accept="image/*"
-              :aria-invalid="!!erros.profile_image"
-              aria-describedby="erro-logo"
-              @change="selecionarImagem"
-            />
+            <div class="upload-logo">
+              <input
+                id="logo-empresa"
+                type="file"
+                aria-label="Selecionar imagem do logotipo"
+                accept="image/*"
+                :aria-invalid="!!erros.profile_image"
+                aria-describedby="nome-logo erro-logo"
+                @change="selecionarImagem"
+              />
+              <span class="upload-botao" aria-hidden="true">Selecionar imagem</span>
+            </div>
+            <p id="nome-logo" class="nome-arquivo" role="status">
+              {{ imagem?.name || 'Nenhuma nova imagem selecionada' }}
+            </p>
             <p id="erro-logo" class="erro" role="alert" v-if="erros.profile_image">
               {{ erros.profile_image }}
             </p>
@@ -188,6 +195,7 @@ function editar() {
   background: var(--mrj-color-background);
   color: var(--mrj-color-text);
   font-family: var(--mrj-font-family);
+  line-height: var(--mrj-line-height);
 }
 main {
   max-width: 760px;
@@ -200,9 +208,10 @@ h1 {
 }
 .titulo-perfil {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: var(--mrj-space-6);
 }
 h2,
 p {
@@ -215,6 +224,7 @@ p {
   border-radius: var(--mrj-radius-md);
   object-fit: contain;
   background: var(--mrj-color-secondary);
+  border: 1px solid var(--mrj-color-border-subtle);
 }
 .sem-logo {
   display: grid;
@@ -276,19 +286,77 @@ dl {
 }
 dt {
   font-weight: bold;
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 dd {
   margin: 0 0 16px;
+  padding-bottom: var(--mrj-space-3);
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
 }
 .descricao {
   white-space: pre-wrap;
 }
 a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mrj-control-height-md);
+  text-underline-offset: 3px;
   color: inherit;
 }
 @media (min-width: 768px) {
   main {
     padding: 32px 24px 100px;
   }
+}
+main > [role='status'],
+main > .erro {
+  padding: var(--mrj-space-4);
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
+}
+.titulo-perfil h1 {
+  min-width: 0;
+  line-height: 1.25;
+}
+.acoes > * {
+  flex: 1 1 140px;
+}
+:is(textarea, select)[aria-invalid='true'] {
+  border-color: var(--mrj-color-danger);
+}
+/* O input nativo permanece focável e recebe o clique em toda a área. */
+.upload-logo {
+  position: relative;
+  min-width: 0;
+}
+.upload-logo input {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.upload-botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mrj-control-height-md);
+  padding: 8px 12px;
+  border: 1px solid var(--mrj-color-border);
+  border-radius: var(--mrj-radius-sm);
+  background: var(--mrj-color-secondary);
+}
+.upload-logo:focus-within {
+  outline: 3px solid var(--mrj-color-focus);
+  outline-offset: 3px;
+}
+.upload-logo:has(input:disabled) {
+  opacity: var(--mrj-disabled-opacity);
+}
+.nome-arquivo {
+  overflow-wrap: anywhere;
+  font-size: var(--mrj-font-size-sm);
 }
 </style>

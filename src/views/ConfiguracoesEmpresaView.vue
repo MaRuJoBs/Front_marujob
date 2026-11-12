@@ -32,6 +32,7 @@ const router = useRouter()
   background: var(--mrj-color-background);
   color: var(--mrj-color-text);
   font-family: var(--mrj-font-family);
+  line-height: var(--mrj-line-height);
 }
 main {
   max-width: 760px;
@@ -41,12 +42,18 @@ main {
 }
 h1 {
   font-size: 1.6rem;
+  margin-block: var(--mrj-space-4) var(--mrj-space-6);
+  line-height: 1.25;
 }
 h2 {
   font-size: 1.2rem;
   margin: 0;
 }
 a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mrj-control-height-md);
+  text-underline-offset: 3px;
   color: inherit;
 }
 a:focus-visible {
