@@ -299,6 +299,19 @@ h1 {
   border-radius: 50%;
   overflow: hidden;
 }
+@media (min-width: 48rem) {
+  .notificacoes-empresa {
+    padding: 32px 32px calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+  .lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .filtros button {
+    flex: 0 1 auto;
+    min-width: 8rem;
+  }
+}
 .avatar img {
   width: 100%;
   height: 100%;

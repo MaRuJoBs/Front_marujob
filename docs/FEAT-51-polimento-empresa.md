@@ -1,6 +1,6 @@
 # FEAT-51 — Polimento visual da empresa
 
-> **Situação vigente em 2026-11-12: APTA COM RESSALVAS para commit local.** Os dois apontamentos locais de acessibilidade foram corrigidos na continuação registrada em “Últimas correções de acessibilidade antes do commit”; as ressalvas externas permanecem. A seção “Finalização e homologação — 2026-11-12” ao final contém os resultados desta execução. As auditorias anteriores são histórico; não substituem esta conclusão. A largura desktop continua dependendo de FIX separada.
+> **Situação vigente: integração desktop incorporada à FEAT-51 por autorização expressa.** A seção “Incorporação da correção desktop à FEAT-51” contém os resultados finais desta etapa. As referências anteriores à FIX separada e aos bloqueios já resolvidos são histórico. Homologação com backend real e Figma definitivo continuam pendentes.
 
 **Estado atual: implementação visual realizada sob contrato provisório expressamente autorizado para a FEAT-51; APTA COM RESSALVAS para revisão.** O registro A–J abaixo preserva a auditoria inicial; o bloqueio por Figma foi superado. Resultados atuais estão em “Implementação após autorização”.
 
@@ -392,3 +392,46 @@ Evidências geradas fora do repositório: `/tmp/feat51-a11y-final-visual/` (`res
 **Resultado: os dois problemas locais de acessibilidade foram eliminados; FEAT-51 pronta para commit local com as ressalvas externas já documentadas.** Nenhuma regressão detectada nos cenários executados. Permanecem fora desta correção: FIX de largura desktop/opt-in wide da FEAT-49, atualização dos dois testes antigos incompatíveis com a FEAT-47 e homologação com backend real/Figma definitivo. Esses dois roteiros antigos não foram alterados nem repetidos nesta continuação; suas falhas preexistentes continuam registradas na auditoria. O transporte dos fluxos permanece simulado, sem alteração de dados reais.
 
 Estado final: mesmos oito Vue modificados e dois arquivos próprios novos do futuro commit; somente os quatro arquivos citados acima mudaram nesta continuação. Staging vazio; artifacts, screenshots, caches e arquivos temporários não adicionados ao Git. Nenhum commit executado.
+
+## Incorporação da correção desktop à FEAT-51
+
+O usuário autorizou expressamente incorporar as alterações não commitadas da FIX-49 à própria FEAT-51 e criar um único novo commit local, preservando o commit de polimento `c45ac1991066f483e9060a7e2824930d0c1a18c1`. Não haverá commit na branch FIX-49 nesta etapa, nem push, PR ou merge na DEV.
+
+Origem preservada: `/mnt/c/users/omtra/onedrive/documentos/Front_marujob-worktrees/FIX-49-layout-desktop-empresa`, branch FIX-49-layout-desktop-empresa, HEAD be21c6a. Destino: worktree original Front_marujob na FEAT-51, inicialmente limpo em c45ac19. DEV e origin/DEV confirmadas na base comum be21c6ae456d023881d9860981f61b325270472b.
+
+A integração usou comparação textual de três vias com essa DEV comum. Finais CRLF/LF foram normalizados em cópias temporárias para evitar conflito artificial de arquivos inteiros. Os sete resultados de aplicação/testes combinaram sem conflitos de conteúdo e coincidiram com o worktree de integração previamente validado. Não foram copiados componentes completos da FIX por cima dos componentes polidos da FEAT-51. A documentação técnica FIX-49 foi incorporada como registro da causa e evolução.
+
+Alterações incorporadas:
+
+- `src/router/routes.js`: layout wide nas sete rotas empresariais, preservando autenticação, tipo de conta, aliases e hideFooter.
+- `HomeEmpresaComponent.vue`: saudação/última vaga em duas colunas, filtros proporcionais e gerenciamento em duas colunas no tablet e três a partir de 1200px. Mantidos títulos/preços separados e ordem DOM/Tab Editar → Excluir → Ver detalhes.
+- `CriarVagaComponent.vue`: formulário com máximo de 64rem, grupos duplos a partir de 768px e barra fixa alinhada à largura do conteúdo. Sem reativar prévia oculta ou alterar campos, validação e handlers.
+- `DetalheVagaEmpresaView.vue`: largura de leitura de 64rem e informações em três colunas a partir de 768px.
+- `NotificacoesEmpresaView.vue`: cards em duas colunas e filtros proporcionais em tablet/desktop.
+- `tests/notificacoes.test.mjs` e `tests/perfil-empresa.test.mjs`: somente layout wide acrescentado ao meta esperado; verificações de permissão intactas.
+
+App, shell global, headers/footers, serviços, composables, endpoints e regras de negócio não foram alterados. Os componentes de perfil/configurações e ambos os dialogs existentes na FEAT-51 foram preservados integralmente. O upload em português, seu nome acessível, multipart, estados e a navegação mobile continuam os mesmos. As novas regras visuais começam em 48rem; freelancer permanece no layout anterior.
+
+A limitação empresarial de 420px deixa de ser pendência externa: a correção está nesta FEAT-51. O registro técnico de causa está em `docs/FIX-49-layout-desktop-empresa.md`. Permanecem pendentes backend real, dispositivo físico/Figma definitivo e a atualização própria dos dois roteiros browser antigos com expectativas incompatíveis F47. Nenhum desses roteiros foi modificado para forçar aprovação.
+
+### Validação final da integração na própria FEAT-51
+
+| Verificação executada                                              | Resultado                                                                                                                                 |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`                                                         | 227 testes aprovados, zero falhas, cancelamentos ou skips                                                                                 |
+| Notificações / perfil / complementos de vagas, execução específica | 42/42, 5/5 e 9/9 aprovados (também abrangidos pela suíte)                                                                                 |
+| `npm run build`                                                    | Aprovado; 220 módulos, PWA 81 entradas. Aviso de atualização caniuse-lite, sem falha                                                      |
+| Chromium: área empresarial                                         | 112/112 verificações nas sete resoluções solicitadas                                                                                      |
+| Chromium: fluxos funcionais isolados                               | 13/13 grupos: criação, edição, exclusão, cancelamentos, erros, duplicidade, notificações, perfil, seletor nativo e multipart              |
+| Chromium: freelancer                                               | 28/28 verificações de Home, freelances, favoritos e perfil nas mesmas sete resoluções                                                     |
+| Auditoria Vue e rotas                                              | Scripts, bindings, templates e CSS compilados; somente layout alterado nos metadados de sete rotas; autenticação e permissões preservadas |
+
+Viewports reais: 320×900, 375×812, 390×844, 430×932, 768×1024, 1024×768 e 1440×900. Conteúdo empresarial medido na Home: 305, 360, 375, 415, 753, 1009 e 1200px respectivamente (scrollbar do navegador descontada onde presente). A grade passa a duas colunas no tablet e três no desktop amplo. Nenhum overflow horizontal detectado; rolagem até ações finais, barra fixa, modais, Tab real Editar → Excluir → Ver detalhes e nome acessível “Selecionar imagem do logotipo” aprovados. Sem erro inesperado de JavaScript/console detectado pelo harness. Capturas atuais usam dados de teste e foram revisadas com o diagnóstico antes/depois; capturas de página inteira não substituíram os testes de rolagem.
+
+Evidências locais, fora do commit: `../Front_marujob-worktrees/FIX-49-layout-desktop-empresa-validacao/feat51-integracao-final/`, com `unit/`, `build/`, `browser-empresa/`, `fluxos/` e `browser-freelancer/`. O harness temporário foi executado pelo cache ignorado; o teste temporário original da FEAT-51 não foi modificado nem versionado. Os oito arquivos da origem FIX, os seis arquivos protegidos no destino e 273 PNGs existentes foram conferidos por SHA-256 e preservados.
+
+Escopo do novo commit: router, quatro componentes/views empresariais, dois testes preexistentes e as duas documentações técnicas (nove arquivos). Sem App/shell global, serviços, dependências, credenciais ou arquivos gerados. Prettier nos nove arquivos e `git diff --check` aprovados antes do staging. A revisão do índice repete a checagem antes do commit.
+
+**Resultado da integração: apta para commit local.** Não houve regressão nos cenários executados. A largura desktop está resolvida nesta funcionalidade; backend real, dispositivo físico/Figma definitivo e roteiros browser antigos incompatíveis da FEAT-47 continuam com as limitações registradas, sem alegação de homologação real. O commit de polimento anterior e a branch/worktree FIX permanecem preservados; nenhuma alteração na DEV, push ou PR nesta etapa.
+
+Comparação de capturas: das 21 imagens com correspondente na pasta `fix49-qa/antes`, as sete telas principais em 375px permaneceram idênticas em bytes; as demais refletem a ampliação de tablet/desktop. Inspecionadas também a Home desktop, o formulário tablet e o modal de aprovação mobile atuais.

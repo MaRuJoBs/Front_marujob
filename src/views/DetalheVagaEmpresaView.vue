@@ -258,6 +258,19 @@ dt {
 dt svg {
   flex-shrink: 0;
 }
+@media (min-width: 48rem) {
+  .detalhe-conteudo {
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 32px 32px calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+  .informacoes-vaga {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .acoes-principais a {
+    max-width: 12rem;
+  }
+}
 dd {
   margin: 6px 0 0;
   color: var(--mrj-color-text-secondary);

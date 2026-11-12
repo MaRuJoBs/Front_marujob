@@ -497,6 +497,39 @@ select:focus-visible {
   outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
   outline-offset: var(--mrj-focus-offset);
 }
+/* A largura vem do opt-in wide da rota; o mobile mantém a composição original. */
+@media (min-width: 48rem) {
+  .home {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: var(--mrj-space-6, 24px);
+    padding: 32px 32px calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+  .welcome {
+    align-self: center;
+    padding-block: 0;
+  }
+  .home > .welcome + .section {
+    margin-top: 0;
+  }
+  .home > .section + .section,
+  .home > .confirmacao-publicacao {
+    grid-column: 1 / -1;
+  }
+  .lista-vagas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .filtros-vagas {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+@media (min-width: 75rem) {
+  .lista-vagas {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 .sr-only {
   position: absolute;
   width: 1px;

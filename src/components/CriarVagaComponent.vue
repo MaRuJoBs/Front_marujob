@@ -829,6 +829,32 @@ a:focus-visible {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+@media (min-width: 48rem) {
+  .conteudo {
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 32px 32px calc(112px + env(safe-area-inset-bottom, 0px));
+  }
+  .form-card {
+    padding: 24px 32px;
+  }
+  .campos-duplos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .acoes {
+    width: min(100%, 64rem);
+    padding-inline: 32px;
+    justify-content: flex-end;
+  }
+  .btn-cancelar {
+    min-width: 8rem;
+  }
+  .btn-publicar {
+    flex: 0 1 auto;
+    min-width: 14rem;
+  }
+}
 @keyframes girar {
   to {
     transform: rotate(360deg);
