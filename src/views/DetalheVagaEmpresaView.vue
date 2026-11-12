@@ -64,7 +64,7 @@ const detalhes = computed(() =>
 </script>
 
 <template>
-  <div class="detalhe-vaga-empresa">
+  <div class="detalhe-vaga-empresa mrj-ui">
     <EmpresaHeader voltar />
     <main class="detalhe-conteudo" :aria-busy="carregando">
       <p v-if="carregando" class="feedback" role="status">Carregando oportunidade...</p>
@@ -144,17 +144,19 @@ const detalhes = computed(() =>
 <style scoped>
 .detalhe-vaga-empresa {
   min-height: 100dvh;
-  color: #493260;
-  background: #e9def5;
+  color: var(--mrj-color-text-secondary);
+  background: var(--mrj-color-background);
+  font-family: var(--mrj-font-family);
+  line-height: var(--mrj-line-height);
 }
 .detalhe-conteudo {
   padding: 22px 16px calc(104px + env(safe-area-inset-bottom, 0px));
 }
 .resumo-vaga {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--mrj-space-3);
   margin-bottom: 22px;
 }
 .vaga-icone {
@@ -163,9 +165,9 @@ const detalhes = computed(() =>
   flex-shrink: 0;
   width: 60px;
   height: 64px;
-  border-radius: 13px;
-  color: white;
-  background: #a48aca;
+  border-radius: var(--mrj-radius-md);
+  color: var(--mrj-color-primary);
+  background: var(--mrj-color-secondary);
   font-size: 26px;
 }
 .resumo-texto {
@@ -173,7 +175,7 @@ const detalhes = computed(() =>
   min-width: 0;
 }
 h1 {
-  color: #452677;
+  color: var(--mrj-color-text);
   font-size: 19px;
   font-weight: 700;
   line-height: 1.35;
@@ -181,8 +183,8 @@ h1 {
 }
 .nome-empresa {
   margin-top: 5px;
-  color: #6d5685;
-  font-size: 13px;
+  color: var(--mrj-color-text-secondary);
+  font-size: var(--mrj-font-size-sm);
   overflow-wrap: anywhere;
 }
 .condicoes-vaga {
@@ -190,8 +192,8 @@ h1 {
   flex-wrap: wrap;
   gap: 5px 12px;
   margin-top: 6px;
-  color: #694894;
-  font-size: 12px;
+  color: var(--mrj-color-text-secondary);
+  font-size: var(--mrj-font-size-sm);
 }
 .condicoes-vaga span {
   display: inline-flex;
@@ -199,36 +201,40 @@ h1 {
   gap: 5px;
 }
 .preco {
+  grid-column: 2;
+  justify-self: start;
   max-width: 100%;
-  border: 1px solid #c7b4df;
-  border-radius: 20px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-lg);
   padding: 3px 10px;
-  background: #faf7fe;
-  color: #5b358c;
-  font-size: 12px;
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-text-secondary);
+  font-size: var(--mrj-font-size-sm);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 .bloco-descricao {
-  margin-bottom: 16px;
+  margin-bottom: var(--mrj-space-4);
   padding: 18px;
-  border-radius: 17px;
-  background: #fdfaff;
+  border-radius: var(--mrj-radius-lg);
+  background: var(--mrj-color-surface);
+  border: 1px solid var(--mrj-color-border-subtle);
+  box-shadow: var(--mrj-shadow-card);
 }
 h2 {
-  color: #563382;
-  font-size: 14px;
+  color: var(--mrj-color-text);
+  font-size: var(--mrj-font-size-sm);
   font-weight: 650;
 }
 .bloco-descricao p {
   margin-top: 10px;
-  font-size: 14px;
+  font-size: var(--mrj-font-size-sm);
   line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .bloco-descricao .indisponivel {
-  color: #786585;
+  color: var(--mrj-color-text-secondary);
 }
 .informacoes-vaga {
   display: grid;
@@ -238,23 +244,37 @@ h2 {
 .informacoes-vaga > div {
   min-width: 0;
   padding: 14px 12px;
-  border-radius: 13px;
-  background: #fdfaff;
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
+  border: 1px solid var(--mrj-color-border-subtle);
 }
 dt {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
-  color: #63418e;
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 dt svg {
   flex-shrink: 0;
 }
+@media (min-width: 48rem) {
+  .detalhe-conteudo {
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 32px 32px calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+  .informacoes-vaga {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .acoes-principais a {
+    max-width: 12rem;
+  }
+}
 dd {
   margin: 6px 0 0;
-  color: #52396b;
-  font-size: 13px;
+  color: var(--mrj-color-text-secondary);
+  font-size: var(--mrj-font-size-sm);
   overflow-wrap: anywhere;
 }
 .acoes {
@@ -268,15 +288,15 @@ dd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--mrj-space-2);
   min-height: 46px;
   padding: 10px 16px;
-  border: 1px solid #9569c7;
-  border-radius: 10px;
+  border: 1px solid var(--mrj-color-border);
+  border-radius: var(--mrj-radius-md);
   background: #f8f1ff;
-  color: #674195;
+  color: var(--mrj-color-text-secondary);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--mrj-font-size-sm);
   text-decoration: none;
   cursor: pointer;
 }
@@ -284,40 +304,40 @@ dd {
   flex: 1;
 }
 .acoes .primario {
-  color: white;
-  background: #7548bd;
-  border-color: #7548bd;
+  color: var(--mrj-color-on-primary);
+  background: var(--mrj-color-primary);
+  border-color: var(--mrj-color-primary);
 }
 .excluir-vaga {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--mrj-space-2);
   width: 100%;
   min-height: 44px;
-  margin-top: 12px;
+  margin-top: var(--mrj-space-3);
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--mrj-radius-md);
   background: transparent;
-  color: #963552;
+  color: var(--mrj-color-danger);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--mrj-font-size-sm);
   cursor: pointer;
 }
 .feedback {
   padding: 18px;
-  border-radius: 16px;
-  background: #faf7fe;
-  font-size: 14px;
+  border-radius: var(--mrj-radius-lg);
+  background: var(--mrj-color-surface);
+  font-size: var(--mrj-font-size-sm);
 }
 .feedback p {
-  margin-top: 12px;
+  margin-top: var(--mrj-space-3);
   line-height: 1.6;
 }
 a:focus-visible,
 button:focus-visible {
-  outline: 3px solid #63369e;
-  outline-offset: 3px;
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
+  outline-offset: var(--mrj-focus-offset);
 }
 @media (max-width: 359px) {
   .detalhe-conteudo {
@@ -327,8 +347,13 @@ button:focus-visible {
     width: 48px;
     height: 52px;
   }
-  .preco {
-    margin-left: 60px;
+}
+@media (max-width: 359px) {
+  .informacoes-vaga {
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+.acoes .primario:hover {
+  background: var(--mrj-color-primary-hover);
 }
 </style>

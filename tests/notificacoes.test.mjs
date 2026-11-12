@@ -168,7 +168,7 @@ test('empresa carrega dados reais e contagem DRF sem confundir as datas', async 
 test('rota exige empresa; freelancer e anônimo não acessam', async () => {
   const rota = routes.find((r) => r.name === 'notificacoes-empresa')
   assert.equal(rota.path, '/empresa/notificacoes')
-  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa' })
+  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa', layout: 'wide' })
   assert.equal(await protegerRota({ ...rota, query: {} }), true)
   sessao.tipo = 'usuario'
   sessao.usuario = { id: 7, groups: ['Usuário'] }

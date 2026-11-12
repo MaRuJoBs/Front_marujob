@@ -43,7 +43,7 @@ const contatoSeguro = (n) =>
 </script>
 <template>
   <EmpresaHeader voltar />
-  <main class="notificacoes-empresa">
+  <main class="notificacoes-empresa mrj-ui">
     <div class="cabecalho">
       <div>
         <p class="sobretitulo">Sua empresa</p>
@@ -224,19 +224,22 @@ const contatoSeguro = (n) =>
 .notificacoes-empresa {
   min-height: calc(100dvh - 92px);
   padding: 24px 16px calc(104px + env(safe-area-inset-bottom, 0px));
-  background: #ddc8f7;
-  color: #412473;
+  background: var(--mrj-color-background);
+  color: var(--mrj-color-text-secondary);
   overflow-wrap: anywhere;
+  font-family: var(--mrj-font-family);
+  line-height: var(--mrj-line-height);
 }
 .cabecalho {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: var(--mrj-space-3);
+  flex-wrap: wrap;
 }
 .sobretitulo {
-  font-size: 12px;
-  color: #68517e;
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 h1 {
   font-size: 25px;
@@ -245,55 +248,69 @@ h1 {
 }
 .introducao {
   margin: 10px 0 20px;
-  font-size: 14px;
-  color: #65517e;
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 .filtros {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrj-space-2);
   margin: 16px 0;
 }
 .filtros button {
   flex: 1 1 42%;
-  border-radius: 20px;
+  border-radius: var(--mrj-radius-lg);
 }
-.filtros button[aria-pressed='true'] {
-  background: #7548bd;
-  color: #fff;
-  border-color: #7548bd;
+.notificacoes-empresa .filtros button[aria-pressed='true'] {
+  background: var(--mrj-color-primary);
+  color: var(--mrj-color-on-primary);
+  border-color: var(--mrj-color-primary);
 }
 .resumo {
   margin: 18px 0 12px;
-  font-size: 12px;
-  color: #65517e;
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 .lista {
   display: grid;
-  gap: 16px;
+  gap: var(--mrj-space-4);
 }
 .card {
   min-width: 0;
   padding: 18px;
-  border: 1px solid #eee3fa;
-  border-radius: 18px;
-  background: #f7f1fc;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-lg);
+  background: var(--mrj-color-surface);
+  box-shadow: var(--mrj-shadow-card);
 }
 .nao-lida {
-  border-inline-start: 4px solid #7548bd;
+  border-inline-start: 4px solid var(--mrj-color-primary);
 }
 .card-topo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--mrj-space-3);
 }
 .avatar {
   width: 52px;
   height: 52px;
   flex-shrink: 0;
-  background: #d4c4e7;
+  background: var(--mrj-color-secondary);
   border-radius: 50%;
   overflow: hidden;
+}
+@media (min-width: 48rem) {
+  .notificacoes-empresa {
+    padding: 32px 32px calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+  .lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .filtros button {
+    flex: 0 1 auto;
+    min-width: 8rem;
+  }
 }
 .avatar img {
   width: 100%;
@@ -310,13 +327,13 @@ h2 {
 }
 .identidade p,
 .data {
-  font-size: 12px;
-  color: #65517e;
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 .oportunidade {
-  font-size: 14px;
+  font-size: var(--mrj-font-size-sm);
   font-weight: 650;
-  margin-top: 16px;
+  margin-top: var(--mrj-space-4);
 }
 .data {
   margin-top: 6px;
@@ -330,31 +347,31 @@ h2 {
 }
 .status {
   padding: 4px 12px;
-  border-radius: 18px;
-  font-size: 12px;
+  border-radius: var(--mrj-radius-lg);
+  font-size: var(--mrj-font-size-sm);
   font-weight: 650;
-  background: #ede2f9;
+  background: var(--mrj-color-secondary);
 }
 .pendente {
   background: #fff0ce;
-  color: #785418;
+  color: var(--mrj-color-text-secondary);
 }
 .aprovada {
   background: #dff3e7;
-  color: #245c3d;
+  color: var(--mrj-color-success);
 }
 .recusada {
   background: #fae1e6;
-  color: #87384b;
+  color: var(--mrj-color-danger);
 }
 .leitura {
-  font-size: 12px;
-  color: #60467e;
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 .acoes {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrj-space-2);
   margin-top: 14px;
 }
 .acoes button {
@@ -362,53 +379,53 @@ h2 {
 }
 .decisoes {
   padding-top: 12px;
-  border-top: 1px solid #e3d5ef;
+  border-top: 1px solid var(--mrj-color-border-subtle);
 }
-.aprovar {
-  background: #7548bd;
-  color: white;
-  border-color: #7548bd;
+button.aprovar {
+  background: var(--mrj-color-primary);
+  color: var(--mrj-color-on-primary);
+  border-color: var(--mrj-color-primary);
 }
 .contato {
-  margin-top: 16px;
+  margin-top: var(--mrj-space-4);
   padding-top: 14px;
-  border-top: 1px solid #e3d5ef;
-  font-size: 13px;
+  border-top: 1px solid var(--mrj-color-border-subtle);
+  font-size: var(--mrj-font-size-sm);
 }
 .ajuda {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #65517e;
+  margin-top: var(--mrj-space-2);
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 .paginacao {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrj-space-2);
   margin-top: 20px;
-  font-size: 13px;
+  font-size: var(--mrj-font-size-sm);
 }
 .estado,
 .feedback {
   padding: 18px;
-  border: 1px solid #d9c6eb;
-  border-radius: 14px;
-  background: #f7f1fc;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
   margin: 16px 0;
 }
 .estado p {
-  font-size: 14px;
+  font-size: var(--mrj-font-size-sm);
   margin: 8px 0;
 }
 .sucesso {
   background: #e9f8ee;
-  color: #216547;
+  color: var(--mrj-color-success);
   border-color: #bde2ca;
 }
 .falha {
-  background: #fff0f2;
-  color: #813346;
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-danger);
   border-color: #e9c5ce;
 }
 button,
@@ -418,28 +435,28 @@ button,
   justify-content: center;
   min-height: 44px;
   padding: 9px 12px;
-  border: 1px solid #ac8ace;
-  border-radius: 10px;
-  background: #faf7fe;
-  color: #5a348c;
+  border: 1px solid var(--mrj-color-border);
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-text-secondary);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--mrj-font-size-sm);
   text-decoration: none;
   cursor: pointer;
 }
 .whatsapp {
   background: #e5f6ec;
   border-color: #a1ceb4;
-  color: #195539;
+  color: var(--mrj-color-success);
 }
 button:disabled {
-  opacity: 0.6;
+  opacity: var(--mrj-disabled-opacity);
   cursor: wait;
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #63369e;
-  outline-offset: 3px;
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
+  outline-offset: var(--mrj-focus-offset);
 }
 @media (max-width: 359px) {
   .notificacoes-empresa {
@@ -448,5 +465,15 @@ a:focus-visible {
   .card {
     padding: 14px;
   }
+}
+button:hover:not(:disabled):not([aria-pressed='true']):not(.aprovar) {
+  background: var(--mrj-color-secondary-hover);
+}
+button.aprovar:hover:not(:disabled) {
+  background: var(--mrj-color-primary-hover);
+}
+button {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 </style>

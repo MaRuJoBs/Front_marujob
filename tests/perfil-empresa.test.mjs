@@ -128,7 +128,7 @@ test('erros 400, 403, 503 e rede preservam formulário e permitem nova tentativa
 })
 test('guard restringe rota a empresa e redireciona visitante', async () => {
   const rota = routes.find((r) => r.path === '/empresa/perfil')
-  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa' })
+  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa', layout: 'wide' })
   sessao.tipo = 'usuario'
   assert.equal((await protegerRota({ ...rota, query: {} })).path, '/home')
   limparSessao()

@@ -32,7 +32,7 @@ const contatoSeguro = () =>
 <template>
   <dialog
     ref="dialogo"
-    class="notificacoes-dialog"
+    class="notificacoes-dialog mrj-ui"
     aria-labelledby="notificacao-dialog-titulo"
     @cancel.prevent="!processando && emit('fechar')"
   >
@@ -125,12 +125,15 @@ const contatoSeguro = () =>
   max-height: calc(100dvh - 24px);
   overflow: auto;
   overflow-wrap: anywhere;
-  border: 1px solid #d8c4ed;
-  border-radius: 20px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-lg);
   padding: 22px;
-  background: #faf7fe;
-  color: #493260;
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-text-secondary);
   font: inherit;
+  font-family: var(--mrj-font-family);
+  line-height: var(--mrj-line-height);
+  box-shadow: var(--mrj-shadow-card);
 }
 dialog::backdrop {
   background: #20103599;
@@ -138,15 +141,15 @@ dialog::backdrop {
 h2 {
   font-size: 20px;
   font-weight: 700;
-  color: #4e2b7c;
+  color: var(--mrj-color-text);
 }
 h3 {
   font-size: 16px;
   font-weight: 650;
 }
 p {
-  margin-top: 12px;
-  font-size: 14px;
+  margin-top: var(--mrj-space-3);
+  font-size: var(--mrj-font-size-sm);
   line-height: 1.6;
 }
 .subtitulo {
@@ -163,21 +166,21 @@ p {
 .habilidades {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrj-space-2);
   list-style: none;
   padding: 0;
   margin-top: 10px;
 }
 .habilidades li {
   padding: 4px 10px;
-  border-radius: 16px;
-  background: #e9dcf6;
-  font-size: 13px;
+  border-radius: var(--mrj-radius-lg);
+  background: var(--mrj-color-secondary);
+  font-size: var(--mrj-font-size-sm);
 }
 .acoes {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrj-space-2);
   margin-top: 20px;
 }
 button,
@@ -187,35 +190,46 @@ button,
   justify-content: center;
   min-height: 44px;
   padding: 10px 14px;
-  border: 1px solid #9a73ca;
-  border-radius: 10px;
-  background: #f4ecfb;
-  color: #5a348c;
+  border: 1px solid var(--mrj-color-border);
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-text-secondary);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--mrj-font-size-sm);
   text-decoration: none;
   cursor: pointer;
 }
 .principal {
-  background: #7548bd;
-  color: white;
+  background: var(--mrj-color-primary);
+  color: var(--mrj-color-on-primary);
 }
 .whatsapp {
-  margin-top: 16px;
+  margin-top: var(--mrj-space-4);
   background: #e5f6ec;
-  color: #195539;
+  color: var(--mrj-color-success);
   border-color: #a1ceb4;
 }
 .ajuda {
-  font-size: 12px;
+  font-size: var(--mrj-font-size-sm);
 }
 button:disabled {
-  opacity: 0.65;
+  opacity: var(--mrj-disabled-opacity);
   cursor: wait;
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #63369e;
-  outline-offset: 3px;
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
+  outline-offset: var(--mrj-focus-offset);
+}
+button {
+  flex: 1 1 120px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+[role='alert'] {
+  color: var(--mrj-color-danger);
+}
+button:hover:not(:disabled) {
+  filter: brightness(0.95);
 }
 </style>
