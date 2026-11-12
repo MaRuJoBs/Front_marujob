@@ -22,11 +22,14 @@ watch(
 </script>
 
 <template>
-  <main class="body">
+  <main class="body mrj-ui freelancer-page">
+    <RouterLink to="/home" class="voltar-pagina"
+      ><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Início</RouterLink
+    >
     <div class="header">
       <div class="title">
         <FontAwesomeIcon :icon="['fas', 'heart']" />
-        <span>Favoritos</span>
+        <h1>Favoritos</h1>
       </div>
       <button
         type="button"
@@ -38,6 +41,7 @@ watch(
         <FontAwesomeIcon :icon="faRotateRight" aria-hidden="true" />
       </button>
     </div>
+    <p class="descricao-pagina">Suas oportunidades salvas, em um só lugar.</p>
 
     <p v-if="store.erroFavorito" class="estado" role="alert">{{ store.erroFavorito }}</p>
     <p v-if="store.carregando" class="estado" role="status">
@@ -56,12 +60,12 @@ watch(
     >
       <div class="parte-superior">
         <div>
-          <h3>
+          <h2 :title="item.job?.titulo">
             {{
               item.job?.titulo ||
               (item.status === 'carregando' ? 'Carregando...' : `Oportunidade #${item.id}`)
             }}
-          </h3>
+          </h2>
           <p v-if="item.job?.tag" class="company">{{ item.job.tag }}</p>
         </div>
 
@@ -113,165 +117,133 @@ watch(
   </main>
 </template>
 
+<style scoped src="../styles/freelancer.css"></style>
 <style scoped>
 .body {
-  min-height: 100vh;
-  padding: 20px;
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(180deg, #cbb6ff, #f5f3ff);
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
-  box-sizing: border-box;
-  padding-bottom: 25vh;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 16px;
+  align-content: start;
+  min-height: 100dvh;
+  padding: 24px 20px 25vh;
 }
-
+.voltar-pagina,
+.header,
+.descricao-pagina,
+.estado {
+  grid-column: 1/-1;
+}
 .header {
-  background: #f4f1ff;
-  border-radius: 22px;
-  padding: 14px 18px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  justify-content: space-between;
+  gap: 16px;
 }
-
 .title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #6b4bc4;
-  font-size: 18px;
+  gap: 12px;
 }
-
 .title svg {
-  font-size: 22px;
-  color: #8b5cf6;
+  color: var(--mrj-color-primary);
+  font-size: 24px;
 }
-
 .btn-atualizar {
-  border: none;
-  background: transparent;
-  color: #8a69d4;
-  font-size: 22px;
-  cursor: pointer;
-  min-width: 44px;
-  min-height: 44px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 12px;
+  color: var(--mrj-color-primary);
+  background: white;
 }
-
+.descricao-pagina {
+  margin-top: -8px !important;
+  margin-bottom: 8px !important;
+}
 .bloco-vaga {
-  background: #f7f5ff;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
   border-radius: 16px;
-  margin-bottom: 18px;
-  overflow: hidden;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-  overflow-wrap: anywhere;
+  box-shadow: var(--mrj-shadow-card);
 }
-
 .parte-superior {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  padding: 15px 15px 10px;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 0;
 }
-
 .parte-superior > div {
   min-width: 0;
 }
-
-.parte-superior h3 {
-  margin: 0;
-  color: #5637b4;
-  font-size: 18px;
+.parte-superior h2 {
+  font-size: 1rem;
+  line-height: 1.5;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
 .company {
-  margin-top: 5px;
-  color: #7d72a7;
-  font-size: 16px;
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.75rem;
+  margin-top: 6px !important;
 }
-
 .divisao {
   height: 1px;
-  background: #cfc7e8;
+  margin: 16px 20px 0;
+  background: var(--mrj-color-border-subtle);
 }
-
 .info {
-  padding: 12px 15px 5px;
+  display: grid;
+  gap: 8px;
+  padding: 16px 20px;
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
 }
-
 .info p {
-  margin: 8px 0;
-  color: #6d5b9d;
-  font-size: 15px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
 .info svg {
-  color: #6546c2;
+  width: 14px;
+  color: var(--mrj-color-primary);
 }
-
 .parte-inferior {
   display: flex;
-  align-items: center;
-  padding: 10px 15px 18px;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 20px 20px;
+  margin-top: auto;
 }
-
-.details {
-  background: #6b4bc4;
-  color: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 25px;
-  font-size: 14px;
+.price {
+  order: -1;
+  font-size: 1.125rem;
   font-weight: 600;
-  cursor: pointer;
+}
+.details {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 44px;
-  box-sizing: border-box;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mrj-color-primary);
+  color: white;
   text-decoration: none;
-  max-width: 100%;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
-
-.price {
-  background: #f4f1ff;
-  border: 2px solid #cfc7e8;
-  padding: 7px 15px;
-  border-radius: 20px;
-  color: #5637b4;
-  font-size: 16px;
-  font-weight: bold;
+.details:hover {
+  background: var(--mrj-color-primary-hover);
 }
-
-.estado {
-  padding: 16px;
-  color: #5637b4;
-  background: #f7f5ff;
-  border-radius: 16px;
-  overflow-wrap: anywhere;
-}
-.estado p {
-  margin: 0 0 12px;
-}
-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid #673fd7;
-  outline-offset: 3px;
+.bloco-vaga > .estado {
+  margin: 16px;
 }
 </style>

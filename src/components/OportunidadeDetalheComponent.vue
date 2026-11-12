@@ -60,7 +60,7 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <main class="oportunidade">
+  <main class="oportunidade mrj-ui freelancer-page">
     <header class="topo">
       <RouterLink class="botao-icone" to="/freelances" aria-label="Voltar à listagem"
         ><FontAwesomeIcon :icon="faArrowLeft"
@@ -179,230 +179,165 @@ onBeforeUnmount(() => {
     </template>
   </main>
 </template>
+<style scoped src="../styles/freelancer.css"></style>
 <style scoped>
 .oportunidade {
-  --roxo: #7150a6;
-  --texto: #533581;
-  --secundario: #796197;
   min-height: 100dvh;
-  padding: 16px 16px calc(112px + env(safe-area-inset-bottom));
-  background: #f5f0fc;
-  color: var(--texto);
-  font-family: Arial, sans-serif;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
+  padding: 24px 20px 112px;
 }
 .topo {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 44px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: start;
-  gap: 8px;
-  margin: 0 -4px 22px;
+  gap: 12px;
+  margin-bottom: 28px;
 }
 .botao-icone {
-  display: inline-grid;
+  display: grid;
   place-items: center;
-  width: 40px;
-  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 12px;
+  color: var(--mrj-color-text-secondary);
   text-decoration: none;
-  border: 0;
-  background: transparent;
-  color: #8261b0;
-  font-size: 20px;
-  cursor: pointer;
+  background: white;
 }
 .cabecalho {
   min-width: 0;
-  padding-top: 7px;
-  text-align: center;
+  padding-top: 6px;
 }
 .cabecalho h1 {
-  margin: 0;
-  color: #533581;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.35;
+  font-size: clamp(1.25rem, 2.5vw, 1.875rem);
+  line-height: 1.4;
 }
 .cabecalho p {
-  color: #80639f;
-  margin: 3px 0 0;
-  font-size: 13px;
-  line-height: 1.35;
+  margin-top: 8px;
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.875rem;
 }
 .blocos {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+  gap: 20px;
+  align-items: start;
 }
 .card {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: start;
-  column-gap: 10px;
-  padding: 16px 12px;
-  border: 1px solid #f0e9f7;
-  border-radius: 13px;
-  background: #fdfbff;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px;
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--mrj-shadow-card);
+  min-width: 0;
 }
-.sobre {
-  min-height: 124px;
+.informacoes-card {
+  grid-row: span 2;
 }
 .icone-card {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  background: #eee6f8;
-  color: #7c58aa;
-  font-size: 13px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  border-radius: 10px;
+  font-size: 14px;
 }
 .conteudo-card {
+  flex: 1;
   min-width: 0;
-  padding-top: 3px;
 }
-h2 {
-  margin: 0 0 10px;
-  color: #59398d;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.35;
+.conteudo-card h2 {
+  font-size: 1rem;
+  margin: 3px 0 16px;
 }
 .texto {
-  margin: 0;
-  color: #514363;
-  font-size: 14px;
-  line-height: 1.55;
   white-space: pre-wrap;
-}
-.informacoes-card .conteudo-card {
-  display: flex;
-  flex-direction: column;
-  min-height: 120px;
+  font-size: 0.875rem;
+  line-height: 1.8;
+  color: var(--mrj-color-text-secondary);
 }
 .lista-info {
   display: grid;
-  gap: 10px;
+  gap: 14px;
   margin: 0;
 }
 .info-item {
   display: flex;
-  align-items: start;
-  gap: 8px;
-  color: #80619f;
-  font-size: 14px;
-  line-height: 1.45;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--mrj-color-text-secondary);
 }
 .info-item dt {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  padding-top: 3px;
   flex-shrink: 0;
-  color: #8f6bb6;
+  color: var(--mrj-color-text-secondary);
 }
 .info-item dd {
+  min-width: 0;
   margin: 0;
 }
 .complemento {
   flex-wrap: wrap;
+  gap: 4px 8px;
 }
 .complemento dt {
-  width: auto;
-  justify-content: start;
-  padding-top: 0;
-  flex-shrink: 1;
+  font-weight: 600;
+  color: var(--mrj-color-text);
 }
 .valor {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 12px;
-  margin-top: auto;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--mrj-color-border-subtle);
 }
 .preco {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding: 4px 9px;
-  background: #fff;
-  border: 1px solid #ddd0e9;
-  border-radius: 14px;
-  box-shadow: 0 1px 3px #4d356714;
-  color: #5c3a8b;
-  font-size: 12px;
-  line-height: 1.4;
+  gap: 10px;
+  font-size: 1.5rem;
+  color: var(--mrj-color-primary);
+  font-weight: 600;
 }
 .preco svg {
-  font-size: 11px;
-  color: #9478b3;
+  font-size: 18px;
 }
 .acoes {
-  margin-top: 24px;
-  padding: 0 4px;
+  max-width: 480px;
+  margin: 28px 0 0 auto;
 }
 .btn-candidatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
+  padding: 12px 18px;
   border: 0;
-  border-radius: 24px;
-  padding: 10px 14px;
-  background: var(--roxo);
-  color: #fff;
-  font: inherit;
-  font-size: 14px;
-  line-height: 1.4;
-  cursor: pointer;
+  border-radius: 12px;
+  background: var(--mrj-color-primary);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
-.btn-candidatar svg {
-  font-size: 13px;
-}
-.acoes .btn-candidatar:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
+.btn-candidatar:hover:not(:disabled) {
+  background: var(--mrj-color-primary-hover);
 }
 .ajuda {
-  margin: 10px 12px 0;
-  color: #79658c;
-  font-size: 12px;
-  line-height: 1.5;
+  margin-top: 12px !important;
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
   text-align: center;
 }
+.ajuda[role='alert'] {
+  color: var(--mrj-color-danger);
+}
 .estado {
-  padding: 20px;
-  border: 1px solid #ded1ea;
-  border-radius: 13px;
-  background: #fdfbff;
-  font-size: 14px;
-  line-height: 1.6;
-}
-.estado p {
-  margin: 0 0 14px;
-}
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid #68449b;
-  outline-offset: 3px;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-}
-@media (min-width: 375px) {
-  .oportunidade {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-  .card {
-    padding: 16px 14px;
-  }
+  margin-bottom: 20px;
 }
 </style>

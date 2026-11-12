@@ -1,7 +1,7 @@
- <script setup>
+<script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { listarOportunidades } from '@/services/freelanceService'
-import { erroOportunidades } from '@/utils/oportunidades'
+import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
 import FavoritoButton from '@/components/FavoritoButton.vue'
 import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
 
@@ -17,6 +17,34 @@ const mostrarAvisoSenha = ref(false)
 const carregandoJobs = ref(false)
 const erroJobs = ref('')
 let controlador
+let observadorEntrada
+
+const vRevelar = {
+  mounted(elemento) {
+    if (
+      !('IntersectionObserver' in window) ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return
+
+    observadorEntrada ??= new IntersectionObserver(
+      (entradas) => {
+        for (const entrada of entradas) {
+          if (!entrada.isIntersecting) continue
+          entrada.target.classList.remove('revelar-pendente')
+          entrada.target.classList.add('revelar-visivel')
+          observadorEntrada.unobserve(entrada.target)
+        }
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -24px 0px' },
+    )
+    elemento.classList.add('revelar-pendente')
+    observadorEntrada.observe(elemento)
+  },
+  unmounted(elemento) {
+    observadorEntrada?.unobserve(elemento)
+  },
+}
 
 const buscarJobs = async () => {
   if (carregandoJobs.value) return
@@ -38,19 +66,19 @@ const buscarJobs = async () => {
   }
 }
 
-onBeforeUnmount(() => controlador?.abort())
+onBeforeUnmount(() => {
+  controlador?.abort()
+  observadorEntrada?.disconnect()
+})
 
 onMounted(() => {
   buscarJobs()
 
-  mostrarAvisoSenha.value =
-    localStorage.getItem('precisa_definir_senha') === 'true'
+  mostrarAvisoSenha.value = localStorage.getItem('precisa_definir_senha') === 'true'
 })
 
 const trabalhosMaisPagam = computed(() => {
-  return [...jobs.value]
-    .sort((a, b) => Number(b.preco) - Number(a.preco))
-    .slice(0, 6)
+  return [...jobs.value].sort((a, b) => Number(b.preco) - Number(a.preco)).slice(0, 6)
 })
 
 const slides = computed(() => {
@@ -79,34 +107,53 @@ const atualizarSlide = () => {
   const largura = slideContainer.value.clientWidth
   if (!largura) return
 
-  slideAtual.value = Math.round(
-    slideContainer.value.scrollLeft / largura
-  )
+  slideAtual.value = Math.round(slideContainer.value.scrollLeft / largura)
 }
 </script>
 
 <template>
-  <main class="home">
+  <main class="home mrj-ui freelancer-page">
+    <header class="home-topbar">
+      <router-link to="/home" class="marca" aria-label="MaRuJoBs — início">
+        <img src="@/assets/images/logo.png" alt="" />
+        <span>MaRuJoBs<span class="marca-ponto">.</span></span>
+      </router-link>
+      <router-link to="/favoritos" class="atalho-favoritos">
+        <i class="fa-regular fa-heart" aria-hidden="true"></i><span>Favoritos</span>
+      </router-link>
+    </header>
+    <section class="home-hero" aria-labelledby="home-titulo">
+      <h1 id="home-titulo">
+        <span class="hero-linha">Seu próximo projeto</span>
+        <span class="hero-linha hero-linha-destaque">começa aqui.</span>
+      </h1>
+      <p class="hero-descricao">
+        Explore oportunidades e encontre trabalhos que combinam com o que você faz.
+      </p>
+      <router-link to="/freelances" class="hero-cta"
+        >Explorar oportunidades <i class="fa-solid fa-arrow-right" aria-hidden="true"></i
+      ></router-link>
+    </section>
     <div v-if="mostrarAvisoSenha" class="aviso-senha">
-  <button class="fechar-aviso" @click="mostrarAvisoSenha = false">
-    ×
-  </button>
+      <button
+        class="fechar-aviso"
+        aria-label="Fechar aviso de senha"
+        @click="mostrarAvisoSenha = false"
+      >
+        ×
+      </button>
 
-  <div class="aviso-conteudo">
-    <strong>Crie uma senha para sua conta</strong>
-    <span>
-      Sua conta Google ainda não possui uma senha. Você pode criar uma
-      para também entrar usando seu e-mail e senha.
-    </span>
+      <div class="aviso-conteudo">
+        <strong>Crie uma senha para sua conta</strong>
+        <span>
+          Sua conta Google ainda não possui uma senha. Você pode criar uma para também entrar usando
+          seu e-mail e senha.
+        </span>
 
-    <button class="btn-criar-senha" @click="$router.push('/definir-senha')">
-  Criar senha
-</button>
-  </div>
-</div>
-    <p v-if="carregandoJobs" class="estado-jobs" role="status">
-      Carregando oportunidades...
-    </p>
+        <button class="btn-criar-senha" @click="$router.push('/definir-senha')">Criar senha</button>
+      </div>
+    </div>
+    <p v-if="carregandoJobs" class="estado-jobs" role="status">Carregando oportunidades...</p>
     <div v-else-if="erroJobs" class="estado-jobs erro-jobs" role="alert">
       <p>{{ erroJobs }}</p>
       <button type="button" @click="buscarJobs">Tentar novamente</button>
@@ -114,54 +161,43 @@ const atualizarSlide = () => {
     <p v-else-if="!jobs.length" class="estado-jobs vazio-jobs" role="status">
       Nenhuma oportunidade disponível no momento.
     </p>
-    <section class="principais">
-      <h2>Principais</h2>
+    <section v-revelar class="principais">
+      <h2>Oportunidades em destaque</h2>
 
       <div class="subtitulo">
-        <strong>Encontre a oportunidade certa para você</strong>
         <span>Os trabalhos que oferecem os melhores valores.</span>
       </div>
 
       <div
         ref="slideContainer"
         class="slide-scroll"
+        tabindex="0"
+        role="region"
+        aria-label="Oportunidades em destaque; role para ver mais"
         @scroll="atualizarSlide"
       >
-        <div
-          v-for="(slide, index) in slides"
-          :key="index"
-          class="slide"
-        >
-          <article
-            v-for="job in slide"
-            :key="job.id"
-            class="card"
-          >
+        <div v-for="(slide, index) in slides" :key="index" class="slide">
+          <article v-for="job in slide" :key="job.id" class="card">
             <router-link :to="`/oportunidade/${job.id}`" class="card-conteudo">
-            <div class="imagem">
-              <img
-                v-if="job.foto"
-                :src="getImageUrl(job.foto)"
-                class="avatar"
-              />
+              <div class="imagem">
+                <img v-if="job.foto" :src="getImageUrl(job.foto)" class="avatar" alt="" />
+                <i v-else class="fa-solid fa-briefcase" aria-hidden="true"></i>
 
-              <div class="selo" v-if="job.preco >= 2500">
-                ★ Destaque
+                <div class="selo" v-if="job.preco >= 2500">★ Destaque</div>
               </div>
-            </div>
 
-            <div class="info">
-              <h3>{{ job.titulo }}</h3>
-              <p>{{ job.tag }}</p>
+              <div class="info">
+                <h3 :title="job.titulo">{{ job.titulo }}</h3>
+                <p>{{ job.tag }}</p>
 
-              <div class="preco">
-                <span>R$ {{ job.preco }}</span>
-                <p>•</p>
-                <p class="horas">{{ job.tempo }} horas</p>
+                <div class="preco">
+                  <span>R$ {{ formatarPreco(job.preco) }}</span>
+                  <p>•</p>
+                  <p class="horas">{{ job.tempo }} horas</p>
+                </div>
               </div>
-            </div>
 
-            <div class="seta-card">›</div>
+              <div class="seta-card">›</div>
             </router-link>
             <FavoritoButton :id="job.id" />
           </article>
@@ -178,15 +214,15 @@ const atualizarSlide = () => {
     </section>
 
     <p v-if="erroFavorito" class="erro-favorito" role="alert">{{ erroFavorito }}</p>
-    <div class="chamada">
+    <div v-revelar class="chamada">
       <strong>Seu próximo trabalho pode estar aqui.</strong>
       <span>Encontre oportunidades, mostre seu talento e comece hoje.</span>
     </div>
 
     <section class="mais">
-      <div class="titulo-mais">
+      <div v-revelar class="titulo-mais">
         <div>
-          <h3>Mais oportunidades</h3>
+          <h2>Mais oportunidades</h2>
           <span v-if="!carregandoJobs && !erroJobs" class="contador">
             {{ totalFreelances }}
             {{ totalFreelances === 1 ? 'oportunidade' : 'oportunidades' }}
@@ -197,434 +233,558 @@ const atualizarSlide = () => {
 
       <div class="grid-oportunidades">
         <div
-          class="mini-card"
-          v-for="job in jobsHome"
+          v-for="(job, index) in jobsHome"
           :key="job.id"
+          v-revelar
+          class="mini-card"
+          :style="{ '--entrada-atraso': `${index * 65}ms` }"
         >
           <div class="mini-card-topo">
-            <h4>{{ job.titulo }}</h4>
+            <span class="mini-card-icone"
+              ><i class="fa-solid fa-briefcase" aria-hidden="true"></i
+            ></span>
+            <span v-if="job.tag" class="categoria-vaga">{{ job.tag }}</span>
             <FavoritoButton :id="job.id" />
           </div>
-          <p>Empresa</p>
-          <span>R$ {{ job.preco }}</span>
-          <p>{{ job.tempo }} horas</p>
+          <h3 class="mini-card-titulo" :title="job.titulo">{{ job.titulo }}</h3>
+          <div class="mini-card-resumo">
+            <div>
+              <span class="mini-rotulo">Valor do projeto</span>
+              <span v-if="job.preco != null && job.preco !== ''" class="mini-preco"
+                >R$ {{ formatarPreco(job.preco) }}</span
+              >
+              <span v-else class="mini-preco">Não informado</span>
+            </div>
+            <p class="mini-tempo">
+              <i class="fa-regular fa-clock" aria-hidden="true"></i> {{ job.tempo }} horas
+            </p>
+          </div>
 
-          <router-link :to="`/oportunidade/${job.id}`">
-            <button>Ver detalhes</button>
+          <router-link :to="`/oportunidade/${job.id}`" class="botao-detalhes">
+            Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
           </router-link>
         </div>
       </div>
 
-      <router-link to="/freelances" class="link-todos">
-        <button class="btn-mais">Ver todos</button>
-      </router-link>
+      <router-link v-revelar to="/freelances" class="link-todos btn-mais"> Ver todos </router-link>
     </section>
   </main>
 </template>
 
+<style scoped src="../styles/freelancer.css"></style>
 <style scoped>
-.aviso-senha {
-  position: relative;
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 18px;
-  box-shadow: 0 4px 14px rgba(72, 48, 120, 0.12);
-}
-
-.aviso-conteudo {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-right: 25px;
-}
-
-.aviso-conteudo strong {
-  color: #49357b;
-  font-size: 15px;
-}
-
-.aviso-conteudo span {
-  color: #817a91;
-  font-size: 12px;
-  line-height: 17px;
-}
-
-.btn-criar-senha {
-  width: fit-content;
-  border: none;
-  background: #5b3cc4;
-  color: white;
-  border-radius: 8px;
-  padding: 8px 14px;
-  margin-top: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.fechar-aviso {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  border: none;
-  background: none;
-  color: #817a91;
-  font-size: 22px;
-  cursor: pointer;
-}
-main {
-  background: #eee8fa;
-  border-radius: 42px 42px 0 0;
-  margin-top: -70px;
-  position: relative;
-  z-index: 5;
-  min-height: 100vh;
-}
-
 .home {
-  padding: 0 18px 100px;
+  min-height: 100dvh;
+  padding: 0 20px 112px;
 }
-
-.principais h2 {
-  width: fit-content;
-  min-width: 150px;
-  color: white;
-  background: #5b3cc4;
-  text-align: center;
-  font-size: 20px;
-  font-weight: 700;
-  padding: 9px 24px;
-  border-radius: 0 0 14px 14px;
-  margin: 0 auto 14px;
-  box-shadow: 0 3px 10px rgba(91, 60, 196, 0.2);
-}
-
-.subtitulo {
-  text-align: center;
-  margin: 0 auto 16px;
-  padding: 0 8px;
-}
-
-.subtitulo strong {
-  display: block;
-  color: #49357b;
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 3px;
-}
-
-.subtitulo span {
-  display: block;
-  color: #817a91;
-  font-size: 12px;
-}
-
-.slide-scroll {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  gap: 18px;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.slide-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.slide {
-  width: 100%;
-  min-width: 100%;
-  flex-shrink: 0;
-  scroll-snap-align: center;
-}
-
-.card {
-  background: #fff;
-  border-radius: 20px;
-  padding: 12px;
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  text-decoration: none;
-  box-shadow: 0 6px 18px rgba(72, 48, 120, 0.09);
-  border: 1px solid rgba(91, 60, 196, 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card:active {
-  transform: scale(0.97);
-  box-shadow: 0 2px 8px rgba(72, 48, 120, 0.08);
-}
-
-.card-conteudo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-  text-decoration: none;
-}
-.mini-card-topo {
+.home-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-width: 0;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
 }
-.mini-card-topo h4 { min-width: 0; }
-.erro-favorito { color: #5637b4; overflow-wrap: anywhere; }
-
-.estado-jobs {
-  margin: 16px 0;
-  padding: 16px;
-  border-radius: 16px;
-  background: #f7f5ff;
-  color: #5637b4;
-  overflow-wrap: anywhere;
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--mrj-color-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
 }
-.estado-jobs button {
-  margin-top: 12px;
-  padding: 10px 18px;
+.marca img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+.marca-ponto {
+  color: var(--mrj-color-primary);
+}
+.atalho-favoritos {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-height: 44px;
+  color: var(--mrj-color-text-secondary);
+  text-decoration: none;
+  font-size: 0.8125rem;
+}
+.atalho-favoritos i {
+  color: var(--mrj-color-primary);
+  font-size: 20px;
+}
+.home-hero {
+  padding: 40px 0;
+  container-type: inline-size;
+}
+.home-hero h1 {
+  font-size: clamp(2.375rem, 6.5cqw, 4.25rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.055em;
+  max-width: 800px;
+}
+.hero-linha {
+  display: block;
+  animation: hero-entrada 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.hero-linha-destaque {
+  color: var(--mrj-color-primary);
+  animation-delay: 180ms;
+}
+@supports (background-clip: text) {
+  .hero-linha-destaque {
+    background: linear-gradient(110deg, #673fd7 10%, #8a4fce 45%, #5b3cc4 75%, #673fd7);
+    background-size: 220% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    animation:
+      hero-entrada 1100ms 180ms cubic-bezier(0.2, 0.7, 0.2, 1) both,
+      hero-brilho 12s 1400ms ease-in-out infinite;
+  }
+}
+@keyframes hero-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes hero-brilho {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-linha,
+  .hero-linha-destaque {
+    animation: none;
+  }
+}
+.hero-descricao {
+  margin: 18px 0 24px !important;
+  max-width: 500px;
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.9375rem;
+}
+.hero-cta,
+.botao-detalhes,
+.btn-mais,
+.btn-criar-senha {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 12px 18px;
   border: 0;
-  border-radius: 25px;
-  background: #5b3cc4;
+  border-radius: 10px;
+  background: var(--mrj-color-primary);
   color: white;
-  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
-.estado-jobs button:focus-visible {
-  outline: 2px solid #673fd7;
-  outline-offset: 3px;
+.hero-cta:hover,
+.botao-detalhes:hover,
+.btn-mais:hover {
+  background: var(--mrj-color-primary-hover);
 }
-
+.principais h2 {
+  margin-bottom: 6px;
+}
+.subtitulo {
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
+  margin-bottom: 18px;
+}
+.slide-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 16px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  padding: 4px;
+  margin: 0 -4px;
+}
+.slide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 12px;
+  min-width: 100%;
+  width: 100%;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  align-content: start;
+}
+.card {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 18px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 16px;
+  background: white;
+  box-shadow: var(--mrj-shadow-card);
+}
+.card-conteudo {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  color: inherit;
+  text-decoration: none;
+}
 .imagem {
-  width: 76px;
-  height: 76px;
-  min-width: 76px;
-  background: #d8d1e8;
-  border-radius: 14px;
-  overflow: hidden;
+  width: 48px;
+  height: 60px;
+  flex: 0 0 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
   position: relative;
+  overflow: hidden;
 }
-
 .avatar {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 .selo {
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(91, 60, 196, 0.92);
+  inset-inline: 0;
+  padding: 2px;
+  background: var(--mrj-color-primary);
   color: white;
-  text-align: center;
   font-size: 8px;
-  font-weight: 700;
-  padding: 4px 2px;
+  text-align: center;
 }
-
 .info {
   min-width: 0;
   flex: 1;
 }
-
-.card h3 {
-  margin: 0 0 5px;
-  font-size: 17px;
-  font-weight: 700;
-  color: #49357b;
-  white-space: nowrap;
+.info h3 {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
-
-.card p {
-  margin: 2px 0;
-  color: #817a91;
-  font-size: 13px;
+.info > p {
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.75rem;
+  margin-top: 4px;
 }
-
 .preco {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-top: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
 }
-
-.card span {
-  font-size: 14px;
-  font-weight: 700;
-  color: #5b3cc4;
+.preco > span {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--mrj-color-primary);
 }
-
-.card .horas {
-  font-size: 13px;
-  color: #817a91;
+.preco > p {
+  font-size: 0.75rem;
+  color: var(--mrj-color-text-secondary);
 }
-
 .seta-card {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 50%;
-  background: #f0ebfa;
-  color: #5b3cc4;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 23px;
-  line-height: 28px;
-  padding: 0 0 7px;
-  box-sizing: border-box;
+  display: none;
 }
-
 .pontos-rolagem {
-  text-align: center;
-  margin: 13px 0 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
 }
-
 .pontos-rolagem span {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin: 3px;
-  background: #c9c2d8;
-  border-radius: 50%;
-  transition: 0.2s ease;
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: #c9c6d9;
 }
-
-.pontos-rolagem .active {
-  width: 18px;
-  border-radius: 10px;
-  background: #5b3cc4;
+.pontos-rolagem span.active {
+  width: 20px;
+  background: var(--mrj-color-primary);
 }
-
 .chamada {
-  text-align: center;
-  padding: 15px 12px 18px;
-  margin: 0 0 4px;
+  margin: 32px 0;
+  padding: 20px;
+  border-left: 3px solid var(--mrj-color-primary);
+  background: var(--mrj-color-secondary);
+  border-radius: 0 12px 12px 0;
 }
-
 .chamada strong {
   display: block;
-  color: #49357b;
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 4px;
+  font-size: 0.9375rem;
+  font-weight: 600;
 }
-
 .chamada span {
   display: block;
-  color: #817a91;
-  font-size: 12px;
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
+  margin-top: 4px;
 }
-
 .titulo-mais {
+  margin-bottom: 18px;
+}
+.contador {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
+  margin-top: 4px;
+}
+.grid-oportunidades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 16px;
+}
+.mini-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 16px;
+  background: white;
+  box-shadow: var(--mrj-shadow-card);
+}
+.mini-card-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mini-card-titulo {
+  min-width: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mini-card-icone {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 12px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+}
+.mini-card-topo .categoria-vaga {
+  flex: 1;
+  font-size: 0.75rem;
+  color: var(--mrj-color-text-secondary);
+}
+.mini-card-topo .favorito {
+  margin-left: auto;
+}
+.mini-card-resumo {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--mrj-color-border-subtle);
 }
-
-.mais h3 {
-  margin: 0;
-  color: #49357b;
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.contador {
+.mini-rotulo {
   display: block;
-  margin-top: 3px;
-  color: #817a91;
-  font-size: 11px;
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.6875rem;
 }
-
-.grid-oportunidades {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+.mini-preco {
+  display: block;
 }
-
-.mini-card {
-  background: #fff;
-  border-radius: 15px;
-  padding: 12px;
-  min-width: 0;
-  min-height: 205px;
+.mini-tempo {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 4px 14px rgba(72, 48, 120, 0.08);
-  box-sizing: border-box;
+  align-items: center;
+  gap: 6px;
 }
-
-.mini-card h4 {
-  margin: 0;
-  color: #49357b;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.botao-detalhes {
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  margin-top: 4px;
 }
-
+.botao-detalhes:hover {
+  color: white;
+}
+.mini-card:hover {
+  border-color: #d7ccef;
+  box-shadow: 0 8px 28px #4930800c;
+}
 .mini-card p {
-  margin: 3px 0;
-  font-size: 11px;
-  color: #817a91;
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.8125rem;
 }
-
-.mini-card span {
-  font-size: 15px;
-  font-weight: 700;
-  color: #5b3cc4;
-}
-
-.mini-card a button {
-  width: 100%;
-  border: none;
-  background: #5b3cc4;
-  color: white;
-  border-radius: 9px;
-  padding: 7px 4px;
-  margin-top: 5px;
-  font-size: 10px;
+.mini-card .mini-preco {
+  font-size: 1.125rem;
   font-weight: 600;
-  cursor: pointer;
+  margin-top: 8px;
 }
-
-.link-todos {
-  text-decoration: none;
+.mini-card .botao-detalhes {
+  margin-top: auto;
 }
-
 .btn-mais {
-  background: #5b3cc4;
-  color: white;
-  border-radius: 12px;
-  padding: 10px 24px;
   margin: 24px auto 0;
-  display: block;
-  border: none;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 4px 10px rgba(91, 60, 196, 0.2);
-  cursor: pointer;
+  display: flex;
+  width: fit-content;
+  background: transparent;
+  color: var(--mrj-color-primary);
+  border: 1px solid var(--mrj-color-border-subtle);
 }
-
-@media (max-width: 479px) {
-  .grid-oportunidades { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .card { gap: 4px; padding: 10px; }
-  .card-conteudo { gap: 8px; }
-  .imagem { width: 52px; min-width: 52px; height: 64px; }
-  .seta-card { display: none; }
-  .card .preco { flex-wrap: wrap; gap: 4px; }
+.btn-mais:hover {
+  color: white;
+}
+.aviso-senha {
+  position: relative;
+  padding: 20px 52px 20px 20px;
+  background: white;
+  border-radius: 16px;
+  margin-bottom: 24px;
+}
+.aviso-conteudo {
+  display: grid;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+.aviso-conteudo span {
+  color: var(--mrj-color-text-secondary);
+}
+.btn-criar-senha {
+  width: fit-content;
+  margin-top: 8px;
+}
+.fechar-aviso {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--mrj-color-text-secondary);
+  font-size: 24px;
+}
+.estado-jobs {
+  margin-bottom: 24px;
+}
+.erro-favorito {
+  color: var(--mrj-color-danger);
+  margin-block: 16px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .home-topbar {
+    animation: hero-entrada 650ms ease-out backwards;
+  }
+  .hero-descricao {
+    animation: hero-entrada 850ms 280ms ease-out backwards;
+  }
+  .hero-cta {
+    animation: hero-entrada 850ms 420ms ease-out backwards;
+  }
+  .revelar-pendente {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  .revelar-pendente:focus-within {
+    opacity: 1;
+    transform: none;
+  }
+  .revelar-visivel {
+    animation: home-revelar 700ms var(--entrada-atraso, 0ms) cubic-bezier(0.2, 0.7, 0.2, 1)
+      backwards;
+  }
+  .card,
+  .mini-card {
+    transition:
+      transform 240ms ease,
+      border-color 240ms ease,
+      box-shadow 240ms ease;
+  }
+  .hero-cta,
+  .botao-detalhes,
+  .btn-mais,
+  .atalho-favoritos {
+    transition:
+      transform 220ms ease,
+      background-color 220ms ease,
+      color 220ms ease,
+      box-shadow 220ms ease;
+  }
+  .hero-cta i,
+  .botao-detalhes i,
+  .atalho-favoritos i,
+  .mini-card-icone {
+    transition: transform 240ms ease;
+  }
+  .hero-cta:is(:hover, :focus-visible),
+  .btn-mais:is(:hover, :focus-visible) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px #673fd724;
+  }
+  .hero-cta:active,
+  .botao-detalhes:active,
+  .btn-mais:active {
+    transform: scale(0.98);
+  }
+  .hero-cta:is(:hover, :focus-visible) i,
+  .botao-detalhes:is(:hover, :focus-visible) i {
+    transform: translateX(4px);
+  }
+  .atalho-favoritos:is(:hover, :focus-visible) i {
+    transform: scale(1.15) rotate(-8deg);
+  }
+  .pontos-rolagem span {
+    transition:
+      width 280ms ease,
+      background-color 280ms ease;
+  }
+  .slide-scroll {
+    scroll-behavior: smooth;
+  }
+  @media (hover: hover) {
+    .card:hover,
+    .mini-card:hover {
+      transform: translateY(-3px);
+    }
+    .mini-card:hover .mini-card-icone {
+      transform: rotate(-6deg) scale(1.06);
+    }
+  }
+}
+@keyframes home-revelar {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useProjetoFormulario } from '@/composables/useProjetoFormulario'
+import { habilidadesSugeridas, opcoesTags } from '@/utils/tags'
 const {
   titulo,
   categoria,
@@ -21,7 +22,6 @@ const {
   selecionarImagem,
   adicionarTag,
   removerTag,
-  enterTag,
   carregarProjeto,
   salvarProjeto,
   cancelar,
@@ -37,10 +37,33 @@ const categorias = [
   'Marketing',
   'Design Gráfico',
 ]
+const tagsRemovidas = ref([])
+const opcoesTecnologias = computed(() =>
+  opcoesTags(habilidadesSugeridas, tags.value, tagsRemovidas.value).filter(
+    (opcao) =>
+      !tags.value.some(
+        (tag) => tag.trim().toLocaleLowerCase('pt-BR') === opcao.toLocaleLowerCase('pt-BR'),
+      ),
+  ),
+)
+watch(pronto, (valor) => {
+  if (!valor) tagsRemovidas.value = []
+})
+function retirarTag(index) {
+  tagsRemovidas.value = opcoesTags(tagsRemovidas.value, [tags.value[index]])
+  removerTag(index)
+}
+function selecionarTag(event) {
+  const campo = event.currentTarget
+  adicionarTag()
+  nextTick(() => {
+    campo.value = novaTag.value
+  })
+}
 </script>
 
 <template>
-  <div class="portfolio-add">
+  <div class="portfolio-add mrj-ui freelancer-page">
     <div v-if="mostrarSucesso" role="status" class="toast-sucesso">
       <FontAwesomeIcon :icon="['fas', 'check']" />
       Projeto salvo com sucesso!
@@ -49,13 +72,13 @@ const categorias = [
     </div>
 
     <section class="header">
-      <router-link to="/portfolio" class="voltar">
+      <router-link to="/portfolio" class="voltar" aria-label="Voltar ao portfólio">
         <FontAwesomeIcon :icon="['fas', 'arrow-left']" />
       </router-link>
 
-      <h2>
+      <h1>
         {{ editando ? 'Editar Portfólio' : 'Adicionar Portfólio' }}
-      </h2>
+      </h1>
     </section>
 
     <p v-if="carregando && !salvando" role="status">Carregando projeto...</p>
@@ -99,378 +122,273 @@ const categorias = [
         </button>
       </div>
 
-      <!-- Título -->
-      <div class="campo">
-        <label>Título do Projeto</label>
-        <p v-if="camposErro.titulo" role="alert">{{ camposErro.titulo }}</p>
+      <div class="campos-projeto">
+        <!-- Título -->
+        <div class="campo">
+          <label for="projeto-titulo">Título do Projeto</label>
+          <p v-if="camposErro.titulo" role="alert">{{ camposErro.titulo }}</p>
 
-        <input
-          aria-label="Título do Projeto"
-          type="text"
-          v-model="titulo"
-          placeholder="Ex: Landing Page para Restaurante"
-        />
-      </div>
+          <input
+            aria-label="Título do Projeto"
+            id="projeto-titulo"
+            :aria-invalid="!!camposErro.titulo"
+            type="text"
+            v-model="titulo"
+            placeholder="Ex: Landing Page para Restaurante"
+          />
+        </div>
 
-      <!-- Categoria -->
-      <div class="campo">
-        <label>Categoria</label>
-        <p v-if="camposErro.categoria" role="alert">{{ camposErro.categoria }}</p>
+        <!-- Categoria -->
+        <div class="campo">
+          <label for="projeto-categoria">Categoria</label>
+          <p v-if="camposErro.categoria" role="alert">{{ camposErro.categoria }}</p>
 
-        <input
-          aria-label="Categoria"
-          v-model="categoria"
-          maxlength="100"
-          list="categorias-projeto"
-        /><datalist id="categorias-projeto">
-          <option v-for="item in categorias" :key="item" :value="item">
-            {{ item }}
-          </option>
-        </datalist>
-      </div>
+          <select
+            aria-label="Categoria"
+            id="projeto-categoria"
+            :aria-invalid="!!camposErro.categoria"
+            v-model="categoria"
+          >
+            <option value="" disabled>Selecionar categoria</option>
+            <option v-if="categoria && !categorias.includes(categoria)" :value="categoria">
+              {{ categoria }}
+            </option>
+            <option v-for="item in categorias" :key="item" :value="item">
+              {{ item }}
+            </option>
+          </select>
+        </div>
 
-      <!-- Descrição -->
-      <div class="campo">
-        <label>Descrição</label>
-        <p v-if="camposErro.descricao" role="alert">{{ camposErro.descricao }}</p>
+        <!-- Descrição -->
+        <div class="campo">
+          <label for="projeto-descricao">Descrição</label>
+          <p v-if="camposErro.descricao" role="alert">{{ camposErro.descricao }}</p>
 
-        <textarea
-          aria-label="Descrição"
-          rows="5"
-          v-model="descricao"
-          placeholder="Conte um pouco sobre esse projeto..."
-        ></textarea>
-      </div>
+          <textarea
+            aria-label="Descrição"
+            id="projeto-descricao"
+            :aria-invalid="!!camposErro.descricao"
+            rows="5"
+            v-model="descricao"
+            placeholder="Conte um pouco sobre esse projeto..."
+          ></textarea>
+        </div>
 
-      <!-- Tags -->
-      <div class="campo">
-        <label>Tecnologias / Tags</label>
-        <p v-if="camposErro.tags" role="alert">{{ camposErro.tags }}</p>
+        <!-- Tags -->
+        <div class="campo">
+          <label for="projeto-tags">Tecnologias / Tags</label>
+          <p v-if="camposErro.tags" role="alert">{{ camposErro.tags }}</p>
 
-        <div class="tags">
-          <div class="tag" v-for="(tag, index) in tags" :key="index">
-            {{ tag }}
+          <div class="tags">
+            <div class="tag" v-for="(tag, index) in tags" :key="index">
+              {{ tag }}
 
-            <button type="button" @click="removerTag(index)">×</button>
+              <button type="button" :aria-label="`Remover tag ${tag}`" @click="retirarTag(index)">
+                ×
+              </button>
+            </div>
+          </div>
+
+          <div class="nova-tag">
+            <select
+              aria-label="Tecnologias / Tags"
+              id="projeto-tags"
+              :aria-invalid="!!camposErro.tags"
+              v-model="novaTag"
+              @change="selecionarTag"
+            >
+              <option value="" disabled>Selecionar tecnologia ou tag</option>
+              <option v-for="opcao in opcoesTecnologias" :key="opcao" :value="opcao">
+                {{ opcao }}
+              </option>
+            </select>
           </div>
         </div>
 
-        <div class="nova-tag">
+        <!-- Link -->
+        <div class="campo">
+          <label for="projeto-link">Link do Projeto</label>
+          <p v-if="camposErro.link" role="alert">{{ camposErro.link }}</p>
+
           <input
-            aria-label="Tecnologias / Tags"
-            type="text"
-            v-model="novaTag"
-            @keydown="enterTag"
-            placeholder="Digite uma tag"
+            id="projeto-link"
+            :aria-invalid="!!camposErro.link"
+            aria-label="Link do Projeto"
+            type="url"
+            v-model="link"
+            placeholder="https://..."
           />
-
-          <button type="button" @click="adicionarTag">Adicionar</button>
         </div>
-      </div>
 
-      <!-- Link -->
-      <div class="campo">
-        <label>Link do Projeto</label>
-        <p v-if="camposErro.link" role="alert">{{ camposErro.link }}</p>
+        <p v-if="erroImagem" role="alert">{{ erroImagem }}</p>
+        <!-- Botões -->
+        <div class="acoes">
+          <button class="cancelar" type="button" @click="cancelar">Cancelar</button>
 
-        <input aria-label="Link do Projeto" type="url" v-model="link" placeholder="https://..." />
-      </div>
-
-      <p v-if="erroImagem" role="alert">{{ erroImagem }}</p>
-      <!-- Botões -->
-      <div class="acoes">
-        <button class="cancelar" type="button" @click="cancelar">Cancelar</button>
-
-        <button class="salvar" type="button" @click="salvarProjeto" :disabled="salvando">
-          {{ salvando ? 'Salvando...' : editando ? 'Salvar Alterações' : 'Salvar Projeto' }}
-        </button>
+          <button class="salvar" type="button" @click="salvarProjeto" :disabled="salvando">
+            {{ salvando ? 'Salvando...' : editando ? 'Salvar Alterações' : 'Salvar Projeto' }}
+          </button>
+        </div>
       </div>
     </fieldset>
   </div>
 </template>
 
+<style scoped src="../styles/freelancer.css"></style>
 <style scoped>
-fieldset.formulario {
-  border: 0;
-  min-width: 0;
-}
-.campo,
-.nova-tag {
-  min-width: 0;
-}
-input,
-textarea,
-select {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-.tag {
-  overflow-wrap: anywhere;
-  max-width: 100%;
-}
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 .portfolio-add {
-  min-height: 100vh;
-  background: #e8e1f2;
-  padding-bottom: 100px;
+  min-height: 100dvh;
+  padding: 24px 20px;
 }
-
 .header {
-  height: 90px;
-  background: linear-gradient(135deg, #5b3cc4, #7a3ff2);
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
-  border-bottom-left-radius: 35px;
-  border-bottom-right-radius: 35px;
+  gap: 16px;
+  margin-bottom: 28px;
 }
-
-.header h2 {
-  color: #fff;
-  font-size: 24px;
-  font-weight: 700;
+.header h1 {
+  font-size: 1.5rem;
 }
-
 .voltar {
-  position: absolute;
-  left: 20px;
-  color: white;
-  font-size: 24px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 12px;
+  background: white;
+  color: var(--mrj-color-text-secondary);
   text-decoration: none;
 }
-
-.formulario {
-  margin: 20px 16px;
-  background: #f7f5fc;
-  border-radius: 22px;
-  padding: 24px 18px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+fieldset.formulario {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin: 0;
+  padding: 24px;
+  min-width: 0;
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 16px;
 }
-
 .upload {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 28px;
+  flex: 1 1 200px;
+  min-width: 0;
+  gap: 16px;
+  padding-block: 8px;
 }
-
 .preview {
-  width: 170px;
-  height: 170px;
-  border-radius: 20px;
-  background: #d7d2e8;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: grid;
+  place-items: center;
+  width: min(100%, 220px);
+  aspect-ratio: 1;
+  background: var(--mrj-color-secondary);
+  border: 1px dashed var(--mrj-color-primary);
+  border-radius: 16px;
   overflow: hidden;
-  border: 2px dashed #7a3ff2;
 }
-
 .preview-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 .icone-preview {
-  font-size: 55px;
-  color: #8a7fb4;
+  font-size: 48px;
+  color: #8b7ba8;
 }
-
 .btn-upload {
-  margin-top: 18px;
-  border: none;
-  background: #5b3cc4;
-  color: white;
-  border-radius: 14px;
-  padding: 12px 22px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.25s;
-}
-
-.btn-upload:hover {
-  background: #4d2eb5;
-}
-
-.campo {
   display: flex;
-  flex-direction: column;
-  margin-bottom: 22px;
-}
-
-.campo label {
-  font-size: 15px;
-  color: #533a91;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.campo input,
-.campo select,
-.campo textarea {
-  width: 100%;
-  border: none;
-  border-radius: 14px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 10px;
   background: white;
-  padding: 14px;
-  font-size: 15px;
-  outline: none;
-  color: #444;
+  color: var(--mrj-color-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
-
-.campo textarea {
-  resize: vertical;
-  min-height: 120px;
+.campos-projeto {
+  flex: 999 1 320px;
+  min-width: 0;
+  display: grid;
+  gap: 24px;
 }
-
-.campo input:focus,
-.campo textarea:focus,
-.campo select:focus {
-  box-shadow: 0 0 0 3px rgba(122, 63, 242, 0.15);
+.campo {
+  min-width: 0;
 }
-
+.nova-tag {
+  min-width: 0;
+}
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 15px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
-
+.tags:empty {
+  display: none;
+}
 .tag {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #d8cff8;
-  color: #4b338d;
-  padding: 8px 14px;
-  border-radius: 30px;
-  font-size: 14px;
-  font-weight: 600;
+  gap: 4px;
+  padding: 0 4px 0 12px;
+  max-width: 100%;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  border-radius: 8px;
+  font-size: 0.8125rem;
 }
-
 .tag button {
+  min-width: 36px;
+  border: 0;
+  border-radius: 8px;
   background: transparent;
-  border: none;
-  color: #4b338d;
-  cursor: pointer;
+  color: inherit;
   font-size: 18px;
 }
-
-.nova-tag {
-  display: flex;
-  gap: 10px;
-}
-
-.nova-tag input {
-  flex: 1;
-}
-
-.nova-tag button {
-  border: none;
-  background: #7a3ff2;
-  color: white;
-  padding: 0 18px;
-  border-radius: 14px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: 0.25s;
-}
-
-.nova-tag button:hover {
-  background: #6230d9;
-}
-
 .acoes {
   display: flex;
-  gap: 15px;
-  margin-top: 35px;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 8px;
 }
-
 .cancelar,
 .salvar {
-  flex: 1;
-  border: none;
-  border-radius: 16px;
-  padding: 15px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.25s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
-
 .cancelar {
-  background: #dad3eb;
-  color: #5d4c82;
+  border: 1px solid var(--mrj-color-border-subtle);
+  background: white;
+  color: var(--mrj-color-text-secondary);
 }
-
-.cancelar:hover {
-  background: #cbc3df;
-}
-
 .salvar {
-  background: #5b3cc4;
+  border: 0;
   color: white;
-}
-
-.salvar:hover {
-  background: #4f30b7;
-}
-
-.toast-sucesso a {
-  color: white;
-  text-decoration: underline;
+  background: var(--mrj-color-primary);
 }
 .toast-sucesso {
-  position: static;
-  margin: 16px;
-  max-width: calc(100% - 32px);
-  flex-wrap: wrap;
-
-  background: #5b3cc4;
-  color: white;
-
-  padding: 14px 20px;
-  border-radius: 14px;
-
+  background: #eaf7ef !important;
+  color: var(--mrj-color-success);
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-
-  z-index: 2000;
 }
-@media (max-width: 420px) {
-  .preview {
-    width: 150px;
-    height: 150px;
-  }
-
-  .header h2 {
-    font-size: 21px;
-  }
-
-  .acoes {
-    flex-direction: column;
-  }
-
-  .nova-tag {
-    flex-direction: column;
-  }
-
-  .nova-tag button {
-    height: 45px;
-  }
+.toast-sucesso a {
+  color: var(--mrj-color-success);
 }
 </style>

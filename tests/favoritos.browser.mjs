@@ -344,7 +344,7 @@ try {
   await clicar('.botao-filtro')
   await esperar("!!document.querySelector('#filtro-tag')")
   await avaliar(
-    "const campo=document.querySelector('#filtro-tag');campo.value='design';campo.dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('.filtros-painel').requestSubmit()",
+    "const campo=document.querySelector('#filtro-tag');campo.value='design';campo.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('.filtros-painel').requestSubmit()",
   )
   await esperar("feat38.consultas.at(-1).params?.tag === 'design'")
   assert.equal(await avaliar('feat38.consultas.at(-1).params.page'), 1)
@@ -392,7 +392,7 @@ try {
         )
         assert.equal(
           await avaliar(
-            "[...document.querySelectorAll('.bloco-vaga h3')].every(h => h.getBoundingClientRect().height < 90)",
+            "document.querySelectorAll('.bloco-vaga h2').length > 0 && [...document.querySelectorAll('.bloco-vaga h2')].every(h => h.getBoundingClientRect().height < 90)",
           ),
           true,
           'Títulos extensos devem manter o card compacto',

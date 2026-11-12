@@ -15,7 +15,7 @@ const logout = () => {
 onMounted(carregar)
 </script>
 <template>
-  <div class="perfil">
+  <div class="perfil mrj-ui freelancer-page">
     <p v-if="carregando" role="status">Carregando perfil...</p>
     <div v-else-if="erro" role="alert">
       {{ erro }} <button @click="carregar">Tentar novamente</button>
@@ -34,10 +34,10 @@ onMounted(carregar)
           </div>
 
           <div class="info">
-            <h2>{{ user?.name }}</h2>
+            <h1>{{ user?.name }}</h1>
             <span>{{ user?.profissao || 'Profissão não informada' }}</span>
             <div class="loc">
-              <i class="fa-solid fa-loc-dot"></i>
+              <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
               <p>{{ user?.localizacao || 'Localização não informada' }}</p>
             </div>
           </div>
@@ -52,454 +52,368 @@ onMounted(carregar)
         </div>
       </section>
 
-      <section class="box">
-        <div class="titulo">
-          <i class="fa-regular fa-user"></i>
-          <h3>Sobre</h3>
-        </div>
-        <p>
-          {{ user?.sobre || 'Nenhuma informação adicionada.' }}
-        </p>
-      </section>
-
-      <section class="box">
-        <div class="titulo">
-          <i class="fa-regular fa-folder"></i>
-          <h3>Habilidades</h3>
-        </div>
-
-        <div class="hab">
-          <span v-for="habilidade in user?.habilidades || []" :key="habilidade">
-            {{ habilidade }}
-          </span>
-
-          <span v-if="!user?.habilidades?.length"> Nenhuma habilidade adicionada. </span>
-        </div>
-      </section>
-
-      <section class="box">
-        <div class="superior-port">
-          <router-link to="/portfolio" class="titulo-link">
-            <div class="titulo">
-              <i class="fa-regular fa-folder-open"></i>
-              <h3>Portfólio</h3>
-            </div>
-          </router-link>
-
-          <router-link to="/portfolio" class="ver-todos"> Ver todos > </router-link>
-        </div>
-
-        <div class="portfolio">
-          <router-link
-            v-for="item in portfolio"
-            :key="item.id"
-            :to="`/portfolio/${item.id}`"
-            class="portfolio-card"
-          >
-            <img
-              @load="
-                (event) => {
-                  event.target.hidden = false
-                }
-              "
-              @error="
-                (event) => {
-                  event.target.hidden = true
-                }
-              "
-              v-if="item.imagem"
-              :src="getImageUrl(item.imagem)"
-              class="portfolio-image"
-              :alt="item.titulo"
-            />
-
-            <div v-else class="portfolio-image"></div>
-
-            <h4>{{ item.titulo }}</h4>
-            <p>{{ item.categoria }}</p>
-          </router-link>
-
-          <p v-if="portfolio.length === 0" class="sem-portfolio">
-            Você ainda não possui projetos no portfólio.
-          </p>
-        </div>
-      </section>
-
-      <div class="last-info">
-        <section class="last-card">
+      <div class="perfil-conteudo">
+        <section class="box sobre-perfil">
           <div class="titulo">
-            <i class="fa-regular fa-envelope"></i>
-            <h3>E-mail</h3>
+            <i class="fa-regular fa-user"></i>
+            <h2>Sobre</h2>
           </div>
-
-          <p>{{ email }}</p>
+          <p>
+            {{ user?.sobre || 'Nenhuma informação adicionada.' }}
+          </p>
         </section>
 
-        <section class="last-card">
+        <section class="box habilidades-perfil">
           <div class="titulo">
-            <i class="fa-solid fa-phone"></i>
-            <h3>Telefone</h3>
+            <i class="fa-regular fa-folder"></i>
+            <h2>Habilidades</h2>
           </div>
 
-          <p>{{ user?.telefone || 'Telefone não informado' }}</p>
+          <div class="hab">
+            <span v-for="habilidade in user?.habilidades || []" :key="habilidade">
+              {{ habilidade }}
+            </span>
+
+            <span v-if="!user?.habilidades?.length"> Nenhuma habilidade adicionada. </span>
+          </div>
+        </section>
+
+        <section class="box projetos-perfil">
+          <div class="superior-port">
+            <router-link to="/portfolio" class="titulo-link">
+              <div class="titulo">
+                <i class="fa-regular fa-folder-open"></i>
+                <h2>Portfólio</h2>
+              </div>
+            </router-link>
+
+            <router-link to="/portfolio" class="ver-todos"> Ver todos > </router-link>
+          </div>
+
+          <div class="portfolio">
+            <router-link
+              v-for="item in portfolio"
+              :key="item.id"
+              :to="`/portfolio/${item.id}`"
+              class="portfolio-card"
+            >
+              <img
+                @load="
+                  (event) => {
+                    event.target.hidden = false
+                  }
+                "
+                @error="
+                  (event) => {
+                    event.target.hidden = true
+                  }
+                "
+                v-if="item.imagem"
+                :src="getImageUrl(item.imagem)"
+                class="portfolio-image"
+                :alt="item.titulo"
+              />
+
+              <div v-else class="portfolio-image"></div>
+
+              <h3>{{ item.titulo }}</h3>
+              <p>{{ item.categoria }}</p>
+            </router-link>
+
+            <p v-if="portfolio.length === 0" class="sem-portfolio">
+              Você ainda não possui projetos no portfólio.
+            </p>
+          </div>
+        </section>
+
+        <div class="last-info">
+          <section class="last-card">
+            <div class="titulo">
+              <i class="fa-regular fa-envelope"></i>
+              <h2>E-mail</h2>
+            </div>
+
+            <p>{{ email }}</p>
+          </section>
+
+          <section class="last-card">
+            <div class="titulo">
+              <i class="fa-solid fa-phone"></i>
+              <h2>Telefone</h2>
+            </div>
+
+            <p>{{ user?.telefone || 'Telefone não informado' }}</p>
+          </section>
+        </div>
+
+        <button class="btn-editar" @click="router.push('/editar-perfil')">Editar Perfil</button>
+        <section class="configuracoes">
+          <h2>Configurações da conta</h2>
+
+          <button class="config-item" @click="router.push('/trocar-senha')">
+            <div>
+              <i class="fa-solid fa-lock"></i>
+              <span>Alterar senha</span>
+            </div>
+
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+
+          <button class="config-item sair" @click="logout">
+            <div>
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span>Sair da conta</span>
+            </div>
+
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
         </section>
       </div>
-
-      <button class="btn-editar" @click="router.push('/editar-perfil')">Editar Perfil</button>
-      <section class="configuracoes">
-        <h3>Configurações da conta</h3>
-
-        <button class="config-item" @click="router.push('/trocar-senha')">
-          <div>
-            <i class="fa-solid fa-lock"></i>
-            <span>Alterar senha</span>
-          </div>
-
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
-
-        <button class="config-item sair" @click="logout">
-          <div>
-            <i class="fa-solid fa-right-from-bracket"></i>
-            <span>Sair da conta</span>
-          </div>
-
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
-      </section>
     </template>
   </div>
 </template>
 
+<style scoped src="../styles/freelancer.css"></style>
 <style scoped>
-.info,
-.last-card {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.avatar,
-.portfolio-image {
-  object-fit: cover;
-}
-@media (max-width: 375px) {
-  .header-perfil {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-  .last-info {
-    grid-template-columns: 1fr;
-  }
-}
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: sans-serif;
-}
-
 .perfil {
-  background: #e8e1f2;
-  min-height: 100vh;
-  padding-bottom: 40px;
+  min-height: 100dvh;
+  padding-bottom: 112px;
 }
-
 .header-perfil {
-  position: relative;
-  border-bottom-left-radius: 40px;
-  border-bottom-right-radius: 40px;
-
-  background-image: url('/src/assets/images/perfil.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  padding: 40px 50px 120px;
-  overflow: hidden;
+  padding: 32px 24px;
+  background: linear-gradient(120deg, #eee8ff, #f7f8fc);
 }
-
 .separacao {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(2px);
+  display: none;
 }
-
 .profile-content {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 16px;
-  z-index: 2;
+  gap: 20px;
 }
-
 .img-usu {
+  flex-shrink: 0;
   position: relative;
 }
-
 .avatar {
-  width: 90px;
-  height: 90px;
-  background: #8c8c8c;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
+  border: 4px solid white;
+  object-fit: cover;
+  box-shadow: 0 6px 24px #35216712;
 }
-
 .icone {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 28px;
-  height: 28px;
-  border: none;
+  right: -8px;
+  bottom: -4px;
+  border: 3px solid white;
   border-radius: 50%;
-  background: #fff;
-  color: #7a3ff2;
-  cursor: pointer;
-}
-
-.info {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-
-  flex: 1;
-
-  text-align: center;
-}
-
-.info h2 {
+  background: var(--mrj-color-primary);
   color: white;
-  font-size: 24px;
-  font-weight: 700;
 }
-
-.info span {
-  color: #ece2ff;
-  font-size: 14px;
+.info {
+  min-width: 0;
 }
-
+.info h1 {
+  font-size: clamp(1.25rem, 3vw, 2rem);
+}
+.info > span {
+  display: block;
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.875rem;
+  margin-top: 6px;
+}
 .loc {
-  justify-content: center;
-}
-
-.status {
-  position: absolute;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%);
-  width: 92%;
   display: flex;
-
-  gap: 10px;
-  z-index: 3;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
 }
-
+.loc i {
+  margin-top: 4px;
+  color: var(--mrj-color-primary);
+}
+.status {
+  margin-top: 24px;
+  display: flex;
+}
 .card {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  text-align: center;
-  padding: 14px 10px;
-  color: #5e4d77;
-}
-
-.card.ativo {
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.card i {
-  margin-bottom: 6px;
-}
-
-.card h3 {
-  font-size: 18px;
-}
-
-.card p {
-  font-size: 12px;
-}
-
-.box {
-  background: #f5f2fb;
-  margin: 25px 14px 10px 14px;
-  padding: 16px;
-  border-radius: 18px;
-}
-
-.titulo {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #6d47d9;
-  margin-bottom: 12px;
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
+  padding: 10px 16px;
+  border-radius: 12px;
 }
-
-.titulo h3 {
-  font-weight: 650;
-  font-size: 16px;
+.card i {
+  color: var(--mrj-color-primary);
+  margin-right: 4px;
 }
-
-.box p {
-  color: #513f7c;
-  font-size: 14px;
-  line-height: 1.5;
+.card h3 {
+  font-size: 1rem;
 }
-
+.card p {
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
+}
+.perfil-conteudo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 20px;
+  padding: 24px;
+}
+.box,
+.last-card,
+.configuracoes {
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--mrj-shadow-card);
+  min-width: 0;
+}
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.titulo i {
+  color: var(--mrj-color-primary);
+}
+.titulo h2 {
+  font-size: 1rem;
+}
+.box > p {
+  font-size: 0.875rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  color: var(--mrj-color-text-secondary);
+}
 .hab {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
-
 .hab span {
-  background: #aba6b5;
-  color: #49357b;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 650;
+  max-width: 100%;
+  padding: 7px 12px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  border-radius: 8px;
+  font-size: 0.8125rem;
 }
-
+.projetos-perfil,
+.last-info,
+.btn-editar,
+.configuracoes {
+  grid-column: 1/-1;
+}
 .superior-port {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.superior-port button {
-  border: none;
-  background: none;
-  color: #7a3ff2;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.portfolio {
-  display: flex;
   gap: 12px;
-  overflow-x: auto;
-  margin-top: 12px;
 }
-
-.portfolio::-webkit-scrollbar {
-  display: none;
+.superior-port .titulo {
+  margin: 0;
 }
-
-.portfolio-card {
-  min-width: 140px;
-}
-
-.portfolio-image {
-  width: 100%;
-  height: 90px;
-  background: #aaa;
-  border-radius: 12px;
-  margin-bottom: 8px;
-}
-
-.portfolio-card h4 {
-  font-size: 13px;
-
-  color: #444;
-}
-
-.portfolio-card p {
-  font-size: 11px;
-  color: #777;
-}
-
-.last-info {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 16px;
-}
-
-.last-card {
-  background: #f5f2fb;
-  border-radius: 18px;
-  padding: 16px;
-}
-
-.last-card p {
-  font-size: 13px;
-  color: #666;
-}
-
-.btn-editar {
-  width: 80%;
-  margin: 24px auto;
-  padding: 14px;
-  border: none;
-  border-radius: 16px;
-
-  background: #7a3ff2;
-  color: white;
-  font-size: 15px;
-  font-weight: 700;
-  display: block;
-  margin-bottom: 100px;
-}
-.titulo-link {
-  text-decoration: none;
-}
-
+.titulo-link,
 .ver-todos {
   text-decoration: none;
-  color: #7a3ff2;
-  font-size: 12px;
+}
+.ver-todos {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--mrj-color-primary);
+  font-size: 0.8125rem;
+}
+.portfolio {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.portfolio-card {
+  display: block;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+.portfolio-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/10;
+  object-fit: cover;
+  background: var(--mrj-color-secondary);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+.portfolio-card h3 {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.portfolio-card p,
+.sem-portfolio {
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
+  margin-top: 4px;
+}
+.last-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 20px;
+}
+.last-card p {
+  font-size: 0.875rem;
+  color: var(--mrj-color-text-secondary);
+}
+.btn-editar {
+  justify-self: start;
+  padding: 12px 24px;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  background: var(--mrj-color-primary);
+  font-size: 0.875rem;
   font-weight: 600;
 }
-.configuracoes {
-  background: #f5f2fb;
-  margin: 0 14px 30px;
-  padding: 16px;
-  border-radius: 18px;
+.configuracoes h2 {
+  font-size: 1rem;
+  margin-bottom: 12px;
 }
-
-.configuracoes h3 {
-  color: #513f7c;
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-
 .config-item {
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  padding: 14px 4px;
-
-  border: none;
-  border-bottom: 1px solid #ddd6e8;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
   background: transparent;
-
-  color: #513f7c;
-  font-size: 14px;
-
-  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--mrj-color-text-secondary);
 }
-
-.config-item:last-child {
-  border-bottom: none;
-}
-
-.config-item div {
+.config-item > div {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
-.config-item > i {
-  font-size: 12px;
-  color: #9185a5;
+.config-item:last-child {
+  border: 0;
+  padding-bottom: 0;
 }
-
 .config-item.sair {
-  color: #d14b5b;
-}
-
-.config-item.sair > div > i {
-  color: #d14b5b;
+  color: var(--mrj-color-danger);
 }
 </style>
