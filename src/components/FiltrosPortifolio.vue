@@ -80,7 +80,7 @@ const limparFiltros = () => {
 
 <template>
   <div class="filtros-container">
-    <button class="botao-filtro" @click="abrirFiltros">
+    <button class="botao-filtro" aria-label="Filtrar projetos" :aria-expanded="aberto" @click="abrirFiltros">
       <FontAwesomeIcon :icon="['fas', 'sliders']" />
     </button>
 
@@ -92,7 +92,7 @@ const limparFiltros = () => {
             <p>Refine seus projetos</p>
           </div>
 
-          <button class="botao-fechar" @click="fecharFiltros">
+          <button class="botao-fechar" aria-label="Fechar filtros de projetos" @click="fecharFiltros">
             <FontAwesomeIcon :icon="['fas', 'xmark']" />
           </button>
         </header>
@@ -145,7 +145,7 @@ const limparFiltros = () => {
   height: 50px;
   border: none;
   border-radius: 15px;
-  background: #5b3cc4;
+  background: var(--mrj-color-primary);
   color: white;
   font-size: 18px;
   cursor: pointer;
@@ -168,6 +168,7 @@ const limparFiltros = () => {
   width: 100%;
   max-width: 420px;
   max-height: 85vh;
+  max-height: 85dvh;
   background: white;
   border-radius: 20px 20px 0 0;
   display: flex;
@@ -190,14 +191,14 @@ const limparFiltros = () => {
 }
 
 .filtros-header p {
-  color: #888;
+  color: var(--mrj-color-text-secondary);
   font-size: 13px;
   margin-top: 4px;
 }
 
 .botao-fechar {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
   background: #f2f2f2;
@@ -236,12 +237,15 @@ const limparFiltros = () => {
   color: #333;
   font-size: 14px;
   cursor: pointer;
+  min-height: 44px;
+  overflow-wrap: anywhere;
 }
 
 .opcoes input {
   width: 18px;
   height: 18px;
-  accent-color: #5b3cc4;
+  accent-color: var(--mrj-color-primary);
+  flex-shrink: 0;
 }
 
 .filtros-footer {
@@ -250,6 +254,7 @@ const limparFiltros = () => {
   padding: 16px 20px;
   border-top: 1px solid #ddd;
   background: white;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 .filtros-footer button {
@@ -260,6 +265,7 @@ const limparFiltros = () => {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  font-family: inherit;
 }
 
 .botao-limpar {
@@ -268,11 +274,28 @@ const limparFiltros = () => {
 }
 
 .botao-aplicar {
-  background: #5b3cc4;
+  background: var(--mrj-color-primary);
   color: white;
 }
 
 .botao-aplicar:hover {
-  background: #4928b0;
+  background: var(--mrj-color-primary-hover);
+}
+button:focus-visible,
+input:focus-visible {
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
+  outline-offset: var(--mrj-focus-offset);
+}
+.opcoes label:has(input:checked) {
+  background: var(--mrj-color-secondary);
+}
+@media (min-width: 768px) {
+  .filtros-overlay {
+    align-items: center;
+    padding: 24px;
+  }
+  .filtros-painel {
+    border-radius: var(--mrj-radius-lg);
+  }
 }
 </style>

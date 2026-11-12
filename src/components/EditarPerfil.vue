@@ -1,7 +1,8 @@
 ﻿<script setup>
-import { ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import CameraCapture from '@/components/CameraCapture.vue'
 import { useEditarPerfil } from '@/composables/useEditarPerfil'
+import { habilidadesSugeridas, opcoesTags } from '@/utils/tags'
 
 const {
   nome,
@@ -52,6 +53,30 @@ const {
   voltar,
 } = useEditarPerfil()
 
+const habilidadesRemovidas = ref([])
+const opcoesHabilidades = computed(() =>
+  opcoesTags(habilidadesSugeridas, habilidades.value, habilidadesRemovidas.value).filter(
+    (opcao) =>
+      !habilidades.value.some(
+        (atual) => atual.trim().toLocaleLowerCase('pt-BR') === opcao.toLocaleLowerCase('pt-BR'),
+      ),
+  ),
+)
+watch(pronto, (valor) => {
+  if (!valor) habilidadesRemovidas.value = []
+})
+function retirarHabilidade(habilidade) {
+  habilidadesRemovidas.value = opcoesTags(habilidadesRemovidas.value, [habilidade])
+  removerHabilidade(habilidade)
+}
+function selecionarHabilidade(event) {
+  const campo = event.currentTarget
+  adicionarHabilidade()
+  nextTick(() => {
+    campo.value = novaHabilidade.value
+  })
+}
+
 const mostrarOpcoesFoto = ref(false)
 const mostrarCamera = ref(false)
 
@@ -79,13 +104,13 @@ const receberFotoCamera = (arquivo) => {
 </script>
 
 <template>
-  <div class="editar-perfil">
+  <div class="editar-perfil mrj-ui freelancer-page">
     <header class="topo">
-      <button class="voltar" @click="voltar">
+      <button class="voltar" aria-label="Voltar ao perfil" @click="voltar">
         <i class="fa-solid fa-arrow-left"></i>
       </button>
 
-      <h2>Editar Perfil</h2>
+      <h1>Editar Perfil</h1>
     </header>
 
     <div v-if="carregando && !salvando" role="status" class="carregando">Carregando perfil...</div>
@@ -175,24 +200,37 @@ const receberFotoCamera = (arquivo) => {
 
       <section class="formulario">
         <div class="campo">
-          <label>Nome</label>
-          <p v-if="camposErro.name" role="alert">{{ camposErro.name }}</p>
-          <input aria-label="Nome" v-model="nome" type="text" placeholder="Digite seu nome" />
+          <label for="perfil-nome">Nome</label>
+          <p v-if="camposErro.name" id="erro-nome" role="alert">{{ camposErro.name }}</p>
+          <input
+            id="perfil-nome"
+            aria-label="Nome"
+            :aria-invalid="!!camposErro.name"
+            :aria-describedby="camposErro.name ? 'erro-nome' : undefined"
+            v-model="nome"
+            type="text"
+            placeholder="Digite seu nome"
+          />
         </div>
 
         <div class="campo">
-          <label>Profissão</label>
-          <p v-if="camposErro.profissao" role="alert">{{ camposErro.profissao }}</p>
+          <label for="perfil-profissao">Profissão</label>
+          <p v-if="camposErro.profissao" id="erro-profissao" role="alert">
+            {{ camposErro.profissao }}
+          </p>
           <input
             aria-label="Profissão"
+            id="perfil-profissao"
+            :aria-invalid="!!camposErro.profissao"
+            :aria-describedby="camposErro.profissao ? 'erro-profissao' : undefined"
             v-model="profissao"
             type="text"
             placeholder="Ex.: Designer Gráfico"
           />
         </div>
 
-        <div class="campo">
-          <label>Localização</label>
+        <div class="campo campo-localizacao">
+          <label for="perfil-localizacao">Localização</label>
           <p v-if="camposErro.localizacao" role="alert">{{ camposErro.localizacao }}</p>
 
           <p class="localizacao-descricao">
@@ -201,6 +239,8 @@ const receberFotoCamera = (arquivo) => {
 
           <input
             aria-label="Localização"
+            id="perfil-localizacao"
+            :aria-invalid="!!camposErro.localizacao"
             :value="localizacao"
             type="text"
             placeholder="Nenhuma cidade selecionada"
@@ -236,6 +276,7 @@ const receberFotoCamera = (arquivo) => {
 
             <div class="busca-cidade-controles">
               <input
+                aria-label="Pesquisar cidade"
                 v-model="pesquisaCidade"
                 type="text"
                 placeholder="Ex.: Joinville"
@@ -277,48 +318,65 @@ const receberFotoCamera = (arquivo) => {
         </div>
 
         <div class="campo">
-          <label>Telefone</label>
-          <p v-if="camposErro.telefone" role="alert">{{ camposErro.telefone }}</p>
+          <label for="perfil-telefone">Telefone</label>
+          <p v-if="camposErro.telefone" id="erro-telefone" role="alert">
+            {{ camposErro.telefone }}
+          </p>
           <input
             aria-label="Telefone"
+            id="perfil-telefone"
+            :aria-invalid="!!camposErro.telefone"
+            :aria-describedby="camposErro.telefone ? 'erro-telefone' : undefined"
             v-model="telefone"
             type="tel"
             placeholder="(47) 99999-9999"
           />
         </div>
 
-        <div class="campo">
-          <label>Sobre você</label>
-          <p v-if="camposErro.sobre" role="alert">{{ camposErro.sobre }}</p>
+        <div class="campo campo-sobre">
+          <label for="perfil-sobre">Sobre você</label>
+          <p v-if="camposErro.sobre" id="erro-sobre" role="alert">{{ camposErro.sobre }}</p>
           <textarea
             aria-label="Sobre você"
+            id="perfil-sobre"
+            :aria-invalid="!!camposErro.sobre"
+            :aria-describedby="camposErro.sobre ? 'erro-sobre' : undefined"
             v-model="sobre"
             rows="5"
             placeholder="Conte um pouco sobre você..."
           ></textarea>
         </div>
 
-        <div class="campo">
-          <label>Habilidades</label>
+        <div class="campo campo-habilidades">
+          <label for="perfil-habilidades">Habilidades</label>
           <p v-if="camposErro.habilidades" role="alert">{{ camposErro.habilidades }}</p>
 
           <div class="adicionar-habilidade">
-            <input
+            <select
               aria-label="Habilidades"
+              id="perfil-habilidades"
+              :aria-invalid="!!camposErro.habilidades || !!erroHabilidade"
               v-model="novaHabilidade"
-              type="text"
-              placeholder="Ex.: Photoshop"
-              @keyup.enter="adicionarHabilidade"
-            />
-
-            <button type="button" @click="adicionarHabilidade">Adicionar</button>
+              @change="selecionarHabilidade"
+            >
+              <option value="" disabled>Selecionar habilidade</option>
+              <option v-for="opcao in opcoesHabilidades" :key="opcao" :value="opcao">
+                {{ opcao }}
+              </option>
+            </select>
           </div>
 
           <div class="habilidades">
             <span v-for="habilidade in habilidades" :key="habilidade" class="habilidade">
               {{ habilidade }}
 
-              <button type="button" @click="removerHabilidade(habilidade)">×</button>
+              <button
+                type="button"
+                :aria-label="`Remover habilidade ${habilidade}`"
+                @click="retirarHabilidade(habilidade)"
+              >
+                ×
+              </button>
             </span>
           </div>
         </div>
@@ -341,399 +399,249 @@ const receberFotoCamera = (arquivo) => {
   </div>
 </template>
 
+<style scoped src="../styles/freelancer.css"></style>
 <style scoped>
-fieldset.conteudo {
-  border: 0;
-  min-width: 0;
-}
-input,
-textarea {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-.habilidade {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: sans-serif;
-}
-
 .editar-perfil {
-  min-height: 100vh;
-  background: #e8e1f2;
-  padding-bottom: 80px;
+  min-height: 100dvh;
+  padding: 24px 20px;
 }
-
 .topo {
-  height: 70px;
-  background: #f5f2fb;
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 15px;
+  gap: 16px;
+  margin-bottom: 28px;
 }
-
-.topo h2 {
-  color: #513f7c;
-  font-size: 20px;
-}
-
 .voltar {
-  border: none;
-  background: transparent;
-  color: #6d47d9;
-  font-size: 18px;
-  cursor: pointer;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  flex: 0 0 44px;
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 12px;
+  color: var(--mrj-color-text-secondary);
 }
-
-.conteudo {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 25px 16px;
+fieldset.conteudo {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 24px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }
-
 .foto-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 25px;
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 28px 20px;
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 16px;
 }
-
 .foto-container {
   position: relative;
 }
-
 .foto {
-  width: 110px;
-  height: 110px;
+  display: block;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  display: block;
+  border: 4px solid var(--mrj-color-secondary);
 }
-
 .foto-vazia {
-  background: #aaa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 35px;
+  display: grid;
+  place-items: center;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  font-size: 36px;
 }
-
 .botao-camera {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  border: 3px solid white;
   border-radius: 50%;
-  background: #7a3ff2;
+  background: var(--mrj-color-primary);
   color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-
-  padding: 0;
-  border: none;
 }
-
-.foto-section p {
-  margin-top: 8px;
-  color: #6d47d9;
-  font-size: 13px;
+.foto-section > p {
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
+  margin-top: 16px;
 }
-
 .formulario {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.campo {
-  background: #f5f2fb;
-  padding: 15px;
+  display: grid;
+  gap: 24px;
+  flex: 999 1 320px;
+  min-width: 0;
+  padding: 24px;
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
   border-radius: 16px;
 }
-
-.campo label {
-  display: block;
-  color: #513f7c;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 8px;
+.campo {
+  min-width: 0;
 }
-
-.campo input,
-.campo textarea {
-  width: 100%;
-  border: 1px solid #ddd6e8;
-  border-radius: 10px;
-  padding: 11px;
-  background: white;
-  color: #444;
-  font-size: 14px;
-  outline: none;
-}
-
-.campo textarea {
-  resize: vertical;
-}
-
-.campo input:focus,
-.campo textarea:focus {
-  border-color: #7a3ff2;
-}
-
-.adicionar-habilidade {
+.adicionar-habilidade,
+.busca-cidade-controles {
   display: flex;
+  align-items: center;
   gap: 8px;
+  min-width: 0;
 }
-
-.adicionar-habilidade button {
-  border: none;
-  border-radius: 10px;
-  padding: 0 14px;
-  background: #7a3ff2;
-  color: white;
-  cursor: pointer;
+.busca-cidade-controles input {
+  flex: 1;
+  min-width: 0;
 }
-
 .habilidades {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
 }
-
 .habilidade {
-  background: #aba6b5;
-  color: #49357b;
-  padding: 6px 10px;
-  border-radius: 20px;
-  font-size: 13px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-}
-
-.habilidade button {
-  border: none;
-  background: transparent;
-  color: #49357b;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.btn-salvar {
-  border: none;
-  border-radius: 16px;
-  padding: 14px;
-  background: #7a3ff2;
-  color: white;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.btn-salvar:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.mensagem {
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  text-align: center;
-}
-
-.erro {
-  background: #ffe0e0;
-  color: #a33;
-}
-
-.sucesso {
-  background: #def5df;
-  color: #28752d;
-}
-
-.carregando {
-  text-align: center;
-  padding: 50px;
-  color: #513f7c;
-}
-
-/* LOCALIZAÇÃO */
-
-.localizacao-descricao {
-  color: #746b85;
-  font-size: 12px;
-  line-height: 1.5;
-  margin-bottom: 12px;
-}
-
-.btn-localizacao {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 12px;
-  padding: 13px;
-  border: 1px solid #7a3ff2;
-  border-radius: 12px;
-  background: #ede5ff;
-  color: #673fd7;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.btn-localizacao:hover {
-  background: #e0d2ff;
-}
-
-.btn-localizacao:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.localizacao-erro {
-  color: #b42318;
-  font-size: 12px;
-  margin-top: 10px;
-}
-
-.localizacao-sucesso {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #23824b;
-  font-size: 12px;
-  margin-top: 10px;
-  line-height: 1.5;
-}
-
-.busca-cidade {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid #ddd6e8;
-}
-
-.busca-cidade-controles {
-  display: flex;
-  gap: 8px;
-}
-
-.busca-cidade-controles input {
-  flex: 1;
+  gap: 4px;
   min-width: 0;
+  max-width: 100%;
+  padding: 0 4px 0 12px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  border-radius: 8px;
+  font-size: 0.8125rem;
 }
-
+.habilidade button {
+  min-width: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+}
+.btn-salvar,
 .btn-buscar-cidade {
-  border: none;
+  border: 0;
   border-radius: 10px;
-  padding: 0 14px;
-  background: #7a3ff2;
+  background: var(--mrj-color-primary);
   color: white;
-  font-size: 13px;
+  padding: 12px 18px;
+  font-size: 0.875rem;
   font-weight: 600;
-  cursor: pointer;
 }
-
-.btn-buscar-cidade:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.btn-salvar {
+  justify-self: end;
 }
-
-.resultados-cidades {
-  margin-top: 10px;
-  border: 1px solid #ddd6e8;
+.mensagem {
+  padding: 14px;
   border-radius: 10px;
-  overflow: hidden;
+  font-size: 0.875rem;
 }
-
-.resultado-cidade {
+.erro {
+  background: #fff0f0;
+  color: var(--mrj-color-danger);
+}
+.sucesso {
+  background: #eaf7ef;
+  color: var(--mrj-color-success);
+}
+.localizacao-descricao {
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.75rem;
+  margin-bottom: 12px !important;
+}
+.btn-localizacao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  border: 0;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+}
+.localizacao-erro {
+  color: var(--mrj-color-danger);
+  font-size: 0.8125rem;
+  margin-top: 10px !important;
+}
+.localizacao-sucesso {
+  color: var(--mrj-color-success);
+  font-size: 0.8125rem;
+  margin-top: 12px !important;
+}
+.busca-cidade {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--mrj-color-border-subtle);
+}
+.resultados-cidades {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+.resultado-cidade {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border: none;
-  border-bottom: 1px solid #eee;
-  background: white;
-  color: #513f7c;
-  font-size: 13px;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 8px;
   text-align: left;
-  cursor: pointer;
+  color: var(--mrj-color-text);
+  background: var(--mrj-color-background);
+  font-size: 0.8125rem;
 }
-
-.resultado-cidade:last-child {
-  border-bottom: none;
-}
-
-.resultado-cidade:hover {
-  background: #ede5ff;
-}
-
 .opcoes-foto {
-  width: 100%;
-  max-width: 340px;
-  margin-top: 16px;
-  padding: 16px;
-  background: #f5f2fb;
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+  max-width: 100%;
 }
-
 .opcoes-foto p {
-  color: #513f7c;
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  margin-bottom: 4px;
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
 }
-
 .opcao-foto {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 13px;
-  border: 1px solid #ddd6e8;
-  border-radius: 10px;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 8px;
   background: white;
-  color: #513f7c;
-  font-size: 13px;
+  color: var(--mrj-color-text);
   cursor: pointer;
+  font-size: 0.8125rem;
   text-align: left;
 }
-
-.opcao-foto i {
-  color: #673fd7;
-  font-size: 17px;
-}
-
 .opcao-foto input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
 }
-
+.opcao-foto:focus-within {
+  outline: 3px solid var(--mrj-color-focus);
+  outline-offset: 3px;
+}
 .cancelar-foto {
-  border: none;
+  border: 0;
+  color: var(--mrj-color-text-secondary);
   background: transparent;
-  color: #746b85;
-  padding: 10px;
-  cursor: pointer;
 }
-
 .camera-perfil {
   width: 100%;
   max-width: 440px;

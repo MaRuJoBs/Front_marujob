@@ -10,6 +10,6 @@ import OportunidadeComponent from '@/components/OportunidadeComponent.vue'
 
 <style scoped>
 .page {
-  max-width: 420px;
+  width: 100%;
 }
 </style>

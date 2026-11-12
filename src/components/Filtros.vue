@@ -1,16 +1,33 @@
 <script setup>
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faSliders } from '@fortawesome/free-solid-svg-icons'
 import { parametrosOportunidades } from '@/utils/oportunidades'
-const props = defineProps({ filtros: { type: Object, required: true } })
+import { categoriasVaga } from '@/utils/vagaForm'
+import { opcoesTags } from '@/utils/tags'
+const props = defineProps({
+  filtros: { type: Object, required: true },
+  tagsDisponiveis: { type: Array, default: () => [] },
+})
 const emit = defineEmits(['aplicar-filtros', 'limpar-filtros'])
 const aberto = ref(false)
+const secao = ref('todos')
 const rascunho = ref({})
 const erro = ref('')
 const primeiroCampo = ref(null)
 const botaoAbrir = ref(null)
-function abrir() {
+let botaoRetorno = null
+const tags = computed(() =>
+  opcoesTags(
+    categoriasVaga.map((categoria) => categoria.value),
+    props.tagsDisponiveis,
+    [rascunho.value.tag],
+  ),
+)
+const rotuloTag = (tag) => categoriasVaga.find((categoria) => categoria.value === tag)?.label || tag
+function abrir(modo = 'todos', origem = null) {
+  secao.value = modo === 'tags' ? 'tags' : 'todos'
+  botaoRetorno = origem || botaoAbrir.value
   rascunho.value = { ...props.filtros }
   erro.value = ''
   aberto.value = true
@@ -18,11 +35,11 @@ function abrir() {
 }
 function fechar() {
   aberto.value = false
-  nextTick(() => botaoAbrir.value?.focus())
+  nextTick(() => botaoRetorno?.focus())
 }
 function teclaModal(event) {
   if (event.key !== 'Tab') return
-  const campos = Array.from(event.currentTarget.querySelectorAll('button, input'))
+  const campos = Array.from(event.currentTarget.querySelectorAll('button, input, select'))
   const primeiro = campos[0],
     ultimo = campos.at(-1)
   if (event.shiftKey && document.activeElement === primeiro) {
@@ -43,10 +60,11 @@ function aplicar() {
   }
 }
 function limpar() {
-  emit('limpar-filtros')
+  if (secao.value === 'tags') emit('aplicar-filtros', { ...props.filtros, tag: '' })
+  else emit('limpar-filtros')
   fechar()
 }
-defineExpose({ abrir })
+defineExpose({ abrir, abrirTags: (origem) => abrir('tags', origem) })
 </script>
 <template>
   <div class="filtros-container">
@@ -55,7 +73,7 @@ defineExpose({ abrir })
       class="botao-filtro"
       :aria-expanded="aberto"
       aria-haspopup="dialog"
-      @click="abrir"
+      @click="abrir()"
     >
       <span>Filtros</span><FontAwesomeIcon :icon="faSliders" aria-hidden="true" />
     </button>
@@ -64,12 +82,12 @@ defineExpose({ abrir })
         class="filtros-painel"
         role="dialog"
         aria-modal="true"
-        aria-label="Filtros de oportunidades"
+        :aria-label="secao === 'tags' ? 'Selecionar tag' : 'Filtros de oportunidades'"
         @submit.prevent="aplicar"
         @keydown="teclaModal"
       >
         <header class="filtros-header">
-          <h2>Filtros</h2>
+          <h2>{{ secao === 'tags' ? 'Selecionar tag' : 'Filtros' }}</h2>
           <button type="button" class="botao-fechar" aria-label="Fechar filtros" @click="fechar">
             ×
           </button>
@@ -77,12 +95,15 @@ defineExpose({ abrir })
         <div class="filtros-conteudo">
           <section class="filtro-secao">
             <h3>Tag</h3>
-            <label for="filtro-tag">Informe a tag da oportunidade</label>
+            <label for="filtro-tag">Selecione a área da oportunidade</label>
             <div class="input-wrapper">
-              <input id="filtro-tag" ref="primeiroCampo" v-model="rascunho.tag" type="text" />
+              <select id="filtro-tag" ref="primeiroCampo" v-model="rascunho.tag">
+                <option value="">Todas as áreas</option>
+                <option v-for="tag in tags" :key="tag" :value="tag">{{ rotuloTag(tag) }}</option>
+              </select>
             </div>
           </section>
-          <section class="filtro-secao">
+          <section v-if="secao !== 'tags'" class="filtro-secao">
             <h3>Preço</h3>
             <div class="campos">
               <div class="campo">
@@ -102,23 +123,26 @@ defineExpose({ abrir })
           <p v-if="erro" role="alert">{{ erro }}</p>
         </div>
         <footer class="filtros-footer">
-          <button type="button" class="limpar" @click="limpar">Limpar filtros</button
-          ><button class="aplicar" type="submit">Aplicar filtros</button>
+          <button type="button" class="limpar" @click="limpar">
+            {{ secao === 'tags' ? 'Limpar tag' : 'Limpar filtros' }}</button
+          ><button class="aplicar" type="submit">
+            {{ secao === 'tags' ? 'Aplicar tag' : 'Aplicar filtros' }}
+          </button>
         </footer>
       </form>
     </div>
   </div>
 </template>
 <style scoped>
-button:focus-visible,
-input:focus-visible {
+button:focus-visible {
   outline: 2px solid #68449b;
   outline-offset: 3px;
 }
 .campo {
   min-width: 0;
 }
-input {
+input,
+select {
   box-sizing: border-box;
   min-width: 0;
   font-size: 16px !important;
@@ -135,12 +159,13 @@ input {
   align-items: center;
   gap: 8px;
   padding: 9px 12px;
-  min-height: 40px;
-  background-color: #7050a6;
+  min-height: var(--mrj-control-height-md);
+  background-color: var(--mrj-color-primary);
   color: #fff;
   border: none;
-  border-radius: 10px;
-  font-size: 12px;
+  border-radius: var(--mrj-radius-md);
+  font-family: inherit;
+  font-size: var(--mrj-font-size-sm);
   font-weight: 400;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -176,6 +201,7 @@ input {
   width: 100%;
   max-width: 420px;
   max-height: 85vh;
+  max-height: 85dvh;
   background: #fff;
   border-radius: 20px 20px 0 0;
   display: flex;
@@ -219,8 +245,8 @@ input {
   background: #f2f2f2;
   border: none;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -286,8 +312,8 @@ input {
 }
 
 .campo label {
-  font-size: 12px;
-  color: #888;
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 
 .separador {
@@ -300,7 +326,7 @@ input {
   display: flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--mrj-color-border);
   border-radius: 8px;
   padding: 8px 10px;
   background: #fff;
@@ -311,13 +337,29 @@ input {
   color: #888;
 }
 
-.input-wrapper input {
+.input-wrapper input,
+.input-wrapper select {
   border: none;
   outline: none;
   width: 100%;
   font-size: 14px;
   color: #1a1a1a;
   background: transparent;
+  min-height: 28px;
+  font-family: inherit;
+}
+.input-wrapper select {
+  min-height: 32px;
+  cursor: pointer;
+}
+.input-wrapper select:focus {
+  outline: none;
+}
+.filtros-container .filtros-painel .input-wrapper input {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  min-height: 28px;
 }
 
 /* ===== FOOTER ===== */
@@ -326,6 +368,7 @@ input {
   gap: 12px;
   padding: 16px 20px;
   border-top: 1px solid #eee;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 .filtros-footer button {
@@ -336,6 +379,8 @@ input {
   font-weight: 600;
   border: none;
   cursor: pointer;
+  min-height: var(--mrj-control-height-md);
+  font-family: inherit;
 }
 
 .limpar {
@@ -344,11 +389,43 @@ input {
 }
 
 .aplicar {
-  background: #6c2bd9;
+  background: var(--mrj-color-primary);
   color: #fff;
 }
 
 .aplicar:active {
   background: #5a22b5;
+}
+
+.input-wrapper:focus-within,
+button:focus-visible {
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
+  outline-offset: var(--mrj-focus-offset);
+}
+.filtros-conteudo [role='alert'] {
+  color: var(--mrj-color-danger);
+  overflow-wrap: anywhere;
+}
+.aplicar:hover,
+.botao-filtro:hover {
+  background: var(--mrj-color-primary-hover);
+}
+@media (min-width: 768px) {
+  .filtros-overlay {
+    align-items: center;
+    padding: 24px;
+  }
+  .filtros-painel {
+    border-radius: var(--mrj-radius-lg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .filtros-overlay,
+  .filtros-painel {
+    animation: none;
+  }
+  .botao-filtro {
+    transition: none;
+  }
 }
 </style>

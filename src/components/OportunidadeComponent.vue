@@ -26,7 +26,7 @@ const {
 } = useOportunidades()
 </script>
 <template>
-  <main class="body oportunidades">
+  <main class="body oportunidades mrj-ui freelancer-page">
     <header class="cabecalho-listagem">
       <svg class="ondas" viewBox="0 0 420 120" preserveAspectRatio="none" aria-hidden="true">
         <path fill="#b58be4" d="M0 0H420V57C330 98 295 4 208 29S64 64 0 7Z" />
@@ -37,6 +37,12 @@ const {
           d="M0 0C65 67 109 54 172 26S282 75 420 20V72C295 94 262 41 186 50S69 91 0 38Z"
         />
       </svg>
+      <RouterLink to="/home" class="voltar-pagina"
+        ><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Início</RouterLink
+      >
+      <p class="eyebrow">Explore novos caminhos</p>
+      <h1>Encontre seu próximo projeto</h1>
+      <p class="descricao-pagina">Oportunidades para colocar seu talento em prática.</p>
       <div class="busca-filtros">
         <label class="busca"
           ><FontAwesomeIcon :icon="faMagnifyingGlass" aria-hidden="true" /><input
@@ -48,6 +54,7 @@ const {
         <Filtros
           ref="painelFiltros"
           :filtros="filtros"
+          :tags-disponiveis="jobs.map((job) => job.tag)"
           @aplicar-filtros="aplicar"
           @limpar-filtros="limpar"
         />
@@ -70,18 +77,11 @@ const {
           {{ filtros.tag }} <span aria-hidden="true">×</span
           ><span class="sr-only">Remover tag</span>
         </button>
-        <button class="chip escolher-tag" @click="painelFiltros?.abrir()">
+        <button class="chip escolher-tag" @click="painelFiltros?.abrirTags($event.currentTarget)">
           {{ filtros.tag ? 'Alterar tag' : 'Selecionar tag' }}
         </button>
       </div>
-      <div
-        v-if="pesquisa || filtros.preco_min || filtros.preco_max || filtros.tag"
-        class="filtros-ativos"
-      >
-        <button v-if="pesquisa" class="filtro-aplicado" @click="pesquisa = ''">
-          {{ pesquisa }} <span aria-hidden="true">×</span
-          ><span class="sr-only">Limpar pesquisa</span>
-        </button>
+      <div v-if="filtros.preco_min || filtros.preco_max || filtros.tag" class="filtros-ativos">
         <span v-if="filtros.preco_min" class="filtro-aplicado"
           >Mín. {{ formatarPreco(filtros.preco_min) }}</span
         >
@@ -108,16 +108,23 @@ const {
       </div>
       <template v-else>
         <p v-if="!jobs.length" class="estado" role="status">Nenhuma oportunidade encontrada.</p>
-        <p v-else class="sr-only" role="status">{{ total }} oportunidades · Página {{ pagina }}</p>
+        <p v-else class="resumo-resultados" role="status">
+          {{ total }} oportunidades · Página {{ pagina }}
+        </p>
         <template v-for="(job, index) in jobs" :key="job.id">
           <article class="vaga">
             <header class="vaga-superior">
-              <div class="vaga-titulo">
-                <h2>{{ job.titulo || 'Título não informado' }}</h2>
+              <div class="vaga-categoria">
+                <span class="vaga-icone"
+                  ><i class="fa-solid fa-briefcase" aria-hidden="true"></i
+                ></span>
                 <p v-if="job.tag" class="tag">{{ job.tag }}</p>
               </div>
               <FavoritoButton :id="job.id" />
             </header>
+            <div class="vaga-titulo">
+              <h2 :title="job.titulo">{{ job.titulo || 'Título não informado' }}</h2>
+            </div>
             <div class="info">
               <p
                 v-if="formularioDaVaga(job).modalidade || job.cidade || job.uf || job.status"
@@ -145,13 +152,15 @@ const {
                   >
                 </p>
                 <span v-if="job.preco != null && job.preco !== ''" class="preco"
-                  ><span class="sr-only">Preço informado: </span
-                  >{{ formatarPreco(job.preco) }}</span
+                  ><span class="sr-only">Preço informado: </span>R$
+                  {{ formatarPreco(job.preco) }}</span
                 >
               </div>
             </div>
             <footer class="vaga-inferior">
-              <RouterLink class="details" :to="`/oportunidade/${job.id}`">Ver detalhes</RouterLink>
+              <RouterLink class="details" :to="`/oportunidade/${job.id}`"
+                >Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i
+              ></RouterLink>
             </footer>
           </article>
           <aside v-if="index === 1" class="obs">
@@ -178,196 +187,191 @@ const {
     </section>
   </main>
 </template>
+<style scoped src="../styles/freelancer.css"></style>
 <style scoped>
 .body {
-  --roxo: #7150a6;
-  --texto: #533581;
-  --secundario: #796197;
-  --borda: #dcd0e8;
   min-height: 100dvh;
-  padding-bottom: calc(112px + env(safe-area-inset-bottom));
-  background: #eee7f4;
-  color: var(--texto);
-  font-family: Arial, sans-serif;
-  line-height: 1.4;
+  padding: 24px 20px 112px;
 }
 .cabecalho-listagem {
   position: relative;
-  isolation: isolate;
-  padding: 43px 16px 16px;
-  background: linear-gradient(180deg, #d9c5ed, #e7dbf1);
+  margin-bottom: 24px;
+}
+.cabecalho-listagem:has(.filtros-overlay) {
+  z-index: 2000;
 }
 .ondas {
-  position: absolute;
-  inset: 0 0 auto;
-  width: 100%;
-  height: 85px;
-  z-index: -1;
+  display: none;
 }
 .busca-filtros {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  margin-top: 24px;
 }
 .busca {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  background: #f4edf9;
-  border: 1px solid #d9c9e8;
-  border-radius: 24px;
-  color: #8265af;
-  box-shadow: 0 2px 4px #60468112;
+  gap: 12px;
+  padding: 0 14px;
+  background: white;
+  border: 1px solid var(--mrj-color-border);
+  border-radius: 12px;
+  color: var(--mrj-color-text-secondary);
 }
 .busca input {
   width: 100%;
   min-width: 0;
-  height: 40px;
-  font: inherit;
-  font-size: 16px;
-  color: var(--texto);
+  height: 48px;
+  font-size: 0.875rem;
   background: transparent;
   border: 0;
+  color: var(--mrj-color-text);
   outline: none;
 }
-.busca input::placeholder {
-  color: #7b639a;
-  font-style: italic;
-  font-size: 12px;
-}
 .busca:focus-within {
-  outline: 2px solid var(--roxo);
-  outline-offset: 2px;
+  outline: 3px solid var(--mrj-color-focus);
+  outline-offset: 3px;
 }
-.chips {
+.busca input::placeholder {
+  color: var(--mrj-color-text-secondary);
+}
+.chips,
+.filtros-ativos {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  padding: 10px 0 2px;
-  scrollbar-width: thin;
+  margin-top: 14px;
 }
 .chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  flex-shrink: 0;
-  min-height: 34px;
+  gap: 8px;
+  padding: 8px 14px;
+  min-height: 44px;
   max-width: 100%;
-  padding: 6px 15px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: #eae1f3;
-  color: #755994;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  overflow-wrap: anywhere;
+  border-radius: 99px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  background: white;
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.8125rem;
 }
 .chip.selecionado {
-  background: var(--roxo);
-  color: #fff;
+  background: var(--mrj-color-secondary);
+  border-color: transparent;
+  color: var(--mrj-color-primary);
+  font-weight: 600;
 }
-.escolher-tag {
-  border-color: #d9c9e8;
-  background: #f0e8f7;
-}
-.filtros-ativos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  padding-top: 10px;
+.chip:hover:not(:disabled) {
+  border-color: var(--mrj-color-primary);
 }
 .filtro-aplicado {
-  border: none;
-  border-radius: 16px;
-  background: #dfd1ee;
-  padding: 7px 11px;
-  color: #694b8b;
-  font: inherit;
-  font-size: 12px;
-  overflow-wrap: anywhere;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  font-size: 0.75rem;
   max-width: 100%;
 }
-button.filtro-aplicado {
-  cursor: pointer;
-  min-height: 34px;
-}
 .remover {
-  min-height: 34px;
-  border: none;
-  background: none;
-  color: #725394;
-  font: inherit;
-  font-size: 12px;
-  padding: 5px 2px;
-  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: var(--mrj-color-primary);
+  font-size: 0.8125rem;
 }
 .resultados {
-  padding: 14px 16px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 16px;
+}
+.resumo-resultados {
+  grid-column: 1/-1;
+  color: var(--mrj-color-text-secondary);
+  font-size: 0.8125rem;
+  padding-bottom: 4px;
 }
 .vaga {
-  overflow-wrap: anywhere;
-  background: #f6f1fa;
-  border: 1px solid #e5daed;
-  border-radius: 12px;
-  box-shadow: 0 2px 3px #4c356719;
-  margin-bottom: 16px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--mrj-shadow-card);
 }
 .vaga-superior {
   display: flex;
-  align-items: start;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px 7px;
-  border-bottom: 1px solid var(--borda);
+  gap: 12px;
+  padding: 20px 20px 0;
 }
 .vaga-titulo {
   min-width: 0;
-  padding-top: 1px;
+  padding: 14px 20px 0;
 }
-h2 {
-  margin: 0;
-  color: #533581;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.3;
+.vaga-categoria {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.vaga-icone {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 12px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+}
+.vaga h2 {
+  font-size: 1rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .tag {
-  color: var(--secundario);
-  font-size: 13px;
-  line-height: 1.4;
-  margin: 3px 0 0;
+  font-size: 0.75rem;
+  color: var(--mrj-color-text-secondary);
+  margin-top: 6px !important;
+}
+.vaga-categoria .tag {
+  display: inline-block;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 .info {
   display: grid;
-  gap: 6px;
-  padding: 8px 12px 6px;
-  color: #795c9b;
-  font-size: 13px;
+  gap: 12px;
+  flex: 1;
+  padding: 16px 20px;
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
 }
 .info p {
   display: flex;
-  align-items: start;
-  gap: 7px;
-  margin: 0;
-  line-height: 1.45;
-  min-width: 0;
+  align-items: flex-start;
+  gap: 8px;
 }
 .info svg {
-  flex-shrink: 0;
-  width: 13px;
-  margin-top: 3px;
-  color: #9671bd;
+  flex: 0 0 14px;
+  margin-top: 4px;
+  color: #8b7ba8;
 }
 .descricao span {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -375,140 +379,91 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
   flex-wrap: wrap;
-}
-.linha-final p {
-  flex: 1;
+  gap: 12px;
+  margin-top: 8px;
 }
 .preco {
-  display: inline-block;
-  flex-shrink: 0;
-  padding: 4px 9px;
-  border: 1px solid #d9cce6;
-  border-radius: 14px;
-  background: #fdfaff;
-  color: #5c3a8b;
-  font-size: 12px;
+  font-size: 1rem;
   font-weight: 600;
-  line-height: 1.25;
-  box-shadow: 0 1px 2px #4c35670c;
+  color: var(--mrj-color-text);
 }
 .vaga-inferior {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 0 0 8px;
-}
-.vaga-inferior::before,
-.vaga-inferior::after {
-  content: '';
-  height: 1px;
-  flex: 1;
-  background: var(--borda);
+  padding: 0 20px 20px;
 }
 .details {
   display: inline-flex;
-  justify-content: center;
   align-items: center;
-  min-height: 34px;
-  min-width: 130px;
-  padding: 6px 20px;
-  border: none;
-  border-radius: 24px;
-  background: var(--roxo);
-  color: #fff;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
   text-decoration: none;
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.4;
-  cursor: pointer;
+}
+.details:hover {
+  background: var(--mrj-color-primary-hover);
+  color: white;
+}
+.vaga:hover {
+  border-color: #d7ccef;
+  box-shadow: 0 8px 28px #4930800c;
 }
 .obs {
+  grid-column: 1/-1;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  margin: 4px 0 20px;
-  background: #e6ddef;
-  border: 1px solid #d1c1df;
-  border-radius: 11px;
+  background: var(--mrj-color-secondary);
+  color: var(--mrj-color-primary);
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-size: 0.8125rem;
 }
 .obs svg {
-  font-size: 23px;
   flex-shrink: 0;
-  color: #b68ed7;
+  font-size: 20px;
 }
-.obs p {
-  margin: 0;
-  color: #745894;
-  font-size: 12px;
-  line-height: 1.45;
-  font-style: italic;
+.obs span {
+  color: var(--mrj-color-text-secondary);
 }
 .paginacao {
-  margin-top: 24px;
-  padding-bottom: 8px;
-  color: var(--secundario);
-  font-size: 12px;
+  grid-column: 1/-1;
+  margin-top: 16px;
+  font-size: 0.8125rem;
+  color: var(--mrj-color-text-secondary);
 }
-.paginacao p {
+.paginacao > p {
   text-align: center;
-  margin: 0 0 10px;
+  margin-bottom: 12px;
 }
 .paginacao > div {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid #68449b;
-  outline-offset: 3px;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 .estado {
-  background: #fcfaff;
-  border: 1px solid var(--borda);
-  border-radius: 12px;
-  padding: 20px;
-  font-size: 14px;
-  line-height: 1.6;
+  grid-column: 1/-1;
 }
-.estado p {
-  margin: 0 0 14px;
+.estado .details {
+  margin-top: 12px;
 }
 .carregador {
   display: inline-block;
   width: 14px;
   height: 14px;
-  margin-right: 4px;
-  border: 2px solid #d7c6e8;
-  border-top-color: var(--roxo);
+  border: 2px solid #d8cdef;
+  border-top-color: var(--mrj-color-primary);
   border-radius: 50%;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-}
-@media (min-width: 375px) {
-  .cabecalho-listagem {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-  .resultados {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
+  margin-right: 6px;
 }
 </style>
