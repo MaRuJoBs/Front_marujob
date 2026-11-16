@@ -132,7 +132,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="camera-capture">
+  <div class="camera-capture" :aria-busy="carregando">
     <h3>Tirar foto de perfil</h3>
 
     <video
@@ -145,10 +145,11 @@ onUnmounted(() => {
     ></video>
 
     <div v-else class="camera-placeholder">
-      <i class="fa-solid fa-camera"></i>
+      <i aria-hidden="true" class="fa-solid fa-camera"></i>
       <p>Câmera desligada</p>
     </div>
 
+    <p v-if="carregando" role="status">Solicitando acesso à câmera...</p>
     <p role="alert" v-if="erro" class="camera-erro">
       {{ erro }}
     </p>
@@ -159,7 +160,7 @@ onUnmounted(() => {
       </button>
 
       <button v-if="cameraAtiva" type="button" @click="fotografar">
-        <i class="fa-solid fa-camera"></i>
+        <i aria-hidden="true" class="fa-solid fa-camera"></i>
         Fotografar
       </button>
 

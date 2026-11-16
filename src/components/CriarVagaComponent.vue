@@ -64,7 +64,7 @@ function alterarModalidade() {
   <div class="criar-vaga mrj-ui">
     <EmpresaHeader :voltar="!publicando" />
 
-    <main class="conteudo">
+    <main class="conteudo" :aria-busy="carregando">
       <section class="apresentacao">
         <h1>{{ editando ? 'Editar oportunidade' : 'Criar nova vaga' }}</h1>
         <p>

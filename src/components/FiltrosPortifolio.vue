@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, useId, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   projetos: {
@@ -15,6 +15,9 @@ const props = defineProps({
 const emit = defineEmits(['aplicar-filtros', 'limpar-filtros'])
 
 const aberto = ref(false)
+const dialogo = ref(null)
+const painelId = 'filtros-projetos-' + useId()
+let focoAnterior
 const categoriasSelecionadas = ref([])
 const tecnologiasSelecionadas = ref([])
 
@@ -26,13 +29,21 @@ const tecnologias = computed(() => {
   return [...new Set(props.projetos.flatMap((projeto) => projeto.tags || []))]
 })
 
-const abrirFiltros = () => {
+const abrirFiltros = async () => {
+  focoAnterior = document.activeElement
   aberto.value = true
+  await nextTick()
+  dialogo.value?.showModal()
+  dialogo.value?.querySelector('button')?.focus()
 }
 
-const fecharFiltros = () => {
+const fecharFiltros = async () => {
+  dialogo.value?.close()
   aberto.value = false
+  await nextTick()
+  if (focoAnterior?.isConnected) focoAnterior.focus()
 }
+onBeforeUnmount(() => dialogo.value?.close())
 
 const aplicarFiltros = () => {
   const resultado = props.projetos.filter((projeto) => {
@@ -80,24 +91,44 @@ const limparFiltros = () => {
 
 <template>
   <div class="filtros-container">
-    <button class="botao-filtro" aria-label="Filtrar projetos" :aria-expanded="aberto" @click="abrirFiltros">
+    <button
+      type="button"
+      class="botao-filtro"
+      aria-label="Filtrar projetos"
+      :aria-expanded="aberto"
+      :aria-controls="aberto ? painelId : undefined"
+      aria-haspopup="dialog"
+      @click="abrirFiltros"
+    >
       <FontAwesomeIcon :icon="['fas', 'sliders']" />
     </button>
 
-    <div v-if="aberto" class="filtros-overlay" @click.self="fecharFiltros">
+    <dialog
+      v-if="aberto"
+      ref="dialogo"
+      :id="painelId"
+      class="filtros-overlay"
+      :aria-labelledby="`${painelId}-titulo`"
+      @cancel.prevent="fecharFiltros"
+      @click.self="fecharFiltros"
+    >
       <div class="filtros-painel">
         <header class="filtros-header">
           <div>
-            <h2>Filtros</h2>
+            <h2 :id="`${painelId}-titulo`">Filtros</h2>
             <p>Refine seus projetos</p>
           </div>
 
-          <button class="botao-fechar" aria-label="Fechar filtros de projetos" @click="fecharFiltros">
+          <button
+            class="botao-fechar"
+            aria-label="Fechar filtros de projetos"
+            @click="fecharFiltros"
+          >
             <FontAwesomeIcon :icon="['fas', 'xmark']" />
           </button>
         </header>
 
-        <main class="filtros-conteudo">
+        <div class="filtros-conteudo">
           <section class="filtro-secao">
             <h3>Categoria</h3>
 
@@ -121,7 +152,7 @@ const limparFiltros = () => {
               </label>
             </div>
           </section>
-        </main>
+        </div>
 
         <footer class="filtros-footer">
           <button type="button" class="botao-limpar" @click="limparFiltros">Limpar filtros</button>
@@ -131,7 +162,7 @@ const limparFiltros = () => {
           </button>
         </footer>
       </div>
-    </div>
+    </dialog>
   </div>
 </template>
 
@@ -155,6 +186,13 @@ const limparFiltros = () => {
 }
 
 .filtros-overlay {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
@@ -162,6 +200,9 @@ const limparFiltros = () => {
   align-items: flex-end;
   justify-content: center;
   z-index: 2000;
+}
+.filtros-overlay::backdrop {
+  background: transparent;
 }
 
 .filtros-painel {

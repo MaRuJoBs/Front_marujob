@@ -146,13 +146,18 @@ onMounted(() => {
         <span class="quantidade-vagas">{{ vagas.length }}</span>
       </div>
       <div class="filtros-vagas">
-        <label class="busca-vagas">
+        <label for="busca-vagas-empresa">Buscar suas vagas</label>
+        <div class="busca-vagas">
           <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" aria-hidden="true" />
-          <span class="sr-only">Buscar suas vagas</span>
-          <input v-model="busca" type="search" placeholder="Buscar suas vagas" />
-        </label>
+          <input
+            id="busca-vagas-empresa"
+            v-model="busca"
+            type="search"
+            placeholder="Buscar suas vagas"
+          />
+        </div>
         <label class="categoria-vagas">
-          <span class="sr-only">Filtrar por categoria</span>
+          <span>Filtrar por categoria</span>
           <select v-model="categoria">
             <option value="">Todas as categorias</option>
             <option v-for="tag in categorias" :key="tag" :value="tag">{{ tag }}</option>

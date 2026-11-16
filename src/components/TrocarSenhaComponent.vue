@@ -1,10 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { useId, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { sessao } from '@/services/authSession'
 import { trocarSenha as salvarSenha, paginaInicial } from '@/services/authService'
 import { mensagensErro } from '@/utils/authErrors'
 
+const campoId = 'trocar-senha-' + useId()
 const router = useRouter()
 const route = useRoute()
 const voltar = () =>
@@ -66,19 +67,24 @@ const trocarSenha = async () => {
 </script>
 
 <template>
-  <div class="trocar-senha">
+  <main class="trocar-senha">
     <div class="topo">
-      <button type="button" :disabled="carregando" @click="voltar">
-        <i class="fa-solid fa-arrow-left"></i>
+      <button type="button" aria-label="Voltar" :disabled="carregando" @click="voltar">
+        <i aria-hidden="true" class="fa-solid fa-arrow-left"></i>
       </button>
 
-      <h2>Alterar senha</h2>
+      <h1>Alterar senha</h1>
     </div>
 
     <form class="formulario" @submit.prevent="trocarSenha" :aria-busy="carregando">
+      <p :id="`${campoId}-ajuda`">
+        Use pelo menos 8 caracteres e repita a nova senha na confirmação.
+      </p>
       <div class="campo">
-        <label>Senha atual</label>
+        <label :for="`${campoId}-senhaAtual`">Senha atual (obrigatório)</label>
         <input
+          :id="`${campoId}-senhaAtual`"
+          :aria-describedby="erro ? campoId + '-erro' : ''"
           v-model="senhaAtual"
           type="password"
           autocomplete="current-password"
@@ -89,8 +95,11 @@ const trocarSenha = async () => {
       </div>
 
       <div class="campo">
-        <label>Nova senha</label>
+        <label :for="`${campoId}-novaSenha`">Nova senha (obrigatório)</label>
         <input
+          :id="`${campoId}-novaSenha`"
+          :aria-describedby="(erro ? campoId + '-erro' : '') + ' ' + campoId + '-ajuda'"
+          :aria-invalid="!!erro && novaSenha.length < 8"
           v-model="novaSenha"
           type="password"
           autocomplete="new-password"
@@ -102,8 +111,11 @@ const trocarSenha = async () => {
       </div>
 
       <div class="campo">
-        <label>Confirmar nova senha</label>
+        <label :for="`${campoId}-confirmarSenha`">Confirmar nova senha (obrigatório)</label>
         <input
+          :id="`${campoId}-confirmarSenha`"
+          :aria-describedby="(erro ? campoId + '-erro' : '') + ' ' + campoId + '-ajuda'"
+          :aria-invalid="!!erro && novaSenha !== confirmarSenha"
           v-model="confirmarSenha"
           type="password"
           autocomplete="new-password"
@@ -114,7 +126,7 @@ const trocarSenha = async () => {
         />
       </div>
 
-      <p v-if="erro" class="erro" role="alert">
+      <p v-if="erro" :id="`${campoId}-erro`" class="erro" role="alert">
         {{ erro }}
       </p>
 
@@ -125,8 +137,9 @@ const trocarSenha = async () => {
       <button class="btn-salvar" type="submit" :disabled="carregando">
         {{ carregando ? 'Alterando...' : 'Alterar senha' }}
       </button>
+      <p v-if="carregando" role="status">Aguardando confirmação da alteração de senha...</p>
     </form>
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -151,7 +164,7 @@ const trocarSenha = async () => {
   cursor: pointer;
 }
 
-.topo h2 {
+.topo h1 {
   color: #513f7c;
   font-size: 22px;
 }
@@ -176,9 +189,10 @@ const trocarSenha = async () => {
 }
 
 .campo input {
+  font-size: 16px;
   width: 100%;
   padding: 13px;
-  border: 1px solid #d8d0e5;
+  border: 1px solid #796197;
   border-radius: 12px;
   outline: none;
   background: white;
@@ -190,13 +204,13 @@ const trocarSenha = async () => {
 }
 
 .erro {
-  color: #d14b5b;
+  color: #b30000;
   font-size: 13px;
   margin-bottom: 15px;
 }
 
 .sucesso {
-  color: #3d8b5c;
+  color: #195539;
   font-size: 13px;
   margin-bottom: 15px;
 }

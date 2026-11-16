@@ -60,7 +60,7 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <main class="oportunidade mrj-ui freelancer-page">
+  <main class="oportunidade mrj-ui freelancer-page" :aria-busy="carregando">
     <header class="topo">
       <RouterLink class="botao-icone" to="/freelances" aria-label="Voltar à listagem"
         ><FontAwesomeIcon :icon="faArrowLeft"

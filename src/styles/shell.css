@@ -22,6 +22,31 @@
   margin-inline: auto;
 }
 
+/* F52: fallback para controles legados que removiam o outline localmente. */
+.app :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--mrj-focus-width, 3px) solid var(--mrj-color-focus, #63369e);
+  outline-offset: var(--mrj-focus-offset, 3px);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.app :is(button, a, input, select, textarea, [tabindex]) {
+  scroll-margin-block: 24px calc(var(--mrj-navigation-height) + 24px);
+}
+
+.saltar-conteudo {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 3000;
+  padding: 12px 16px;
+  background: #fff;
+  color: #533581;
+  transform: translateY(-200%);
+}
+.saltar-conteudo:focus {
+  transform: translateY(0);
+}
+
 .app--navigation {
   padding-bottom: max(
     0px,

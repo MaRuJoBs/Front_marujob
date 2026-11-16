@@ -180,7 +180,7 @@ try {
         route + ' overflow ' + largura + ' ' + medidas.scroll,
       )
       assert.ok(!medidas.texto.includes('falta alterar'))
-      assert.equal(await avaliar("document.querySelectorAll('footer').length"), 1)
+      assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 1)
       if (route === '/editar-perfil' && largura < 500) {
         await cdp('Emulation.setDeviceMetricsOverride', {
           width: largura,

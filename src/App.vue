@@ -1,9 +1,27 @@
 <script setup>
+import { nextTick, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import Footer from './components/Footer.vue'
 import FooterEmpresa from './components/FooterEmpresaComponent.vue'
 import { sessao } from './services/authService'
 import './styles/tokens.css'
 import './styles/shell.css'
+
+const route = useRoute()
+const conteudo = ref(null)
+const focarConteudo = () => conteudo.value?.focus()
+watch(
+  () => route.path,
+  async () => {
+    await nextTick()
+    const titulo = conteudo.value?.querySelector('h1')
+    if (titulo) {
+      titulo.setAttribute('tabindex', '-1')
+      titulo.focus({ preventScroll: true })
+    } else focarConteudo()
+  },
+  { flush: 'post' },
+)
 
 // Estas páginas já reservam espaço para a navegação inferior.
 // Mantém a reserva local sem somar novamente a altura inteira do footer.
@@ -33,9 +51,18 @@ const paginasComReserva = new Set([
       'app--wide': $route.meta.layout === 'wide',
     }"
   >
-    <div class="app-content">
+    <a class="saltar-conteudo" href="#conteudo-principal" @click.prevent="focarConteudo">
+      Pular para o conteúdo
+    </a>
+    <section
+      id="conteudo-principal"
+      ref="conteudo"
+      class="app-content"
+      tabindex="-1"
+      aria-label="Conteúdo da página"
+    >
       <router-view />
-    </div>
+    </section>
 
     <template v-if="!$route.meta.hideFooter && sessao.usuario">
       <FooterEmpresa v-if="sessao.tipo === 'empresa'" />

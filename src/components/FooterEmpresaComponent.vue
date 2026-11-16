@@ -11,23 +11,23 @@ const sair = () => {
 </script>
 
 <template>
-  <footer class="footer app-navigation mrj-ui" aria-label="Navegação da empresa">
+  <nav class="footer app-navigation mrj-ui" aria-label="Navegação da empresa">
     <router-link to="/homeEmpresa" class="item">
-      <span class="icon">
+      <span class="icon" aria-hidden="true">
         <FontAwesomeIcon :icon="['fas', 'house']" />
       </span>
       <span class="label">Início</span>
     </router-link>
 
     <router-link to="/mensagens" class="item">
-      <span class="icon">
+      <span class="icon" aria-hidden="true">
         <FontAwesomeIcon :icon="['fas', 'message']" />
       </span>
       <span class="label">Mensagens</span>
     </router-link>
 
     <router-link to="/empresa/perfil" class="item">
-      <span class="icon">
+      <span class="icon" aria-hidden="true">
         <FontAwesomeIcon :icon="faBuilding" />
       </span>
       <span class="label">Perfil</span>
@@ -41,7 +41,7 @@ const sair = () => {
       </span>
       <span class="label">Sair</span>
     </button>
-  </footer>
+  </nav>
 </template>
 
 <style scoped>
@@ -70,7 +70,7 @@ const sair = () => {
   justify-content: center;
   gap: 2px;
   text-decoration: none;
-  color: #897ba6;
+  color: #5c3a8b;
   font: inherit;
   min-width: 0;
   min-height: var(--mrj-control-height-md);

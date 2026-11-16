@@ -1,7 +1,9 @@
 <script setup>
-import { ref } from 'vue'
+import { useId, ref } from 'vue'
+import { emailValido } from '@/utils/authErrors'
 import { useCadastro } from '@/composables/useCadastro'
 
+const campoId = 'cadastro-' + useId()
 const arquivoImp = ref(null)
 const {
   name,
@@ -25,27 +27,32 @@ const {
 </script>
 
 <template>
-  <div class="container">
+  <main class="container">
     <div class="top">
-      <router-link to="/">
-        <button class="btn-voltar">←</button>
-      </router-link>
+      <router-link to="/" class="btn-voltar" aria-label="Voltar ao login">←</router-link>
 
       <div class="div-foto">
-        <div class="photo-box" @click="arquivoImp.click()">
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            :disabled="ocupado || contaCriada"
-            @change="handleImageChange"
-            hidden
-            ref="arquivoImp"
-          />
-          <img v-if="preview" :src="preview" class="preview-img" />
-          <div v-else class="placeholder">
+        <button
+          type="button"
+          class="photo-box"
+          aria-label="Escolher foto de cadastro (opcional)"
+          :disabled="ocupado || contaCriada"
+          @click="arquivoImp.click()"
+        >
+          <img v-if="preview" :src="preview" class="preview-img" alt="Prévia da foto de cadastro" />
+          <span v-else class="placeholder" aria-hidden="true">
             <span>👤</span>
-          </div>
-        </div>
+          </span>
+        </button>
+        <input
+          aria-label="Foto de cadastro (opcional)"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          :disabled="ocupado || contaCriada"
+          @change="handleImageChange"
+          hidden
+          ref="arquivoImp"
+        />
 
         <p>Adicione uma foto sua</p>
       </div>
@@ -57,11 +64,14 @@ const {
 
     <form class="form" @submit.prevent="criarConta" :aria-busy="ocupado">
       <div class="card">
-        <label>Nome completo</label>
+        <label :for="`${campoId}-name`">Nome completo (obrigatório)</label>
 
         <div class="box">
-          <FontAwesomeIcon :icon="['fas', 'user']" class="icon" />
+          <FontAwesomeIcon aria-hidden="true" :icon="['fas', 'user']" class="icon" />
           <input
+            :id="`${campoId}-name`"
+            :aria-describedby="erros.length ? campoId + '-erro' : ''"
+            :aria-invalid="!!erros.length && !name.trim()"
             v-model="name"
             type="text"
             autocomplete="name"
@@ -73,11 +83,14 @@ const {
       </div>
 
       <div class="card">
-        <label>E-mail</label>
+        <label :for="`${campoId}-email`">E-mail (obrigatório)</label>
 
         <div class="box">
-          <FontAwesomeIcon :icon="['fas', 'envelope']" class="icon" />
+          <FontAwesomeIcon aria-hidden="true" :icon="['fas', 'envelope']" class="icon" />
           <input
+            :id="`${campoId}-email`"
+            :aria-describedby="erros.length ? campoId + '-erro' : ''"
+            :aria-invalid="!!erros.length && !emailValido(email)"
             v-model="email"
             type="email"
             autocomplete="email"
@@ -89,11 +102,14 @@ const {
       </div>
 
       <div class="card">
-        <label>Senha</label>
+        <label :for="`${campoId}-senha`">Senha (obrigatório)</label>
 
         <div class="box">
-          <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
+          <FontAwesomeIcon aria-hidden="true" :icon="['fas', 'lock']" class="icon" />
           <input
+            :id="`${campoId}-senha`"
+            :aria-describedby="(erros.length ? campoId + '-erro' : '') + ' ' + campoId + '-ajuda'"
+            :aria-invalid="!!erros.length && senha.length < 8"
             v-model="senha"
             type="password"
             autocomplete="new-password"
@@ -106,11 +122,14 @@ const {
       </div>
 
       <div class="card">
-        <label>Confirmar senha</label>
+        <label :for="`${campoId}-confirmarSenha`">Confirmar senha (obrigatório)</label>
 
         <div class="box">
-          <FontAwesomeIcon :icon="['fas', 'lock']" class="icon" />
+          <FontAwesomeIcon aria-hidden="true" :icon="['fas', 'lock']" class="icon" />
           <input
+            :id="`${campoId}-confirmarSenha`"
+            :aria-describedby="(erros.length ? campoId + '-erro' : '') + ' ' + campoId + '-ajuda'"
+            :aria-invalid="!!erros.length && senha !== confirmarSenha"
             v-model="confirmarSenha"
             type="password"
             autocomplete="new-password"
@@ -122,9 +141,9 @@ const {
         </div>
       </div>
 
-      <div class="box-senha">
+      <div class="box-senha" :id="`${campoId}-ajuda`">
         <p class="title">
-          <FontAwesomeIcon :icon="['fas', 'shield-halved']" class="icon" />
+          <FontAwesomeIcon aria-hidden="true" :icon="['fas', 'shield-halved']" class="icon" />
           Sua senha deve conter:
         </p>
 
@@ -136,10 +155,11 @@ const {
       <button v-if="!contaCriada" class="criarConta" type="submit" :disabled="ocupado">
         {{ loading ? 'Criando conta...' : 'Criar conta' }}
       </button>
-      <div v-if="erros.length" class="error-box" role="alert">
+      <div v-if="erros.length" :id="`${campoId}-erro`" class="error-box" role="alert">
         <p v-for="(erro, index) in erros" :key="index">• {{ erro }}</p>
       </div>
 
+      <p v-if="loading" role="status">Criando sua conta. Aguarde a confirmação.</p>
       <div class="login">
         Já tem uma conta?
         <router-link to="/"><span>Entrar</span></router-link>
@@ -172,7 +192,7 @@ const {
       <p v-else-if="!googlePronto && !googleErro" role="status">Carregando acesso com Google...</p>
       <p v-if="googleErro" role="status">{{ googleErro }}</p>
     </form>
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -247,6 +267,9 @@ button:disabled {
 }
 
 .btn-voltar {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
   width: 45px;
   height: 45px;
   border: none;
@@ -262,6 +285,9 @@ button:disabled {
 }
 
 .photo-box {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
   width: 120px;
   height: 120px;
   border-radius: 20px;
@@ -385,6 +411,7 @@ h1 {
 }
 
 .box {
+  border: 1px solid #796197;
   display: flex;
   align-items: center;
 
@@ -402,15 +429,16 @@ h1 {
 }
 
 .box input {
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
   width: 100%;
-  font-size: 14px;
+  font-size: 16px;
   color: #333;
 }
 
 .box input::placeholder {
-  color: #888;
+  color: #555;
 }
 </style>

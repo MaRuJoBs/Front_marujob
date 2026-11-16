@@ -16,7 +16,7 @@ const {
 } = useProjetoDetalhe()
 </script>
 <template>
-  <div class="portfolio-detalhe mrj-ui freelancer-page">
+  <main class="portfolio-detalhe mrj-ui freelancer-page" :aria-busy="carregando && !excluindo">
     <div v-if="carregando && !excluindo" role="status" class="carregando">
       Carregando projeto...
     </div>
@@ -117,7 +117,7 @@ const {
       @cancelar="mostrarModalExcluir = false"
       @confirmar="excluirProjeto"
     />
-  </div>
+  </main>
 </template>
 
 <style scoped src="../styles/freelancer.css"></style>

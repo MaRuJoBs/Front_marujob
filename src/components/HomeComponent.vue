@@ -231,7 +231,7 @@ const atualizarSlide = () => {
         </div>
       </div>
 
-      <div class="grid-oportunidades">
+      <div class="grid-oportunidades" :aria-busy="carregandoJobs">
         <div
           v-for="(job, index) in jobsHome"
           :key="job.id"

@@ -1,9 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { useId, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { definirSenha as salvarSenha, paginaInicial } from '@/services/authService'
 import { mensagensErro } from '@/utils/authErrors'
 
+const campoId = 'definir-senha-' + useId()
 const router = useRouter()
 
 const senha = ref('')
@@ -39,16 +40,22 @@ const definirSenha = async () => {
 </script>
 
 <template>
-  <div class="pagina-senha">
+  <main class="pagina-senha">
     <form class="card-senha" @submit.prevent="definirSenha" :aria-busy="carregando">
       <h1>Criar senha</h1>
 
       <p>Crie uma senha para também poder entrar no Marujobs usando seu e-mail.</p>
 
+      <p :id="`${campoId}-ajuda`">
+        Use pelo menos 8 caracteres e repita a nova senha na confirmação.
+      </p>
       <div class="campo">
-        <label>Nova senha</label>
+        <label :for="`${campoId}-senha`">Nova senha (obrigatório)</label>
 
         <input
+          :id="`${campoId}-senha`"
+          :aria-describedby="(erro ? campoId + '-erro' : '') + ' ' + campoId + '-ajuda'"
+          :aria-invalid="!!erro && senha.length < 8"
           v-model="senha"
           type="password"
           autocomplete="new-password"
@@ -60,9 +67,12 @@ const definirSenha = async () => {
       </div>
 
       <div class="campo">
-        <label>Confirmar senha</label>
+        <label :for="`${campoId}-confirmarSenha`">Confirmar senha (obrigatório)</label>
 
         <input
+          :id="`${campoId}-confirmarSenha`"
+          :aria-describedby="(erro ? campoId + '-erro' : '') + ' ' + campoId + '-ajuda'"
+          :aria-invalid="!!erro && senha !== confirmarSenha"
           v-model="confirmarSenha"
           type="password"
           autocomplete="new-password"
@@ -73,7 +83,7 @@ const definirSenha = async () => {
         />
       </div>
 
-      <p v-if="erro" class="erro" role="alert">
+      <p v-if="erro" :id="`${campoId}-erro`" class="erro" role="alert">
         {{ erro }}
       </p>
 
@@ -88,8 +98,9 @@ const definirSenha = async () => {
       >
         Voltar ao início
       </button>
+      <p v-if="carregando" role="status">Aguardando confirmação da alteração de senha...</p>
     </form>
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -117,7 +128,7 @@ const definirSenha = async () => {
 }
 
 .card-senha > p {
-  color: #817a91;
+  color: #5c3a8b;
   font-size: 13px;
   line-height: 18px;
   margin-bottom: 20px;
@@ -136,17 +147,18 @@ const definirSenha = async () => {
 }
 
 .campo input {
+  font-size: 16px;
   width: 100%;
-  height: 40px;
-  border: none;
+  height: 44px;
+  border: 1px solid #796197;
   border-radius: 8px;
   background: #eee;
   padding: 0 12px;
   outline: none;
 }
 
-.erro {
-  color: red;
+.card-senha .erro {
+  color: #b30000;
   font-size: 12px;
   margin-bottom: 12px;
 }

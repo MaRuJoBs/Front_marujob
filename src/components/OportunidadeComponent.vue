@@ -43,12 +43,13 @@ const {
       <p class="eyebrow">Explore novos caminhos</p>
       <h1>Encontre seu próximo projeto</h1>
       <p class="descricao-pagina">Oportunidades para colocar seu talento em prática.</p>
+      <label class="rotulo-busca" for="pesquisa-oportunidades">Pesquisar por título</label>
       <div class="busca-filtros">
         <label class="busca"
           ><FontAwesomeIcon :icon="faMagnifyingGlass" aria-hidden="true" /><input
             v-model="pesquisa"
             type="search"
-            aria-label="Pesquisar por título"
+            id="pesquisa-oportunidades"
             placeholder="Buscar oportunidades..."
         /></label>
         <Filtros
@@ -97,7 +98,7 @@ const {
         </button>
       </div>
     </header>
-    <section class="resultados" aria-label="Oportunidades disponíveis">
+    <section class="resultados" :aria-busy="carregando" aria-label="Oportunidades disponíveis">
       <p v-if="erroFavorito" class="estado" role="alert">{{ erroFavorito }}</p>
       <div v-if="carregando" class="estado" role="status">
         <span class="carregador" aria-hidden="true"></span> Carregando oportunidades...

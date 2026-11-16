@@ -189,7 +189,7 @@ try {
       await cdp('Page.navigate', { url: 'http://127.0.0.1:5194/__feat44?scenario=' + scenario })
       await aguardar("document.body.dataset.pronto==='sim'")
       await semOverflow()
-      assert.equal(await avaliar("document.querySelectorAll('footer').length"), 1)
+      assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 1)
       assert.ok(
         await avaliar(
           'document.querySelector(\'.empresa-header a[aria-label="Notificações de candidaturas"]\')!==null',
@@ -321,7 +321,7 @@ try {
         assert.equal(await avaliar("window.teste.requests.filter(r=>r.method==='post').length"), 1)
         await foto('conflito-' + largura)
       } else {
-        await clicarTexto('footer button', 'Sair')
+        await clicarTexto('nav.app-navigation button', 'Sair')
         await aguardar("window.teste.router.currentRoute.value.name==='login'")
         assert.ok(
           await avaliar(

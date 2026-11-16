@@ -1,10 +1,11 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { useId, ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { login as fazerLogin, paginaInicial } from '@/services/authService'
 import { useGoogleAuth } from '@/composables/useGoogleAuth'
 import { mensagensErro, emailValido } from '@/utils/authErrors'
 
+const campoId = 'login-' + useId()
 const router = useRouter()
 const route = useRoute()
 const email = ref('')
@@ -52,11 +53,11 @@ const login = async () => {
 </script>
 
 <template>
-  <div class="paginaLogin">
+  <main class="paginaLogin">
     <div class="content">
       <div class="header">
-        <img src="@/assets/images/logo.png" class="logo-top" />
-        <img src="@/assets/images/slogan.png" class="slogan" />
+        <img src="@/assets/images/logo.png" class="logo-top" alt="MaRuJoBs" />
+        <img src="@/assets/images/slogan.png" class="slogan" alt="MaRuJoBs Freelances" />
       </div>
 
       <div class="info">
@@ -67,19 +68,22 @@ const login = async () => {
 
         <div class="user-box">
           <div class="user-icon">
-            <i class="mdi mdi-account"></i>
+            <i aria-hidden="true" class="mdi mdi-account"></i>
           </div>
         </div>
       </div>
 
       <form class="form-card" @submit.prevent="login" :aria-busy="ocupado">
         <div class="field">
-          <label>E-mail</label>
+          <label :for="`${campoId}-email`">E-mail (obrigatório)</label>
 
           <div class="input">
-            <i class="mdi mdi-email-outline"></i>
+            <i aria-hidden="true" class="mdi mdi-email-outline"></i>
 
             <input
+              :id="`${campoId}-email`"
+              :aria-describedby="error ? campoId + '-erro' : ''"
+              :aria-invalid="!!error && !emailValido(email)"
               v-model="email"
               type="email"
               autocomplete="email"
@@ -91,12 +95,15 @@ const login = async () => {
         </div>
 
         <div class="field">
-          <label>Senha</label>
+          <label :for="`${campoId}-senha`">Senha (obrigatório)</label>
 
           <div class="input">
-            <i class="mdi mdi-lock-outline"></i>
+            <i aria-hidden="true" class="mdi mdi-lock-outline"></i>
 
             <input
+              :id="`${campoId}-senha`"
+              :aria-describedby="error ? campoId + '-erro' : ''"
+              :aria-invalid="!!error && !senha"
               v-model="senha"
               type="password"
               autocomplete="current-password"
@@ -106,13 +113,14 @@ const login = async () => {
             />
           </div>
         </div>
-        <p v-if="error" class="error-message" role="alert">
+        <p v-if="error" class="error-message" :id="`${campoId}-erro`" role="alert">
           {{ error }}
         </p>
 
         <button class="btn-login" type="submit" :disabled="ocupado">
           {{ carregando ? 'Entrando...' : 'Entrar' }}
         </button>
+        <p v-if="carregando" role="status">Entrando na sua conta...</p>
         <div class="ou">
           <span>ou</span>
         </div>
@@ -154,7 +162,7 @@ const login = async () => {
         </div>
       </form>
     </div>
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -199,7 +207,7 @@ button:disabled {
   padding-bottom: 30px;
 }
 .error-message {
-  color: red;
+  color: #b30000;
   font-size: 12px;
   margin-top: -10px;
   margin-bottom: 10px;
@@ -280,7 +288,8 @@ button:disabled {
 }
 
 .input {
-  height: 31px;
+  border: 1px solid #796197;
+  min-height: 44px;
   background: #d9d9d9;
   border-radius: 3px;
 
@@ -297,16 +306,18 @@ button:disabled {
 }
 
 .input input {
+  min-width: 0;
+  min-height: 44px;
   flex: 1;
   border: none;
   background: none;
   outline: none;
   color: #555;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .input input::placeholder {
-  color: #9a9a9a;
+  color: #555;
 }
 
 .forgot {
@@ -335,7 +346,7 @@ button:disabled {
   margin-top: 18px;
   text-align: center;
   font-size: 12px;
-  color: #8a8a8a;
+  color: #555;
 }
 .register ul {
   list-style: none;
