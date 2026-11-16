@@ -71,7 +71,7 @@ async function confirmar() {
 <style scoped>
 dialog {
   margin: auto;
-  width: min(480px, calc(100% - 32px));
+  width: min(388px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
   overflow: auto;
   padding: var(--mrj-space-6);

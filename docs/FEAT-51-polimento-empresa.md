@@ -1,6 +1,6 @@
 # FEAT-51 — Polimento visual da empresa
 
-> **Situação vigente: integração desktop incorporada à FEAT-51 por autorização expressa.** A seção “Incorporação da correção desktop à FEAT-51” contém os resultados finais desta etapa. As referências anteriores à FIX separada e aos bloqueios já resolvidos são histórico. Homologação com backend real e Figma definitivo continuam pendentes.
+> **Situação vigente: correção estrutural da Home e validação na rota real `localhost:5173`, mantendo shell compacto de 420px.** Consulte “Correção da Home na aplicação real — 2026-11-16”. As galerias anteriores e decisões de layout wide são histórico; a comparação vigente está em `artifacts/FEAT-51/correcao-home-figma/comparacao.html`.
 
 **Estado atual: implementação visual realizada sob contrato provisório expressamente autorizado para a FEAT-51; APTA COM RESSALVAS para revisão.** O registro A–J abaixo preserva a auditoria inicial; o bloqueio por Figma foi superado. Resultados atuais estão em “Implementação após autorização”.
 
@@ -435,3 +435,593 @@ Escopo do novo commit: router, quatro componentes/views empresariais, dois teste
 **Resultado da integração: apta para commit local.** Não houve regressão nos cenários executados. A largura desktop está resolvida nesta funcionalidade; backend real, dispositivo físico/Figma definitivo e roteiros browser antigos incompatíveis da FEAT-47 continuam com as limitações registradas, sem alegação de homologação real. O commit de polimento anterior e a branch/worktree FIX permanecem preservados; nenhuma alteração na DEV, push ou PR nesta etapa.
 
 Comparação de capturas: das 21 imagens com correspondente na pasta `fix49-qa/antes`, as sete telas principais em 375px permaneceram idênticas em bytes; as demais refletem a ampliação de tablet/desktop. Inspecionadas também a Home desktop, o formulário tablet e o modal de aprovação mobile atuais.
+
+## Mobile first e perfil institucional — 2026-11-16
+
+Esta etapa é independente dos aceites históricos acima. Início na FEAT-51 em
+`c4037d1`, com árvore limpa; commits `c45ac19` e `c4037d1` preservados. Nenhuma
+instrução AGENTS.md/SKILL.md local aplicável foi encontrada. Nenhuma alteração
+na DEV, backend, serviços, composables, autenticação ou perfil do usuário.
+
+### Diagnóstico e implementação
+
+Comparados no Chromium os componentes reais `PerfilComponent.vue` e
+`PerfilEmpresaView.vue`, com fixtures existentes e transporte Axios em memória.
+O perfil empresarial anterior concentrava logotipo, nome, apresentação, dados e
+edição em um único card; a ação de editar ficava no final. A largura local máxima
+era 760px, mesmo com shell wide. A edição mantinha o título grande em 320px e as
+ações dependiam da quebra flexível.
+
+O novo cabeçalho institucional reúne logotipo proporcional, nome, área e
+localização disponíveis e ação de edição no início. Cards separados apresentam
+“Sobre a empresa” e “Informações empresariais”. Não foram acrescentados campos,
+documentos privados, métricas ou funcionalidades. Sem descrição, a interface
+informa a ausência, sem inventar conteúdo. A identidade de organização é
+preservada pelo logotipo quadrado e informações institucionais, sem copiar
+habilidades, portfólio ou estatísticas pessoais.
+
+Do perfil de usuário foram aproveitados a hierarquia de apresentação, superfícies
+lilás, seções arredondadas e títulos roxos. A implementação usa os tokens opt-in
+FEAT-48 e BaseCard/BaseButton/BaseInput existentes; nenhum componente compartilhado
+foi alterado. O perfil do usuário foi somente lido e capturado.
+
+Mobile: composição vertical, nome com quebra, logotipo de 88px, editar ocupando a
+largura do cabeçalho. Em 320px, título reduzido e Salvar/Cancelar empilhados. A
+reserva inferior inclui safe area. Tablet/desktop: cabeçalho horizontal, logo de
+112px, cards em duas colunas, largura de leitura até 1120px e formulário até 52rem.
+Upload, labels, erros, disabled, loading, handlers, v-model e nome acessível
+“Selecionar imagem do logotipo” preservados. Script do componente sem alterações.
+
+Auditados também Home/gerenciamento, criação, edição, detalhes de vaga,
+notificações, configurações e dialogs. As capturas inspecionadas em 320px mostram
+cards legíveis, título/preço separados, ações de vagas organizadas, formulário
+vertical, filtros de notificações em duas colunas e confirmação dentro da
+viewport. Não foi identificado conflito que justificasse desfazer a correção
+desktop ou refazer essas telas. Ausência de overflow não foi o único critério:
+foram examinadas capturas e exercitadas rolagem, clique e teclado.
+
+`layout: 'wide'` permanece nas rotas. O shell ativa a largura ampla somente em
+48rem; em mobile mantém limite de 420px. Nenhum estilo global ou `!important`
+foi acrescentado.
+
+### Evidências e reprodução
+
+Evidências desta etapa em `/tmp/feat51-mobile-20261116/`, fora do Git. Capturas
+anteriores preservadas. Referência do usuário mobile/desktop em
+`referencia/depois/referencia-usuario-{375,1440}.png`; empresa antes em
+`antes/antes/empresa-perfil-{320,375}-filled.png`; demais evidências e resultados
+por lote. Todas as imagens mostram fixtures, não dados reais. O nome de pessoa
+na fixture empresarial preexistente é dado de teste; o componente usa o nome
+recebido do serviço, sem substituição artificial.
+
+Roteiro temporário: `node_modules/.cache/feat51-mobile-audit.mjs`, não versionado.
+Cópia do harness existente com altura de 800px para 360px, captura adicional do
+perfil do usuário e limite esperado do shell atualizado para 1200px em desktop.
+O teste versionado ainda exige no máximo 420px; sua execução inicial parou nessa
+asserção obsoleta em 1440px. Não houve alteração de teste preexistente para forçar
+aprovação. API simulada, mesmos componentes/rotas/shell reais. Chromium Linux
+1254 já instalado. Sandbox bloqueou a porta Vite com EPERM: execuções de navegador
+necessitaram autorização fora do sandbox. Chrome Windows não conectou ao CDP;
+utilizado Chromium Linux. Execuções interrompidas com sinal 143 não contam como
+aprovação; build repetido com sucesso.
+
+### Resultado da validação desta etapa
+
+- `npm test`: saída 0; sete arquivos aprovados, zero falhas no resumo desta
+  execução Node 26. Não se reutilizou a contagem histórica de 227 testes.
+- `node --test tests/perfil-empresa.test.mjs tests/design-system.test.mjs`:
+  saída 0, dois arquivos aprovados.
+- `npm run build`: saída 0 na repetição; PWA 81 entradas. Aviso preexistente de
+  caniuse-lite desatualizado. Sem atualização de dependências.
+- Chromium: 89 verificações concluídas em quatro lotes: 19 em 320px (incluindo
+  loading/erro e listas vazias), 20 em 360/375px, 20 em 390/430px e 30 em
+  768/1024/1440px. Alturas: 900, 800, 812, 844, 932, 1024, 768 e 900px,
+  respectivamente. Sete rotas, incluindo Home e gerenciamento na mesma página.
+- Sem overflow horizontal, controles fora da largura ou erros inesperados de
+  JavaScript/console coletados nos lotes concluídos. Conferidos foco visível por
+  Tab, ordem Editar/Excluir/Ver detalhes, nome acessível do upload, abertura e
+  fechamento de dialogs e navegação real no router. Capturas no fim da página em
+  320px confirmam que o último contato e os cards finais ficam acima do footer.
+- Fluxos em Chromium: 13/13 grupos aprovados, incluindo criação, edição,
+  exclusão, notificações, cancelamento/validação do perfil, upload pelo seletor
+  nativo, arquivo inválido, PNG válido, nome extenso, foco, loading/disabled,
+  erro 400, prevenção de duplicidade e salvamento multipart em memória.
+- Inspeção visual direta: referência do usuário em 375/1440px; empresa antes em
+  320px; depois em 320/768/1440px, visualização/edição; Home e gerenciamento,
+  criação, detalhe, notificações, configurações e modal de aprovação em 320px;
+  Home ampla em 1440px. As demais dimensões foram exercitadas pelo Chromium e
+  capturadas; não se afirma aceite humano definitivo de cada imagem.
+- Script do perfil empresarial comparado a HEAD: idêntico. Perfil do usuário,
+  router, tokens, componentes compartilhados, serviços, payloads e validações
+  sem diff. Somente `src/views/PerfilEmpresaView.vue` e esta documentação
+  modificados; staging vazio, sem commit/push/PR/merge.
+
+Arquivos de resultados: `depois/depois/results.json` (360/375),
+`lote-390-430/depois/results.json`, `lote-desktop/depois/results.json`,
+`lote-320/depois/results.json` e `fluxos/depois/results.json`, sob a raiz das
+evidências. Screenshots antes desktop em
+`antes-desktop/antes/empresa-perfil-1440-filled.png`. Screenshots depois mobile
+em `lote-320/depois/empresa-perfil-320-filled.png` e
+`depois/depois/empresa-perfil-375-filled.png`; desktop em
+`lote-desktop/depois/empresa-perfil-1440-filled.png`.
+
+**Classificação: APTA COM RESSALVAS para revisão visual.** As verificações locais
+concluídas passaram. Backend/armazenamento reais não foram homologados: toda
+mutação utilizou adapter em memória. Teclado virtual e dispositivo físico não
+foram reproduzidos; teclado real de automação CDP (Tab, Escape, Enter, Espaço)
+foi exercitado. O teste browser versionado ainda contém a expectativa antiga de
+420px em desktop e requer manutenção separada. Figma não foi usado como fonte;
+a referência foi o perfil do usuário existente, conforme solicitado. Nenhuma
+aprovação visual definitiva ou autorização de commit é presumida.
+
+Cópia persistida das evidências em `artifacts/FEAT-51/mobile-first-20261116/`,
+confirmada como ignorada pelo Git, sem apagar ou sobrescrever capturas anteriores.
+Prettier nos dois arquivos modificados e `git diff --check`: aprovados.
+
+## Contrato vigente: aplicativo compacto também no computador — 2026-11-16
+
+Esta seção substitui a decisão anterior de ampliar a área empresarial: por nova
+orientação do usuário, todas as telas empresariais devem manter aparência de
+aplicativo em uma coluna, inclusive em monitor desktop. A integração histórica
+wide permanece documentada acima, mas não representa mais o resultado desejado.
+
+### Segurança e causa
+
+Branch FEAT-51 em `c4037d1`, commits anteriores preservados. No início havia
+alterações locais em `.env`, `PerfilEmpresaView.vue` e nesta documentação. `.env`
+não foi lido ou editado. O novo cabeçalho institucional e cards do perfil foram
+preservados. Nenhum AGENTS.md/SKILL.md local aplicável localizado. Sem troca de
+branch, reset, rebase, merge, staging, commit, push ou PR.
+
+A causa do dashboard largo era dupla: sete rotas ativavam `meta.layout: 'wide'`,
+e o shell aumentava o conteúdo para 75rem (1200px) a partir de 48rem de viewport.
+Adicionalmente, Home, formulários, detalhes, notificações e perfil ativavam grades
+e espaçamentos desktop por media queries da janela. Somente limitar o container
+não corrigiria essas grades nem a barra fixa dos formulários.
+
+### Correção
+
+- Removido `layout: 'wide'` das sete rotas empresariais, mantendo paths, nomes,
+  autenticação, tipo de conta e `hideFooter`.
+- `.app--empresa` define `--mrj-shell-width: 26.25rem` (420px). O contrato global
+  opt-in wide continua disponível para outros contextos; nenhuma regra do perfil
+  do usuário foi alterada. O fundo externo discreto existente foi preservado.
+- Removidas somente as composições desktop empresariais: Home/gerenciamento em
+  duas/três colunas, formulários duplos e barra de ações de 64rem, detalhes em três
+  colunas, notificações em duas colunas e perfil com cards lado a lado.
+- Header e footer existentes acompanham o container, sem alterar links ou
+  controles. A navegação mantém ícones acima dos textos, aba ativa, foco e safe
+  area. A barra fixa de publicar/atualizar volta ao limite de 420px.
+- Home mantém boas-vindas, criar vaga, última vaga e gerenciamento em fluxo
+  vertical; sem vagas usa o estado vazio existente. Não foram criadas métricas ou
+  vagas fictícias na aplicação. A altura mínima apenas mantém o fundo preenchido,
+  sem distribuir blocos artificialmente pela altura.
+- Perfil mantém cabeçalho institucional, logo, nome, setor/localização disponíveis,
+  editar no início, Sobre a empresa e Informações empresariais empilhados. Upload
+  acessível, formulário, salvar/cancelar, erros e carregamento preservados.
+- Modal de exclusão limitado a 388px (shell menos 32px), para não ultrapassar a
+  largura do aplicativo em desktop. Modal de notificações já tinha máximo de
+  400px e foi preservado. Sem `!important`.
+- Testes de rota atualizados para o contrato compacto, com regressão para as sete
+  rotas e manutenção de autenticação/hideFooter. O harness local ignorado agora inclui
+  360x800 e confere centralização, alinhamento de header/footer e coluna única.
+  O teste de shell FEAT-49 distingue o limite empresarial (420px) do opt-in wide
+  genérico (1200px). Nenhum teste foi relaxado para ignorar falhas de usabilidade.
+
+Scripts dos seis componentes alterados comparados a HEAD: idênticos. Não houve
+alteração de serviços, composables, validações, payloads ou backend.
+
+### PWA: aparência versus janela instalada
+
+A aparência compacta funciona numa aba comum. Ela não remove a interface do
+Chrome. Para abrir sem abas e barra de endereço é necessário abrir a PWA instalada.
+
+Configuração existente preservada:
+
+- `public/manifest.webmanifest`, referenciado por `index.html`.
+- `display: standalone`, `start_url: /`, `scope: /`.
+- Ícones PNG 192x192 e 512x512, ambos com `purpose: any maskable`.
+- `vite.config.js`: manifesto estático (`manifest: false`), autoUpdate,
+  service worker de produção e precache Workbox; SW de desenvolvimento desativado.
+- Limpeza de service worker antigo no Vite dev já existente; não foi alterada.
+
+Verificado o build servido localmente em preview: manifesto idêntico ao público,
+ícones servidos com status 200 e dimensões corretas, service worker `/sw.js` ativo
+no Chromium com escopo `/`. Não foi instalada uma aplicação no sistema operacional
+nem homologado o servidor de produção. A captura do preview continua sendo uma
+aba de navegador (`standalone: false`), como esperado.
+
+Para testar a configuração de produção localmente: `npm run build`, depois
+`npm run preview -- --host 127.0.0.1`. No Chrome, abrir o endereço informado pelo
+Vite. Para uso publicado, abrir a URL HTTPS do MaRuJoBs. Escolher o ícone de
+instalação na barra de endereço quando disponível ou menu ⋮ → Transmitir, salvar
+e compartilhar → Instalar página como app. Confirmar a instalação e abrir pelo
+atalho criado ou por `chrome://apps`. O nome do menu pode variar com idioma/versão.
+Não usar `npm run dev` para homologar cache/offline de produção, pois o SW está
+desativado nesse modo. Autenticação e conteúdo que dependem da API continuam
+precisando de conexão; precache não significa funcionamento offline de todas as
+funcionalidades.
+
+Referência do procedimento: [Ajuda oficial do Chrome](https://support.google.com/chrome/answer/9658361).
+
+### Evidências
+
+Raiz nova, ignorada pelo Git: `artifacts/FEAT-51/app-shell-20261116/`.
+`antes/desktop/` e `antes/mobile/` preservam cópias das capturas da etapa anterior,
+sem apagar originais. As pastas por lote contêm as telas atuais, modais,
+formulários, edição do perfil e resultados. `pwa/` contém o resultado do preview.
+As páginas usam os componentes Vue, rotas e shell reais com adapter Axios em
+memória, sem credenciais ou mutações reais. O nome empresarial de pessoa que
+aparece nas capturas vem da fixture preexistente, não de dado inventado no produto.
+
+### Validação do contrato compacto
+
+| Viewport   | Largura de conteúdo medida na Home com vagas |
+| ---------- | -------------------------------------------- |
+| 320 × 900  | 305px                                        |
+| 360 × 800  | 345px                                        |
+| 375 × 812  | 360px                                        |
+| 390 × 844  | 375px                                        |
+| 430 × 932  | 415px                                        |
+| 768 × 1024 | 420px                                        |
+| 1024 × 768 | 420px                                        |
+| 1440 × 900 | 420px                                        |
+
+Os primeiros valores descontam a scrollbar clássica de 15px usada pelo Chromium
+na emulação; o limite de layout é `min(largura disponível, 420px)`. Na Home vazia
+sem scrollbar o aplicativo ocupa 420px em 1440px. Header e navegação têm exatamente
+a largura/posição horizontal do conteúdo; centralização verificada com tolerância
+inferior a 1px.
+
+- `npm test`: saída 0, sete arquivos aprovados, zero falhas no resumo Node 26.
+- Testes específicos de perfil empresarial e design system: saída 0, dois
+  arquivos aprovados, incluindo o novo contrato das sete rotas.
+- `npm run build`: saída 0, PWA com 81 entradas; aviso preexistente de caniuse-lite.
+- Chromium empresarial: 92 verificações de tela/estado/layout concluídas nas oito
+  resoluções; centralização, header/footer, coluna única, ausência de overflow,
+  controles na viewport, Tab e foco visível. Nos lotes desktop foram exercitados
+  também os estados vazio, loading e erro da Home e notificações.
+- O primeiro lote 320/360 usa cópia temporária que registra geometria e métricas
+  separadamente: 40 registros representam 20 verificações, sem duplicar a contagem.
+  Demais lotes: 20 em 375/390, 20 em 430/768 e 32 em 1024/1440.
+- Fluxos funcionais: 13/13 aprovados, com publicação, edição, exclusão,
+  notificações, cancelar/validar/salvar perfil, seletor nativo, arquivo inválido,
+  PNG válido, nome extenso, multipart, loading/disabled, erro 400 e prevenção de
+  duplicidade. Tab, Escape, Enter e Espaço exercitados pelo CDP. As ações finais
+  foram alcançadas por rolagem e clique com verificação de sobreposição real.
+- Sem erros inesperados de JavaScript/console coletados nas execuções empresariais
+  concluídas. Nenhuma requisição de mutação ao backend real: transporte em memória.
+- Inspeção visual direta das capturas: Home mobile e tablet/desktop, estado vazio
+  desktop, formulários tablet, perfil desktop e confirmação de notificações.
+  Comparação com as capturas largas anteriores confirma o shell compacto; as demais
+  imagens continuam disponíveis para revisão humana. Não é aprovação visual
+  definitiva de todas as imagens nem homologação de dispositivo físico.
+
+Arquivos de aplicação alterados: `src/router/routes.js`, `src/styles/shell.css`,
+`src/components/HomeEmpresaComponent.vue`, `src/components/CriarVagaComponent.vue`,
+`src/components/ConfirmarExclusaoVaga.vue`, `src/views/DetalheVagaEmpresaView.vue`,
+`src/views/NotificacoesEmpresaView.vue`, `src/views/PerfilEmpresaView.vue`.
+Testes rastreados atualizados: `tests/notificacoes.test.mjs`,
+`tests/perfil-empresa.test.mjs`, `tests/responsividade.browser.mjs`.
+Documentação: este arquivo. O harness `tests/empresa-visual.browser.mjs` já era
+local e ignorado por `.git/info/exclude`; foi ajustado para a auditoria e continua
+fora do Git, assim como os scripts de cache, screenshots, JSONs e logs. Nenhum
+arquivo ignorado foi forçado ao índice. `.env` permanece como alteração
+preexistente, fora deste escopo.
+
+Regressão preexistente de shell executada com `F49_AUDIT=0`: saída 0. Dez
+combinações de shell/navegação (usuário e empresa em cinco larguras), incluindo
+rota sintética wide, e vinte aberturas de páginas reais sem overflow. O modo de
+auditoria extensa F49 ficou desativado; a matriz empresarial completa foi
+executada separadamente acima. Log em `validacao/shell-regression.log`.
+
+`git diff --check` global aponta **`.env:2: new blank line at EOF`**. Essa alteração
+já existia antes da tarefa e foi preservada, sem inspecionar seu conteúdo. A
+checagem limitada aos demais arquivos (`git diff --check -- . ':!.env'`) passou.
+Não se declara aprovação global ocultando essa ressalva.
+
+**Classificação: APTA COM RESSALVAS para revisão.** Layout compacto e fluxos locais
+aprovados; permanecem backend/armazenamento reais, instalação da PWA no sistema e
+dispositivo físico sem homologação. Nenhum commit, push, PR ou alteração na DEV.
+
+Teste adicional de toque no Chromium em 375×812 (`mobile: true`): navegação pela
+aba Perfil, abertura da edição e Cancelar aprovados com eventos touchStart/touchEnd.
+Evidências em `toque/depois/`. Isso não substitui teste em aparelho físico.
+Prettier aprovado nos arquivos de implementação/testes e na documentação.
+
+## Redesign baseado na imagem de referência — 2026-11-16
+
+### Fonte visual, segurança e precisão
+
+Referência localizada após indicação do usuário: `referencias/image.png`, PNG de
+1143×645 com Home empresarial, freelancers, vagas, perfil/edição, filtros,
+cadastro e detalhes. A imagem foi efetivamente aberta e comparada às telas reais.
+Recortes ampliados por canvas do Chromium foram usados somente para inspeção e
+preservados em `artifacts/FEAT-51/redesign-figma/depois/referencia-*.png`.
+A imagem não foi usada como fundo ou screenshot substituindo componentes da UI.
+Não há arquivo/frame original do projeto Figma identificado; o texto minúsculo e
+os valores da imagem não permitem extração confiável de medidas ou fonte.
+A skill figma-design-to-code foi consultada; neste caso a instrução explícita do
+usuário é implementar pela imagem disponível. Não foi atribuída uma consulta ao
+Figma ou uma fidelidade pixel a pixel que não ocorreu.
+
+Início na FEAT-51 em `c4037d1`, com alterações anteriores de shell/perfil e `.env`
+preservadas. `referencias/` é diretório local não rastreado, fornecido pelo usuário.
+Nenhum AGENTS.md/SKILL.md local aplicável encontrado. `.env` não foi aberto/editado.
+Não houve checkout, reset, rebase, merge, staging, commit, push, PR ou alteração da
+DEV. Cópias dos oito componentes no início desta etapa foram guardadas no cache
+ignorado para comparação, sem substituir ou apagar trabalhos anteriores.
+
+### Diferenças e decisões por tela
+
+| Tela               | Diferença observada                                                                                    | Implementação                                                                                                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Header e navegação | Header de 92px e marca muito grande para a densidade da referência; aba ativa indicada apenas pela cor | Header de 76px, marca e controles proporcionais, mesma imagem local de ondas, tokens FEAT-48 e áreas de toque de 44px. Footer lilás com destaque de superfície na aba ativa, ícones/textos preservados e sombra discreta                                                          |
+| Home               | Saudação/CTA grandes, notas em cards extras e gerenciamento com descrição sempre extensa               | Saudação de 20px, CTA proporcional ao conteúdo, nota auxiliar sem card, estado vazio com ícone e texto existentes. A explicação técnica do maior ID saiu do produto; o algoritmo permanece idêntico e está documentado abaixo                                                     |
+| Vagas da empresa   | Cards mais altos que os compactos da referência                                                        | Ícone roxo, borda de destaque, sombras removidas, chips de categoria/tempo e modalidade/localização quando a resposta já contém esses dados. Descrição integral em details/summary nativo, sem truncamento; Editar/Excluir/Ver detalhes permanecem na ordem DOM e visual anterior |
+| Perfil empresarial | Hero alto, logotipo acima de todo o conteúdo e ação muito afastada do nome                             | Logotipo ao lado de nome/setor/localização, placeholder institucional com ícone de empresa, edição próxima dos dados, cards empilhados Sobre/Informações com títulos e ícones consistentes. Nenhum dado privado ou campo novo                                                     |
+| Editar perfil      | Prévia afastada dos controles e blocos redundantes                                                     | Prévia e controles de logotipo no mesmo grupo, campos verticais com labels próximas, seções claras, Salvar/Cancelar de largura total, erros e estados preservados                                                                                                                 |
+| Criar/editar vaga  | Títulos decorativos repetidos e campos muito espaçados                                                 | Removido o bloco “SUA OPORTUNIDADE / Vamos aos detalhes”, mantidos indicação de obrigatórios e legendas semânticas. Inputs com 44px e fonte de 16px, textareas confortáveis, espaçamento menor e formulário em uma coluna                                                         |
+| Detalhes           | Cards e resumo mais altos/pesados que a referência                                                     | Resumo com ícone roxo, títulos e preço separados, cards com padding menor e sem sombra, informações existentes em grade de pares compactos, sem inventar campos ausentes                                                                                                          |
+| Notificações       | Densidade e pesos maiores que a linguagem de cards da referência                                       | Título, cards e espaços compactados; estados, botões e filtros de situação mantidos. A referência não contém uma tela específica de notificações: a composição usa a linguagem compartilhada, sem alegar reprodução direta de frame                                               |
+| Configurações      | Tipografia e fundo destoavam do conjunto novo                                                          | Mesmo fundo lilás, títulos proporcionais e sem alteração da ação existente. Também não há frame específico desta tela na imagem                                                                                                                                                   |
+| Filtros            | Mockup contém opções adicionais indisponíveis no frontend atual                                        | Preservados somente busca/categoria das vagas e filtros de situação das notificações. Não foi criado drawer, filtros novos ou comportamento sem contrato                                                                                                                          |
+
+Foram reutilizados os tokens opt-in FEAT-48 e BaseCard/BaseInput/BaseButton.
+Nenhum token global ou componente base foi modificado; ajustes são locais aos
+componentes empresariais. Não foi criado outro design system ou usado !important.
+A paleta existente foi priorizada sobre cores estimadas de pixels da imagem para
+preservar consistência e contraste. Não se reproduziram avaliações, estrelas,
+quantidades, listas de freelancers ou vagas dentro do perfil sem dados/fluxo já
+existente. Cadastro e telas de usuário/freelancer não foram redesenhados.
+
+A Home continua selecionando o maior ID como aproximação da última vaga,
+exatamente como antes; não houve alteração de regra ou promessa de ordenação por
+data. A descrição expansível é apresentação local de conteúdo já existente e
+suporta clique, Tab, Enter/Espaço nativos; nenhuma requisição adicional é feita.
+
+### Preservação funcional e layout
+
+Scripts dos oito componentes comparados às cópias do início desta etapa:
+**idênticos**. Serviços Axios, endpoints, autenticação, permissões, payloads,
+composables, regras e validações sem alteração. Nome acessível “Selecionar imagem
+do logotipo”, input nativo focável, validação, estados disabled/loading e multipart
+preservados. Nenhuma alteração no perfil do usuário, PWA ou configuração de build.
+
+O shell de 420px e as sete rotas sem wide da etapa anterior foram preservados.
+Header, conteúdo e footer com a mesma largura/posição horizontal, centralizados.
+Matriz real: 320×900, 360×800, 375×812, 390×844, 430×932, 768×1024,
+1024×768 (adicional) e 1440×900. Na Home preenchida: 305, 345, 360, 375, 415,
+420, 420 e 420px de conteúdo, respectivamente. Os primeiros valores descontam a
+scrollbar clássica de 15px da emulação Chromium; o contrato é ocupar o disponível
+até 420px. Nenhuma grade empresarial larga reativada.
+
+### Testes e evidências finais
+
+- `npm test`: saída 0, sete arquivos aprovados, zero falhas no resumo Node 26.
+- Testes específicos de perfil empresarial/design system: saída 0, dois arquivos
+  aprovados. Nenhum teste rastreado foi alterado nesta etapa.
+- `npm run build`: execução serial final aprovada, PWA com 81 entradas. A execução
+  paralela anterior foi interrompida com sinal 143 após compilar; não foi contada
+  como aprovada. Aviso preexistente de caniuse-lite desatualizado, sem atualizar
+  dependências.
+- Chromium empresarial: 110 verificações de tela/estado/layout concluídas:
+  32 em 320/375px, 30 em 360/390/430px e 48 em 768/1024/1440px. Incluem foco
+  visível, ordem de Tab, header/footer, alinhamento, coluna única, ausência de
+  overflow, abertura/fechamento de descrições, modais e rolagem até ações finais.
+- Fluxos em memória: 13/13 grupos aprovados, incluindo criar/editar/excluir,
+  notificações, validar/cancelar/salvar perfil, seletor nativo de arquivo, PNG
+  válido/arquivo inválido, nome extenso, erro 400, duplicidade e multipart.
+- Teste adicional: perfil sem dados opcionais/logotipo, erro e loading em 375px;
+  navegação, editar e cancelar por touchStart/touchEnd em emulação mobile;
+  galeria HTML local com imagens carregadas e troca de tela/resolução. Sete
+  verificações concluídas nesse roteiro.
+- Sem erros inesperados de JavaScript ou console coletados nos roteiros
+  empresariais concluídos. Nenhuma homologação de API real ou armazenamento.
+- O teste adicional de descrição por mouse mudou a modalidade de entrada antes
+  da asserção de foco por teclado; a primeira tentativa parou em focus-visible.
+  A cópia temporária foi corrigida para enviar Tab real antes de conferir foco.
+  A asserção foi mantida e a matriz foi repetida com sucesso, sem alterar CSS ou
+  testes rastreados para mascarar a falha.
+
+Capturas reais antes/depois, resultados e galeria estão em
+`artifacts/FEAT-51/redesign-figma/`, ignorada pelo Git:
+
+- `antes/`: estado compacto anterior desta mesma worktree em 320/375/1440px.
+- `depois/mobile-320-375-final/`: capturas finais pequenas, visualização/edição e
+  fim das páginas; estados vazios/loading/erro e modais.
+- `depois/mobile-360-390-430/` e `depois/tablet-desktop/`: matriz restante.
+- `depois/fluxos/` e `depois/toque-galeria/`: verificações adicionais.
+- `galeria.html`: 30 comparações antes/depois em 320/375/1440px; todos os links
+  conferidos e trocas de tela/resolução exercitadas no Chromium.
+- `referencia.png`: cópia da imagem fornecida, sem alterar o original.
+
+Capturas preliminares também preservadas; as pastas com “final” e os lotes
+indicados acima são a evidência vigente. Recortes ampliados não aumentam a
+resolução da referência nem representam acesso ao arquivo Figma original.
+A inspeção visual direta incluiu a referência e seus recortes, perfil antes/depois
+em 320/375px e em 1440px, edição e ações finais em 320/375px, Home e gerenciamento,
+criação, detalhes e notificações. Não é aceite definitivo de todas as capturas.
+
+### Arquivos desta etapa
+
+- `src/components/EmpresaHeader.vue`
+- `src/components/FooterEmpresaComponent.vue`
+- `src/components/HomeEmpresaComponent.vue`
+- `src/components/CriarVagaComponent.vue`
+- `src/views/PerfilEmpresaView.vue`
+- `src/views/DetalheVagaEmpresaView.vue`
+- `src/views/NotificacoesEmpresaView.vue`
+- `src/views/ConfiguracoesEmpresaView.vue`
+- Este relatório.
+
+As demais alterações rastreadas no Git são das etapas anteriores e foram
+preservadas. Harnesses e arquivos temporários continuam no cache ignorado; nenhum
+screenshot, foto, JSON de validação, log, dist, node_modules, .env ou credencial
+foi adicionado ao índice. `referencias/` permanece não rastreado e não deve integrar
+o futuro commit.
+
+Regressão final de usuário/freelancer e shell: saída 0 em
+`F49_PATHS=/perfil,/freelances node tests/responsividade.browser.mjs`, incluindo
+auditoria dessas duas telas em sete larguras, shell/navegação de usuário e empresa
+e aberturas reais de Home/freelances/criação. Nenhuma mudança nas telas de usuário.
+
+Prettier aprovado nos oito componentes; documentação formatada. A execução global
+de `git diff --check` continua apontando somente a linha vazia extra no fim do
+`.env` preexistente (`.env:2: new blank line at EOF`). O arquivo foi preservado,
+sem abrir seu conteúdo. `git diff --check -- . ':!.env'` aprovado.
+
+**Avaliação: APTA COM RESSALVAS PARA REVISÃO VISUAL.** A composição está mais próxima
+da referência, com mudanças estruturais no perfil, edição, densidade de cards e
+navegação, e os fluxos locais passaram. A precisão continua limitada à imagem
+panorâmica de baixa resolução. Aprovação visual do usuário, backend/armazenamento
+reais e dispositivo físico permanecem pendentes. Nada foi commitado ou publicado.
+
+## Correção da Home na aplicação real — 2026-11-16
+
+### Diagnóstico objetivo antes da correção
+
+A validação anterior foi insuficiente: o harness de componentes não demonstrava
+o que a instância Vite da porta 5173 estava efetivamente servindo. Também foram
+preservados na Home uma composição de card grande para a última vaga, descrição
+extensa e blocos independentes, em vez dos painéis e linhas compactas da primeira
+tela da referência. Ajustes de densidade não corrigiram essa estrutura.
+
+Reconfirmados raiz Front_marujob, FEAT-51 e HEAD `c4037d1`; todas as alterações
+locais anteriores preservadas. `referencias/image.png` foi novamente aberta e
+comparada à Home. Não há arquivo Figma original: os limites da imagem de
+1143×645 permanecem. O componente que renderiza `/homeEmpresa` é
+`HomeEmpresaView.vue`, que compõe `EmpresaHeader.vue` e `HomeEmpresaComponent.vue`.
+
+A inspeção da rota real comprovou um segundo problema, independente da decisão
+visual: o Vite estava na raiz correta, mas respondia com o módulo compilado antigo.
+O pedido normal de `HomeEmpresaComponent.vue`, inclusive com `?t=...`, não tinha
+`painel-vagas`; a leitura `?raw&diagnostico=...` e um novo ID de módulo já continham
+a estrutura atual. Isso caracteriza resultado de transformação desatualizado no
+servidor, não apenas cache do navegador. O perfil Chromium era novo, com zero
+service workers registrados e nenhum controller antes/depois; não há evidência
+para atribuir esse caso à PWA. Não foram inspecionados ou limpos perfis pessoais.
+
+Foi confirmada a linha de comando e a pasta da instância na porta 5173. Apenas
+esse Vite foi reiniciado, na mesma porta, com `CHOKIDAR_USEPOLLING=true` e intervalo
+de 300ms no ambiente do processo. `vite.config.js` e `.env` permaneceram intactos.
+Após isso, pedidos normais e a rota real passaram a mostrar os módulos atuais.
+Uma alteração posterior de CSS gerou evento HMR no log, sem outro restart,
+confirmando que a atualização passou a ser percebida. Nada foi apagado de caches,
+storage, dados ou configurações do usuário. O servidor foi deixado em execução.
+
+### Mudanças concretas de composição
+
+- Hero de boas-vindas com a arte local existente, descrição de apoio e CTA
+  integrado de largura proporcional ao conteúdo do aplicativo.
+- Painel “Última vaga publicada” com linha clicável: ícone, título completo,
+  preço ao lado, categoria/tempo/modalidade e destino existente Ver detalhes.
+  Removida a descrição extensa dessa prévia; o conteúdo integral permanece na
+  tela real de detalhes e isso foi verificado pelo navegador.
+- Gerenciamento em painel próprio, filtros existentes e linhas de vagas compactas.
+  Categoria, tempo, modalidade e localização disponíveis continuam apresentados;
+  nenhum campo ou endpoint novo. Preço agrupado ao título e metadados abaixo.
+- Editar, Excluir e Ver detalhes em uma barra de três ações de pelo menos 44px,
+  na mesma ordem visual e de Tab. Não há tabindex positivo ou truncamento de
+  títulos; o caso com título extenso foi mantido entre os dados de teste.
+- Estado sem vagas compacto, com ícone, mensagem clara e a ação existente de
+  publicação. O espaço restante resulta da altura da janela e do footer fixo;
+  não há card artificialmente esticado, vagas, métricas ou freelancers fictícios.
+- Busca com texto curto e campos de 16px, para legibilidade e uso mobile.
+
+O perfil/edição e as outras telas foram revistos na aplicação real. A composição
+institucional anterior foi preservada. Uma falha real foi eliminada no perfil:
+os ícones building/circle-info eram referidos por strings, mas não registrados em
+`main.js`. O harness anterior adicionava todos os ícones e mascarava essa falha.
+Agora são importados diretamente no componente, como já ocorria com o ícone de
+configurações. Antes foram coletados oito avisos “Could not find one or more
+icon(s)” nas quatro aberturas do perfil; na rodada final real: zero.
+
+Somente `HomeEmpresaComponent.vue`, `PerfilEmpresaView.vue` e este relatório
+foram alterados nesta continuação. Script da Home idêntico à cópia do início;
+no perfil, apenas imports/referências visuais de ícones. Não houve mudança em
+serviços, Axios, autenticação, permissões, endpoints, regras, payloads, validações,
+router, PWA ou perfil do usuário. As demais modificações no Git são anteriores.
+
+### Validação real e comparação mensurável
+
+Usado Chromium Linux com perfil temporário próprio. Foram carregados o
+`index.html`, `src/main.js`, App, router `createWebHistory` e guards reais em
+`http://localhost:5173/homeEmpresa`. As requisições XHR/Fetch de API foram
+interceptadas por CDP, com conta empresarial e três vagas controladas; não foi
+substituído o bootstrap por um runner Vue, nem alterada a API da aplicação.
+GET/OPTIONS foram respondidos em memória e mutações de rede ficaram bloqueadas.
+Os mesmos dados foram usados antes/depois. A primeira configuração do transporte
+bloqueava preflight OPTIONS; foi corrigida no script temporário, sem alterar
+serviço ou guard da aplicação.
+
+Foram capturados viewport e página inteira em 320×900, 375×812, 390×844 e 1440×900,
+com e sem vagas, e perfil antes/depois. As novas capturas esperam decodificação
+de imagens e confirmam carregamento dos fundos do header/hero. A primeira captura
+nova, prematura, sem esses assets decodificados foi preservada como intermediária;
+`depois-final/` é a evidência vigente. O widget Vue DevTools visível nas capturas
+reais pertence ao ambiente de desenvolvimento, sem CSS de ocultação no produto.
+
+| Largura da janela | Última vaga antes → depois | Altura da página com três vagas antes → depois |
+| ----------------- | -------------------------- | ---------------------------------------------- |
+| 320px             | 240,6 → 128,2px            | 2047 → 1414px                                  |
+| 375px             | 218,2 → 121,8px            | 1835 → 1354px                                  |
+| 390px             | 218,2 → 121,8px            | 1835 → 1334px                                  |
+| 1440px            | 195,8 → 121,8px            | 1784 → 1296px                                  |
+
+As medidas são da conta controlada, não promessas para qualquer conteúdo. O
+shell mediu 305/360/375/420px nas quatro larguras (scrollbar clássica descontada
+nos menores casos); header/footer alinhados e centralização conferida. Nenhum
+wide reativado. A referência e os screenshots lado a lado mostram mudança de
+composição, não somente de bordas/padding. A referência tem outras seções sem
+suporte de dados no escopo, que não foram inventadas para preencher a página.
+
+### Resultados dos testes desta continuação
+
+- Rota real: **45 checkpoints concluídos**, com zero avisos/erros JavaScript
+  coletados. Incluem quatro resoluções, Home com/sem vagas, perfil/edição,
+  criação/edição de vaga, detalhes, notificações, configurações, modais, rolagem
+  até ações finais, mouse, Tab com foco visível e navegação do footer por toque.
+- Formulário preenchido com eventos de teclado do Chromium e cancelado sem
+  escrita. Exclusão/aprovação abertas e fechadas por Escape; ações alcançadas
+  por scrollIntoView e verificação de elementFromPoint, sem depender de clique
+  que atravesse elementos sobrepostos.
+- Fluxos complementares no adapter isolado: **13/13 grupos aprovados**, incluindo
+  criar/editar/excluir, notificações, cancelamento/validação/salvamento de perfil,
+  arquivo inválido/PNG válido, seletor nativo, nome extenso, loading/disabled,
+  erro 400, duplicidade e multipart. Não representam backend real homologado.
+- `npm test`: saída 0, sete arquivos aprovados, zero falhas no resumo Node 26.
+- Testes específicos de perfil empresarial/design system: saída 0, dois arquivos
+  aprovados. Nenhum teste rastreado alterado para forçar resultado.
+- `npm run build`: saída 0, PWA com 81 entradas; aviso preexistente de caniuse-lite.
+- Prettier nos arquivos desta continuação aprovado. `git diff --check` global
+  continua apontando somente a linha vazia extra do `.env` preexistente;
+  `git diff --check -- . ':!.env'` passou. O conteúdo de `.env` não foi aberto,
+  alterado ou incluído no relatório.
+- Comparação HTML local testada no Chromium, com quatro resoluções e alternância
+  viewport/página completa. As capturas completas usam a largura útil sem
+  scrollbar; o teste temporário foi ajustado para conferir essa dimensão real.
+
+### Evidências e pendências
+
+Raiz local ignorada pelo Git: `artifacts/FEAT-51/correcao-home-figma/`.
+
+- `referencia.png`: cópia da referência original, preservada.
+- `antes/`: screenshots da versão efetivamente exibida em 5173 antes desta correção,
+  Home com/sem vagas e perfil. `results.json` registra o hash do módulo antigo e
+  os avisos de ícones. Diagnósticos intermediários foram preservados.
+- `depois-final/`: capturas finais das rotas reais, com viewport e página inteira;
+  `results.json` registra módulo novo, métricas, assets, requests por caminho,
+  ausência de SW e console sem avisos. Sem credenciais nos dados de teste.
+- `fluxos/depois/results.json`: treze fluxos isolados complementares.
+- `comparacao.html`: referência, Home antiga, nova com/sem vagas e perfil antigo/novo
+  lado a lado; seletor de resolução e captura completa. `comparacao-preview.png`
+  permite prévia rápida. `galeria-validacao.json` registra o teste da galeria.
+- `validacao/`: logs de testes/build e evidências de atualização dos módulos.
+
+**Avaliação: APTA COM RESSALVAS PARA REVISÃO VISUAL.** A Home atual é estruturalmente
+mais próxima da referência e foi conferida criticamente no endereço real, com
+mudanças visíveis e mensuráveis. A resolução da imagem não permite alegar
+fidelidade exata. Permanecem aprovação visual do usuário, backend/armazenamento
+reais e dispositivo físico sem homologação. Nenhum commit, push, PR, merge, rebase
+ou alteração da DEV. Screenshots e arquivos locais anteriores preservados.

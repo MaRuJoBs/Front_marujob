@@ -198,7 +198,13 @@ try {
           `overflow ${tipo} ${width}`,
         )
         const shell = await evaluate('document.querySelector(".app").getBoundingClientRect().width')
-        assert.equal(shell, Math.min(await evaluate('document.documentElement.clientWidth'), 1200))
+        assert.equal(
+          shell,
+          Math.min(
+            await evaluate('document.documentElement.clientWidth'),
+            tipo === 'empresa' ? 420 : 1200,
+          ),
+        )
         assert.equal(
           await evaluate(
             '[...document.querySelectorAll(".app-navigation .item")].every(e=>{const r=e.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.left>=0&&r.right<=innerWidth})',
@@ -244,7 +250,7 @@ try {
         const available = await evaluate('document.documentElement.clientWidth')
         assert.equal(
           await evaluate('document.querySelector(".app-content").getBoundingClientRect().width'),
-          Math.min(available, width >= 768 ? 1200 : 420),
+          Math.min(available, width >= 768 && tipo !== 'empresa' ? 1200 : 420),
         )
         assert.equal(
           await evaluate(

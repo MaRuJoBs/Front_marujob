@@ -222,9 +222,9 @@ const contatoSeguro = (n) =>
 </template>
 <style scoped>
 .notificacoes-empresa {
-  min-height: calc(100dvh - 92px);
-  padding: 24px 16px calc(104px + env(safe-area-inset-bottom, 0px));
-  background: var(--mrj-color-background);
+  min-height: calc(100dvh - 76px);
+  padding: 16px 16px calc(104px + env(safe-area-inset-bottom, 0px));
+  background: var(--mrj-color-secondary);
   color: var(--mrj-color-text-secondary);
   overflow-wrap: anywhere;
   font-family: var(--mrj-font-family);
@@ -242,12 +242,12 @@ const contatoSeguro = (n) =>
   color: var(--mrj-color-text-secondary);
 }
 h1 {
-  font-size: 25px;
+  font-size: 21px;
   font-weight: 750;
   line-height: 1.3;
 }
 .introducao {
-  margin: 10px 0 20px;
+  margin: 8px 0 14px;
   font-size: var(--mrj-font-size-sm);
   color: var(--mrj-color-text-secondary);
 }
@@ -273,15 +273,15 @@ h1 {
 }
 .lista {
   display: grid;
-  gap: var(--mrj-space-4);
+  gap: var(--mrj-space-3);
 }
 .card {
   min-width: 0;
-  padding: 18px;
+  padding: 14px;
   border: 1px solid var(--mrj-color-border-subtle);
   border-radius: var(--mrj-radius-lg);
   background: var(--mrj-color-surface);
-  box-shadow: var(--mrj-shadow-card);
+  box-shadow: none;
 }
 .nao-lida {
   border-inline-start: 4px solid var(--mrj-color-primary);
@@ -299,19 +299,7 @@ h1 {
   border-radius: 50%;
   overflow: hidden;
 }
-@media (min-width: 48rem) {
-  .notificacoes-empresa {
-    padding: 32px 32px calc(104px + env(safe-area-inset-bottom, 0px));
-  }
-  .lista {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-  .filtros button {
-    flex: 0 1 auto;
-    min-width: 8rem;
-  }
-}
+
 .avatar img {
   width: 100%;
   height: 100%;
@@ -408,7 +396,7 @@ button.aprovar {
 }
 .estado,
 .feedback {
-  padding: 18px;
+  padding: 14px;
   border: 1px solid var(--mrj-color-border-subtle);
   border-radius: var(--mrj-radius-md);
   background: var(--mrj-color-surface);

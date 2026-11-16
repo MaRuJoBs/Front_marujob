@@ -29,7 +29,7 @@ const router = useRouter()
 <style scoped>
 .configuracoes-empresa {
   min-height: 100vh;
-  background: var(--mrj-color-background);
+  background: var(--mrj-color-secondary);
   color: var(--mrj-color-text);
   font-family: var(--mrj-font-family);
   line-height: var(--mrj-line-height);
@@ -41,12 +41,14 @@ main {
   overflow-wrap: anywhere;
 }
 h1 {
-  font-size: 1.6rem;
+  font-size: 21px;
+  font-weight: 700;
   margin-block: var(--mrj-space-4) var(--mrj-space-6);
   line-height: 1.25;
 }
 h2 {
-  font-size: 1.2rem;
+  font-size: 16px;
+  font-weight: 600;
   margin: 0;
 }
 a {

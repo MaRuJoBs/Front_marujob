@@ -3,7 +3,7 @@ defineProps({ voltar: { type: Boolean, default: false } })
 </script>
 
 <template>
-  <header class="empresa-header">
+  <header class="empresa-header mrj-ui">
     <router-link v-if="voltar" to="/homeEmpresa" class="voltar" aria-label="Voltar ao início">
       <svg
         width="20"
@@ -46,93 +46,75 @@ defineProps({ voltar: { type: Boolean, default: false } })
 .empresa-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 92px;
-  padding: 14px 20px;
-  background: #be98f3 url('@/assets/images/fundo.png') center 36% / cover;
-  border-bottom: 1px solid #c4a6e8;
+  gap: var(--mrj-space-2);
+  min-height: 76px;
+  padding: 10px 16px;
+  background: var(--mrj-color-secondary) url('@/assets/images/fundo.png') center 36% / cover;
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
+  font-family: var(--mrj-font-family);
 }
 .marca {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--mrj-space-1);
   min-width: 0;
+  min-height: 44px;
   text-decoration: none;
-  color: #713ce0;
+  color: var(--mrj-color-primary);
 }
 .marca img {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
 }
 .marca > span {
-  font-size: 27px;
+  font-size: 25px;
   line-height: 1;
   font-weight: 800;
-  letter-spacing: -1.3px;
+  letter-spacing: -1px;
 }
 .marca small {
   display: block;
-  margin-top: 6px;
+  margin-top: 5px;
   text-align: center;
   font-size: 9px;
   font-weight: 600;
-  letter-spacing: 4px;
+  letter-spacing: 3px;
 }
-.voltar {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #f8f1ff;
-  color: #6d45a8;
-  text-decoration: none;
-}
+.voltar,
 .notificacoes {
   display: grid;
   place-items: center;
-  margin-left: auto;
   flex-shrink: 0;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  background: #f8f1ff;
-  color: #6d45a8;
+  border-radius: var(--mrj-radius-pill);
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-primary);
   text-decoration: none;
 }
+.notificacoes {
+  margin-left: auto;
+}
 .notificacoes.router-link-active {
-  background: #7548bd;
-  color: white;
+  background: var(--mrj-color-primary);
+  color: var(--mrj-color-on-primary);
 }
 a:focus-visible {
-  outline: 3px solid #4e268b;
+  outline: 3px solid var(--mrj-color-focus);
   outline-offset: 3px;
 }
 @media (max-width: 359px) {
   .empresa-header {
     padding-inline: 12px;
+    gap: 4px;
   }
   .marca > span {
-    font-size: 23px;
+    font-size: 21px;
   }
   .marca img {
-    width: 46px;
-    height: 46px;
-  }
-}
-/* Só a combinação marca + Voltar excedia o espaço disponível nesses celulares. */
-@media (min-width: 360px) and (max-width: 419px) {
-  .empresa-header:has(.voltar) {
-    padding-inline: 12px;
-  }
-  .empresa-header:has(.voltar) .marca > span {
-    font-size: 23px;
-  }
-  .empresa-header:has(.voltar) .marca img {
-    width: 46px;
-    height: 46px;
+    width: 36px;
+    height: 36px;
   }
 }
 </style>

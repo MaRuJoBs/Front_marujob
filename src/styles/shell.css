@@ -29,6 +29,8 @@
   );
 }
 .app--empresa {
+  /* Área empresarial: aplicativo compacto também no computador. */
+  --mrj-shell-width: 26.25rem;
   --mrj-navigation-height: 76px;
 }
 .app--page-reserve {

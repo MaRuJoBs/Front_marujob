@@ -145,30 +145,31 @@ const detalhes = computed(() =>
 .detalhe-vaga-empresa {
   min-height: 100dvh;
   color: var(--mrj-color-text-secondary);
-  background: var(--mrj-color-background);
+  background: var(--mrj-color-secondary);
   font-family: var(--mrj-font-family);
   line-height: var(--mrj-line-height);
 }
 .detalhe-conteudo {
-  padding: 22px 16px calc(104px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 16px calc(104px + env(safe-area-inset-bottom, 0px));
 }
 .resumo-vaga {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: flex-start;
   gap: var(--mrj-space-3);
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 .vaga-icone {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 60px;
-  height: 64px;
+  width: 48px;
+  height: 52px;
   border-radius: var(--mrj-radius-md);
   color: var(--mrj-color-primary);
-  background: var(--mrj-color-secondary);
-  font-size: 26px;
+  background: var(--mrj-color-primary);
+  color: var(--mrj-color-on-primary);
+  font-size: 22px;
 }
 .resumo-texto {
   flex: 1;
@@ -215,11 +216,11 @@ h1 {
 }
 .bloco-descricao {
   margin-bottom: var(--mrj-space-4);
-  padding: 18px;
+  padding: 14px;
   border-radius: var(--mrj-radius-lg);
   background: var(--mrj-color-surface);
   border: 1px solid var(--mrj-color-border-subtle);
-  box-shadow: var(--mrj-shadow-card);
+  box-shadow: none;
 }
 h2 {
   color: var(--mrj-color-text);
@@ -243,7 +244,7 @@ h2 {
 }
 .informacoes-vaga > div {
   min-width: 0;
-  padding: 14px 12px;
+  padding: 12px 10px;
   border-radius: var(--mrj-radius-md);
   background: var(--mrj-color-surface);
   border: 1px solid var(--mrj-color-border-subtle);
@@ -258,19 +259,7 @@ dt {
 dt svg {
   flex-shrink: 0;
 }
-@media (min-width: 48rem) {
-  .detalhe-conteudo {
-    max-width: 64rem;
-    margin-inline: auto;
-    padding: 32px 32px calc(104px + env(safe-area-inset-bottom, 0px));
-  }
-  .informacoes-vaga {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .acoes-principais a {
-    max-width: 12rem;
-  }
-}
+
 dd {
   margin: 6px 0 0;
   color: var(--mrj-color-text-secondary);
@@ -325,7 +314,7 @@ dd {
   cursor: pointer;
 }
 .feedback {
-  padding: 18px;
+  padding: 14px;
   border-radius: var(--mrj-radius-lg);
   background: var(--mrj-color-surface);
   font-size: var(--mrj-font-size-sm);
