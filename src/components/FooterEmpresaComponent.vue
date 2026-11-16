@@ -16,37 +16,30 @@ const sair = () => {
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'house']" />
       </span>
-      <p>Início</p>
+      <span class="label">Início</span>
     </router-link>
 
     <router-link to="/mensagens" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="['fas', 'message']" />
       </span>
-      <p>Mensagens</p>
+      <span class="label">Mensagens</span>
     </router-link>
 
     <router-link to="/empresa/perfil" class="item">
       <span class="icon">
         <FontAwesomeIcon :icon="faBuilding" />
       </span>
-      <p>Perfil</p>
+      <span class="label">Perfil</span>
     </router-link>
 
     <button type="button" class="item" @click="sair">
-      <span class="icon"
-        ><svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path d="M10 4H4v16h6M9 12h12m-5-5 5 5-5 5" /></svg
-      ></span>
-      <p>Sair</p>
+      <span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10 4H4v16h6M9 12h12m-5-5 5 5-5 5" />
+        </svg>
+      </span>
+      <span class="label">Sair</span>
     </button>
   </footer>
 </template>
@@ -55,14 +48,15 @@ const sair = () => {
 .footer {
   position: fixed;
   bottom: 0;
-  width: 100%;
-  /* padding-bottom: env(safe-area-inset-bottom); */
-  background: #cbbcd9;
-  border-radius: 25px 25px 0 0;
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
-  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+  padding: 7px 10px 5px;
+  background: var(--mrj-color-secondary);
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -3px 12px #4c35670d;
   z-index: 999;
 }
 
@@ -73,26 +67,70 @@ const sair = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-decoration: none;
-  font-size: 12px;
-  color: #65517f;
-  min-width: 44px;
-  min-height: 48px;
   justify-content: center;
+  gap: 2px;
+  text-decoration: none;
+  color: #897ba6;
+  font: inherit;
+  min-width: 0;
+  min-height: var(--mrj-control-height-md);
+  padding: 2px 3px;
+  border-radius: var(--mrj-radius-sm);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .icon {
-  font-size: 22px;
-  margin-bottom: 3px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 17px;
+  line-height: 1;
+  transition:
+    color var(--mrj-motion-duration) ease,
+    background-color var(--mrj-motion-duration) ease;
 }
 
-.router-link-active {
-  color: #31168a;
+.icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.label {
+  max-width: 100%;
+  color: inherit;
+  font-size: 10px;
+  font-weight: var(--mrj-font-weight-regular);
+  line-height: 12px;
+  white-space: nowrap;
+}
+
+.item.router-link-active {
+  color: var(--mrj-color-primary-active);
+}
+
+.item.router-link-active .icon {
+  background: var(--mrj-color-secondary-hover);
+}
+
+.item.router-link-active .label {
+  font-weight: var(--mrj-font-weight-semibold);
+}
+
+.item:hover:not(.router-link-active) {
+  color: var(--mrj-color-text);
+  background: #ffffff55;
 }
 
 .item:focus-visible {
-  outline: 3px solid #63369e;
-  outline-offset: 3px;
-  border-radius: 8px;
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
+  outline-offset: -1px;
+}
+
+@media (max-width: 359px) {
+  .footer {
+    padding-inline: 6px;
+  }
 }
 </style>

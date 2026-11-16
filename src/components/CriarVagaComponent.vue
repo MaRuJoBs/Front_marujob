@@ -103,10 +103,6 @@ function alterarModalidade() {
           @submit.prevent="enviar"
         >
           <div class="cabecalho-form">
-            <div>
-              <span class="etiqueta">SUA OPORTUNIDADE</span>
-              <h2>Vamos aos detalhes</h2>
-            </div>
             <span class="obrigatorios">* Campos obrigatórios</span>
           </div>
 
@@ -473,7 +469,7 @@ function alterarModalidade() {
 .criar-vaga {
   isolation: isolate;
   min-height: 100dvh;
-  background: var(--mrj-color-background);
+  background: var(--mrj-color-secondary);
   color: var(--mrj-color-text-secondary);
   font-family: var(--mrj-font-family);
   line-height: var(--mrj-line-height);
@@ -483,11 +479,11 @@ function alterarModalidade() {
   padding: 16px 16px calc(106px + env(safe-area-inset-bottom, 0px));
 }
 .apresentacao {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   padding-inline: 4px;
 }
 h1 {
-  font-size: 23px;
+  font-size: 21px;
   line-height: 1.3;
   font-weight: 700;
   letter-spacing: -0.5px;
@@ -504,11 +500,11 @@ h1 {
 }
 .form-card {
   min-width: 0;
-  padding: 20px 16px;
+  padding: 16px 12px;
   border: 1px solid var(--mrj-color-border-subtle);
   border-radius: var(--mrj-radius-lg);
   background: var(--mrj-color-surface);
-  box-shadow: var(--mrj-shadow-card);
+  box-shadow: none;
 }
 .cabecalho-form {
   display: flex;
@@ -516,7 +512,7 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--mrj-color-border-subtle);
 }
@@ -550,7 +546,7 @@ fieldset > legend {
 }
 .campo {
   min-width: 0;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 label {
   display: block;
@@ -581,8 +577,8 @@ select,
 textarea {
   width: 100%;
   min-width: 0;
-  min-height: 48px;
-  padding: 11px 14px;
+  min-height: 44px;
+  padding: 9px 12px;
   border: 1px solid var(--mrj-color-border);
   border-radius: var(--mrj-radius-md);
   background: var(--mrj-color-surface);
@@ -595,7 +591,7 @@ select {
   padding-right: 24px;
 }
 textarea {
-  min-height: 134px;
+  min-height: 112px;
   resize: vertical;
 }
 input:focus,
@@ -692,7 +688,7 @@ select.placeholder {
   align-items: center;
   justify-content: center;
   gap: var(--mrj-space-2);
-  min-height: 48px;
+  min-height: 44px;
   padding: 10px 16px;
   border-radius: var(--mrj-radius-md);
   font-size: var(--mrj-font-size-sm);
@@ -754,7 +750,7 @@ a:focus-visible {
   margin: 12px 4px 0;
 }
 .feedback-erro {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   padding: 14px;
   border: 1px solid #edc1cf;
   border-radius: 12px;
@@ -829,32 +825,7 @@ a:focus-visible {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-@media (min-width: 48rem) {
-  .conteudo {
-    max-width: 64rem;
-    margin-inline: auto;
-    padding: 32px 32px calc(112px + env(safe-area-inset-bottom, 0px));
-  }
-  .form-card {
-    padding: 24px 32px;
-  }
-  .campos-duplos {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-  }
-  .acoes {
-    width: min(100%, 64rem);
-    padding-inline: 32px;
-    justify-content: flex-end;
-  }
-  .btn-cancelar {
-    min-width: 8rem;
-  }
-  .btn-publicar {
-    flex: 0 1 auto;
-    min-width: 14rem;
-  }
-}
+
 @keyframes girar {
   to {
     transform: rotate(360deg);

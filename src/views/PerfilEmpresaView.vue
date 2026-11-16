@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { faGear } from '@fortawesome/free-solid-svg-icons'
+import { faGear, faBuilding, faCircleInfo } from '@fortawesome/free-solid-svg-icons'
 const router = useRouter()
 import EmpresaHeader from '../components/EmpresaHeader.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
@@ -64,7 +64,7 @@ function editar() {
     <EmpresaHeader voltar />
     <main>
       <div class="titulo-perfil">
-        <h1>Perfil institucional</h1>
+        <h1>{{ editando ? 'Editar perfil da empresa' : 'Perfil da empresa' }}</h1>
         <BaseButton
           variant="outline"
           aria-label="Configurações da empresa"
@@ -81,160 +81,333 @@ function editar() {
           >Tentar novamente</BaseButton
         >
       </div>
-      <BaseCard v-if="perfil && !carregando" elevated>
-        <img v-if="logo" class="logo" :src="logo" alt="Logotipo da empresa" />
-        <div v-else class="sem-logo">Sem logotipo</div>
-        <form v-if="editando" novalidate @submit.prevent="salvar">
-          <fieldset :disabled="salvando">
-            <legend>Editar informações da empresa</legend>
-            <label for="logo-empresa">Logotipo</label>
-            <div class="upload-logo">
-              <input
-                id="logo-empresa"
-                type="file"
-                aria-label="Selecionar imagem do logotipo"
-                accept="image/*"
-                :aria-invalid="!!erros.profile_image"
-                aria-describedby="nome-logo erro-logo"
-                @change="selecionarImagem"
-              />
-              <span class="upload-botao" aria-hidden="true">Selecionar imagem</span>
+      <div v-if="perfil && !carregando" class="conteudo-perfil">
+        <section v-if="!editando" class="cabecalho-institucional" aria-labelledby="nome-empresa">
+          <div class="identidade-empresa">
+            <img v-if="logo" class="logo" :src="logo" alt="Logotipo da empresa" />
+            <div v-else class="sem-logo" role="img" aria-label="Empresa sem logotipo">
+              <FontAwesomeIcon :icon="faBuilding" aria-hidden="true" />
             </div>
-            <p id="nome-logo" class="nome-arquivo" role="status">
-              {{ imagem?.name || 'Nenhuma nova imagem selecionada' }}
-            </p>
-            <p id="erro-logo" class="erro" role="alert" v-if="erros.profile_image">
-              {{ erros.profile_image }}
-            </p>
-            <BaseButton v-if="logo" variant="outline" @click="removerImagem"
-              >Remover imagem</BaseButton
-            >
-            <BaseInput
-              v-for="[campo, label] in campos"
-              :key="campo"
-              v-model="form[campo]"
-              :label="label"
-              :type="campo === 'website' ? 'url' : 'text'"
-              :required="campo === 'name'"
-              :error="erros[campo]"
-            />
-            <label for="descricao-empresa">Descrição institucional</label>
-            <textarea
-              id="descricao-empresa"
-              v-model="form.descricao_institucional"
-              rows="6"
-              :aria-invalid="!!erros.descricao_institucional"
-              aria-describedby="erro-descricao"
-            />
-            <p id="erro-descricao" v-if="erros.descricao_institucional" role="alert" class="erro">
-              {{ erros.descricao_institucional }}
-            </p>
-            <label for="uf-empresa">UF</label>
-            <select
-              id="uf-empresa"
-              v-model="form.uf"
-              :aria-invalid="!!erros.uf"
-              aria-describedby="erro-uf"
-            >
-              <option value="">Não informada</option>
-              <option v-for="uf in ufs" :key="uf" :value="uf">{{ uf }}</option>
-            </select>
-            <p id="erro-uf" v-if="erros.uf" role="alert" class="erro">{{ erros.uf }}</p>
-          </fieldset>
-          <div class="acoes">
-            <BaseButton type="submit" :loading="salvando" loading-label="Salvando…"
-              >Salvar alterações</BaseButton
-            >
-            <BaseButton variant="outline" :disabled="salvando" @click="cancelar"
-              >Cancelar</BaseButton
-            >
+            <div class="resumo-empresa">
+              <p class="rotulo">Perfil empresarial</p>
+              <h2 id="nome-empresa">{{ perfil.name }}</h2>
+              <p v-if="perfil.area_atuacao">{{ perfil.area_atuacao }}</p>
+              <p v-if="perfil.cidade || perfil.uf" class="localizacao">
+                {{ [perfil.cidade, perfil.uf].filter(Boolean).join(' / ') }}
+              </p>
+            </div>
           </div>
-        </form>
-        <template v-else>
-          <h2>{{ perfil.name }}</h2>
-          <p v-if="vazio">Complete o perfil institucional para apresentar sua empresa.</p>
-          <p v-if="perfil.descricao_institucional" class="descricao">
-            {{ perfil.descricao_institucional }}
-          </p>
-          <dl>
-            <template v-if="perfil.area_atuacao"
-              ><dt>Área de atuação</dt>
-              <dd>{{ perfil.area_atuacao }}</dd></template
+          <BaseButton class="editar-perfil" variant="outline" @click="editar"
+            >Editar informações</BaseButton
+          >
+        </section>
+        <BaseCard v-if="editando" class="card-edicao" elevated>
+          <form novalidate @submit.prevent="salvar">
+            <fieldset :disabled="salvando">
+              <legend>Editar informações da empresa</legend>
+              <div class="logo-editor">
+                <div class="previa-logo">
+                  <img v-if="logo" class="logo" :src="logo" alt="Prévia do logotipo da empresa" />
+                  <div v-else class="sem-logo" role="img" aria-label="Empresa sem logotipo">
+                    <FontAwesomeIcon :icon="faBuilding" aria-hidden="true" />
+                  </div>
+                </div>
+                <div class="logo-controles">
+                  <label for="logo-empresa">Logotipo</label>
+                  <div class="upload-logo">
+                    <input
+                      id="logo-empresa"
+                      type="file"
+                      aria-label="Selecionar imagem do logotipo"
+                      accept="image/*"
+                      :aria-invalid="!!erros.profile_image"
+                      aria-describedby="nome-logo erro-logo"
+                      @change="selecionarImagem"
+                    />
+                    <span class="upload-botao" aria-hidden="true">Selecionar imagem</span>
+                  </div>
+                  <p id="nome-logo" class="nome-arquivo" role="status">
+                    {{ imagem?.name || 'Nenhuma nova imagem selecionada' }}
+                  </p>
+                  <p id="erro-logo" class="erro" role="alert" v-if="erros.profile_image">
+                    {{ erros.profile_image }}
+                  </p>
+                  <BaseButton v-if="logo" variant="outline" @click="removerImagem"
+                    >Remover imagem</BaseButton
+                  >
+                </div>
+              </div>
+              <div class="campos-empresa">
+                <BaseInput
+                  v-for="[campo, label] in campos"
+                  :key="campo"
+                  v-model="form[campo]"
+                  :label="label"
+                  :type="campo === 'website' ? 'url' : 'text'"
+                  :required="campo === 'name'"
+                  :error="erros[campo]"
+                />
+              </div>
+              <div class="campo-descricao">
+                <label for="descricao-empresa">Descrição institucional</label>
+                <textarea
+                  id="descricao-empresa"
+                  v-model="form.descricao_institucional"
+                  rows="6"
+                  :aria-invalid="!!erros.descricao_institucional"
+                  aria-describedby="erro-descricao"
+                />
+                <p
+                  id="erro-descricao"
+                  v-if="erros.descricao_institucional"
+                  role="alert"
+                  class="erro"
+                >
+                  {{ erros.descricao_institucional }}
+                </p>
+              </div>
+              <div class="campo-uf">
+                <label for="uf-empresa">UF</label>
+                <select
+                  id="uf-empresa"
+                  v-model="form.uf"
+                  :aria-invalid="!!erros.uf"
+                  aria-describedby="erro-uf"
+                >
+                  <option value="">Não informada</option>
+                  <option v-for="uf in ufs" :key="uf" :value="uf">{{ uf }}</option>
+                </select>
+                <p id="erro-uf" v-if="erros.uf" role="alert" class="erro">{{ erros.uf }}</p>
+              </div>
+            </fieldset>
+            <div class="acoes">
+              <BaseButton type="submit" :loading="salvando" loading-label="Salvando…"
+                >Salvar alterações</BaseButton
+              >
+              <BaseButton variant="outline" :disabled="salvando" @click="cancelar"
+                >Cancelar</BaseButton
+              >
+            </div>
+          </form>
+        </BaseCard>
+        <div v-else class="secoes-perfil">
+          <BaseCard elevated class="apresentacao">
+            <h2><FontAwesomeIcon :icon="faBuilding" aria-hidden="true" /> Sobre a empresa</h2>
+            <p v-if="vazio">Complete o perfil institucional para apresentar sua empresa.</p>
+            <p v-if="perfil.descricao_institucional" class="descricao">
+              {{ perfil.descricao_institucional }}
+            </p>
+            <p v-else-if="!vazio" class="texto-secundario">
+              A empresa ainda não adicionou uma apresentação.
+            </p>
+          </BaseCard>
+          <BaseCard elevated class="informacoes">
+            <h2>
+              <FontAwesomeIcon :icon="faCircleInfo" aria-hidden="true" /> Informações empresariais
+            </h2>
+            <p
+              v-if="
+                !perfil.area_atuacao &&
+                !perfil.cidade &&
+                !perfil.uf &&
+                !perfil.website &&
+                !perfil.contato_comercial
+              "
+              class="texto-secundario"
             >
-            <template v-if="perfil.cidade || perfil.uf"
-              ><dt>Localização</dt>
-              <dd>{{ [perfil.cidade, perfil.uf].filter(Boolean).join(' / ') }}</dd></template
-            >
-            <template v-if="perfil.website"
-              ><dt>Website</dt>
-              <dd>
-                <a
-                  v-if="urlPublica(perfil.website)"
-                  :href="urlPublica(perfil.website)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >{{ perfil.website }}</a
-                ><span v-else>{{ perfil.website }}</span>
-              </dd></template
-            >
-            <template v-if="perfil.contato_comercial"
-              ><dt>Contato comercial</dt>
-              <dd>{{ perfil.contato_comercial }}</dd></template
-            >
-          </dl>
-          <BaseButton @click="editar">Editar informações</BaseButton>
-        </template>
-      </BaseCard>
+              Nenhuma informação institucional adicionada.
+            </p>
+            <dl>
+              <template v-if="perfil.area_atuacao"
+                ><dt>Área de atuação</dt>
+                <dd>{{ perfil.area_atuacao }}</dd></template
+              >
+              <template v-if="perfil.cidade || perfil.uf"
+                ><dt>Localização</dt>
+                <dd>{{ [perfil.cidade, perfil.uf].filter(Boolean).join(' / ') }}</dd></template
+              >
+              <template v-if="perfil.website"
+                ><dt>Website</dt>
+                <dd>
+                  <a
+                    v-if="urlPublica(perfil.website)"
+                    :href="urlPublica(perfil.website)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ perfil.website }}</a
+                  ><span v-else>{{ perfil.website }}</span>
+                </dd></template
+              >
+              <template v-if="perfil.contato_comercial"
+                ><dt>Contato comercial</dt>
+                <dd>{{ perfil.contato_comercial }}</dd></template
+              >
+            </dl>
+          </BaseCard>
+        </div>
+      </div>
     </main>
   </div>
 </template>
 
 <style scoped>
 .perfil-empresa {
-  min-height: 100vh;
-  background: var(--mrj-color-background);
+  min-height: 100dvh;
+  background: var(--mrj-color-secondary);
   color: var(--mrj-color-text);
   font-family: var(--mrj-font-family);
   line-height: var(--mrj-line-height);
 }
 main {
-  max-width: 760px;
-  margin: auto;
-  padding: 20px 16px 100px;
+  padding: 16px 16px calc(100px + env(safe-area-inset-bottom, 0px));
   overflow-wrap: anywhere;
-}
-h1 {
-  font-size: 1.6rem;
 }
 .titulo-perfil {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: var(--mrj-space-6);
+  margin-bottom: 16px;
+}
+.titulo-perfil h1 {
+  min-width: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.titulo-perfil > button {
+  flex-shrink: 0;
+  width: 44px;
+  padding: 8px;
+  border-color: var(--mrj-color-border-subtle);
+  background: var(--mrj-color-surface);
 }
 h2,
 p {
-  margin-block: 0 12px;
+  margin: 0;
+}
+.conteudo-perfil,
+.secoes-perfil {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.cabecalho-institucional {
+  display: grid;
+  gap: 12px;
+  padding: 4px 0 16px;
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
+}
+.identidade-empresa {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 .logo,
 .sem-logo {
-  width: 112px;
-  height: 112px;
-  border-radius: var(--mrj-radius-md);
+  width: 72px;
+  height: 72px;
   object-fit: contain;
-  background: var(--mrj-color-secondary);
+  border-radius: var(--mrj-radius-md);
   border: 1px solid var(--mrj-color-border-subtle);
+  background: var(--mrj-color-surface);
 }
 .sem-logo {
   display: grid;
   place-items: center;
-  text-align: center;
+  font-size: 30px;
+  color: var(--mrj-color-primary);
+}
+.resumo-empresa {
+  min-width: 0;
+}
+.resumo-empresa h2 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 3px 0 6px;
+}
+.resumo-empresa p {
+  font-size: var(--mrj-font-size-sm);
+}
+.rotulo {
+  color: var(--mrj-color-text-secondary);
+  font-size: 12px;
+}
+.localizacao {
+  margin-top: 4px;
+}
+.editar-perfil {
+  justify-self: start;
+  margin-left: 84px;
+  max-width: calc(100% - 84px);
+  min-height: 44px;
+  font-size: var(--mrj-font-size-sm);
+  background: var(--mrj-color-surface);
+}
+.secoes-perfil > *,
+.card-edicao {
+  padding: 16px;
+  gap: 12px;
+  align-content: start;
+  border-radius: var(--mrj-radius-md);
+  box-shadow: none;
+}
+.secoes-perfil h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.secoes-perfil h2 svg {
+  flex-shrink: 0;
+  color: var(--mrj-color-primary);
+  width: 16px;
+}
+.secoes-perfil p,
+dl {
+  font-size: var(--mrj-font-size-sm);
+}
+.descricao {
+  white-space: pre-wrap;
+}
+.texto-secundario {
+  color: var(--mrj-color-text-secondary);
+}
+dl {
+  margin: 0;
+}
+dt {
+  font-weight: 600;
+  color: var(--mrj-color-text-secondary);
+}
+dd {
+  margin: 2px 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
+}
+dd:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+  text-underline-offset: 3px;
+  color: var(--mrj-color-primary);
 }
 form,
-fieldset {
+fieldset,
+.campos-empresa {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   min-width: 0;
 }
 fieldset {
@@ -243,8 +416,19 @@ fieldset {
   margin: 0;
 }
 legend {
-  margin-bottom: 16px;
-  font-weight: bold;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+label {
+  font-size: var(--mrj-font-size-sm);
+  font-weight: 600;
+}
+.campo-descricao,
+.campo-uf {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 input,
 textarea,
@@ -254,10 +438,12 @@ select {
   min-width: 0;
   width: 100%;
   font: inherit;
+  font-size: 16px;
 }
 textarea,
 select {
-  padding: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
   border: 1px solid var(--mrj-color-border);
   border-radius: var(--mrj-radius-sm);
   color: inherit;
@@ -265,15 +451,32 @@ select {
 }
 textarea {
   resize: vertical;
+  min-height: 120px;
 }
-:is(textarea, select, input):focus-visible {
+.card-edicao :deep(.mrj-field) {
+  gap: 6px;
+  font-size: var(--mrj-font-size-sm);
+}
+.card-edicao :deep(.mrj-field__input) {
+  font-size: 16px;
+}
+:is(textarea, select, input, a):focus-visible {
   outline: 3px solid var(--mrj-color-focus);
   outline-offset: 3px;
 }
+:is(textarea, select)[aria-invalid='true'] {
+  border-color: var(--mrj-color-danger);
+}
 .acoes {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 1px solid var(--mrj-color-border-subtle);
+  padding-top: 14px;
+}
+.acoes > * {
+  width: 100%;
+  font-size: var(--mrj-font-size-sm);
 }
 .erro {
   color: var(--mrj-color-danger);
@@ -281,52 +484,36 @@ textarea {
 .sucesso {
   color: var(--mrj-color-success);
 }
-dl {
-  margin: 0;
-}
-dt {
-  font-weight: bold;
-  font-size: var(--mrj-font-size-sm);
-  color: var(--mrj-color-text-secondary);
-}
-dd {
-  margin: 0 0 16px;
-  padding-bottom: var(--mrj-space-3);
-  border-bottom: 1px solid var(--mrj-color-border-subtle);
-}
-.descricao {
-  white-space: pre-wrap;
-}
-a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--mrj-control-height-md);
-  text-underline-offset: 3px;
-  color: inherit;
-}
-@media (min-width: 768px) {
-  main {
-    padding: 32px 24px 100px;
-  }
-}
 main > [role='status'],
 main > .erro {
-  padding: var(--mrj-space-4);
+  margin-bottom: 16px;
+  padding: 12px;
   border: 1px solid var(--mrj-color-border-subtle);
   border-radius: var(--mrj-radius-md);
   background: var(--mrj-color-surface);
 }
-.titulo-perfil h1 {
+.logo-editor {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
+}
+.logo-editor .logo,
+.logo-editor .sem-logo {
+  width: 60px;
+  height: 60px;
+}
+.logo-controles {
+  display: grid;
+  gap: 8px;
   min-width: 0;
-  line-height: 1.25;
 }
-.acoes > * {
-  flex: 1 1 140px;
+.logo-controles > button {
+  font-size: var(--mrj-font-size-sm);
+  padding-inline: 8px;
 }
-:is(textarea, select)[aria-invalid='true'] {
-  border-color: var(--mrj-color-danger);
-}
-/* O input nativo permanece focável e recebe o clique em toda a área. */
 .upload-logo {
   position: relative;
   min-width: 0;
@@ -342,11 +529,12 @@ main > .erro {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--mrj-control-height-md);
+  min-height: 44px;
   padding: 8px 12px;
   border: 1px solid var(--mrj-color-border);
   border-radius: var(--mrj-radius-sm);
   background: var(--mrj-color-secondary);
+  font-size: var(--mrj-font-size-sm);
 }
 .upload-logo:focus-within {
   outline: 3px solid var(--mrj-color-focus);
@@ -358,5 +546,26 @@ main > .erro {
 .nome-arquivo {
   overflow-wrap: anywhere;
   font-size: var(--mrj-font-size-sm);
+}
+@media (max-width: 359px) {
+  main {
+    padding-inline: 12px;
+  }
+  .identidade-empresa {
+    grid-template-columns: 60px minmax(0, 1fr);
+  }
+  .logo,
+  .sem-logo {
+    width: 60px;
+    height: 60px;
+  }
+  .editar-perfil {
+    margin-left: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+  .resumo-empresa h2 {
+    font-size: 18px;
+  }
 }
 </style>

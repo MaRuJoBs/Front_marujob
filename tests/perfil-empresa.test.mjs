@@ -128,7 +128,7 @@ test('erros 400, 403, 503 e rede preservam formulário e permitem nova tentativa
 })
 test('guard restringe rota a empresa e redireciona visitante', async () => {
   const rota = routes.find((r) => r.path === '/empresa/perfil')
-  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa', layout: 'wide' })
+  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa' })
   sessao.tipo = 'usuario'
   assert.equal((await protegerRota({ ...rota, query: {} })).path, '/home')
   limparSessao()
@@ -151,5 +151,17 @@ test('401 encerra a sessão pelo interceptor existente', async () => {
     assert.equal((await protegerRota({ meta: { requiresAuth: true }, query: {} })).name, 'login')
   } finally {
     fechar()
+  }
+})
+
+test('rotas empresariais preservam o shell de aplicativo sem layout wide', () => {
+  const empresariais = routes.filter((rota) => rota.meta?.tipo === 'empresa')
+  assert.equal(empresariais.length, 7)
+  for (const rota of empresariais) {
+    assert.equal(rota.meta.requiresAuth, true, rota.path)
+    assert.equal(rota.meta.layout, undefined, rota.path)
+  }
+  for (const path of ['/criar-vaga', '/editar-vaga/:id']) {
+    assert.equal(routes.find((rota) => rota.path === path).meta.hideFooter, true)
   }
 })

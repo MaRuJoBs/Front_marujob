@@ -46,7 +46,7 @@ onMounted(() => {
 })
 </script>
 <template>
-  <main class="home mrj-ui" :style="{ backgroundImage: `url('${fundoEmpresa}')` }">
+  <main class="home mrj-ui">
     <div v-if="confirmacao" class="confirmacao-publicacao" role="status">
       <div>
         <strong>{{ confirmacao }}</strong>
@@ -81,8 +81,9 @@ onMounted(() => {
       </div>
     </div>
     <!-- Welcome -->
-    <section class="welcome">
-      <h2>Bem-vindo, {{ sessao.usuario?.name || 'Empresa' }}!</h2>
+    <section class="welcome" :style="{ backgroundImage: `url('${fundoEmpresa}')` }">
+      <p class="welcome-label">Área da empresa</p>
+      <h1>Bem-vindo, {{ sessao.usuario?.name || 'Empresa' }}!</h1>
 
       <p>Gerencie suas vagas e encontre profissionais para seus projetos.</p>
 
@@ -93,62 +94,62 @@ onMounted(() => {
     </section>
 
     <!-- Vagas -->
-    <section class="section" :aria-busy="carregando">
+    <section class="section painel-vagas ultima-publicada" :aria-busy="carregando">
       <div class="section-title">
-        <h3 tabindex="-1">Última vaga publicada</h3>
+        <h2 tabindex="-1">
+          {{ ultimaPublicada ? 'Última vaga publicada' : 'Suas oportunidades' }}
+        </h2>
       </div>
 
       <p v-if="carregando" class="estado-vagas" role="status">Carregando suas oportunidades...</p>
       <div v-else-if="erro" class="estado-vagas estado-vagas--erro" role="alert">
         {{ erro }} <button type="button" @click="gerenciamento.carregar()">Tentar novamente</button>
       </div>
-      <div v-else-if="ultimaPublicada" class="job-card vaga-publicada">
-        <div class="job-header">
-          <h4>
-            <router-link class="titulo-vaga" :to="'/empresa/vagas/' + ultimaPublicada.id">{{
-              ultimaPublicada.titulo
-            }}</router-link>
-          </h4>
-
-          <div class="price">{{ formatarPagamento(ultimaPublicada.preco) }}</div>
-        </div>
-
-        <p v-if="ultimaPublicada.descricao" class="descricao-publicada">
-          {{ ultimaPublicada.descricao }}
-        </p>
-
-        <div class="job-footer">
-          <div class="job-info">{{ ultimaPublicada.tag }}</div>
-
-          <div class="job-info">
-            <i class="fa-regular fa-clock" aria-hidden="true"></i>
-            {{ formatarTempo(ultimaPublicada.tempo) }}
+      <router-link
+        v-else-if="ultimaPublicada"
+        class="job-card vaga-publicada destaque-vaga"
+        :to="'/empresa/vagas/' + ultimaPublicada.id"
+        :aria-label="'Ver detalhes de ' + ultimaPublicada.titulo"
+      >
+        <span class="vaga-icone" aria-hidden="true"
+          ><FontAwesomeIcon :icon="['fas', 'briefcase']"
+        /></span>
+        <div class="vaga-conteudo">
+          <div class="job-header">
+            <h3>{{ ultimaPublicada.titulo }}</h3>
+            <strong class="price">{{ formatarPagamento(ultimaPublicada.preco) }}</strong>
           </div>
+          <div class="job-footer">
+            <span class="job-info">{{ ultimaPublicada.tag }}</span>
+            <span class="job-info">{{ formatarTempo(ultimaPublicada.tempo) }}</span>
+            <span v-if="ultimaPublicada.modalidade" class="job-info">{{
+              ultimaPublicada.modalidade
+            }}</span>
+          </div>
+          <span class="abrir-vaga">Ver detalhes <span aria-hidden="true">›</span></span>
         </div>
-      </div>
+      </router-link>
 
-      <div v-else class="sem-publicacao">
+      <div v-else class="sem-publicacao vazio-publicacao">
+        <FontAwesomeIcon :icon="['fas', 'briefcase']" aria-hidden="true" />
+        <h3>Publique sua primeira vaga</h3>
         <p>Você ainda não tem oportunidades publicadas.</p>
         <router-link to="/criar-vaga">Criar nova vaga</router-link>
       </div>
-      <p v-if="ultimaPublicada" class="sem-publicacao">
-        Exibimos a vaga com maior ID como aproximação da última publicação. A API não informa a data
-        de publicação.
-      </p>
     </section>
-    <section class="section" v-if="!carregando && !erro && vagas.length">
+    <section
+      class="section painel-vagas gerenciamento-vagas"
+      v-if="!carregando && !erro && vagas.length"
+    >
       <div class="section-title">
-        <h3>Suas oportunidades ({{ vagas.length }})</h3>
+        <h2>Vagas da empresa</h2>
+        <span class="quantidade-vagas">{{ vagas.length }}</span>
       </div>
       <div class="filtros-vagas">
         <label class="busca-vagas">
           <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" aria-hidden="true" />
           <span class="sr-only">Buscar suas vagas</span>
-          <input
-            v-model="busca"
-            type="search"
-            placeholder="Buscar por título ou palavra-chave..."
-          />
+          <input v-model="busca" type="search" placeholder="Buscar suas vagas" />
         </label>
         <label class="categoria-vagas">
           <span class="sr-only">Filtrar por categoria</span>
@@ -176,10 +177,13 @@ onMounted(() => {
               </h4>
               <strong class="price">{{ formatarPagamento(vaga.preco) }}</strong>
             </div>
-            <p class="descricao-publicada">{{ vaga.descricao }}</p>
             <div class="job-footer">
-              <span class="job-info">{{ vaga.tag }}</span
-              ><span class="job-info">{{ formatarTempo(vaga.tempo) }}</span>
+              <span class="job-info">{{ vaga.tag }}</span>
+              <span class="job-info">{{ formatarTempo(vaga.tempo) }}</span>
+              <span v-if="vaga.modalidade" class="job-info">{{ vaga.modalidade }}</span>
+              <span v-if="vaga.cidade || vaga.uf" class="job-info">{{
+                [vaga.cidade, vaga.uf].filter(Boolean).join(' / ')
+              }}</span>
             </div>
             <div class="acoes-vaga">
               <router-link :to="'/editar-vaga/' + vaga.id"
@@ -204,331 +208,322 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.home {
+  min-height: calc(100dvh - 76px);
+  padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  background: var(--mrj-color-secondary-hover);
+  color: var(--mrj-color-text);
+  font-family: var(--mrj-font-family);
+  line-height: var(--mrj-line-height);
+  overflow-wrap: anywhere;
+}
+.welcome {
+  padding: 16px 16px 20px;
+  background-color: var(--mrj-color-secondary);
+  background-position: center 22%;
+  background-size: cover;
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
+}
+.welcome-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.welcome h1 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.welcome > p:not(.welcome-label) {
+  margin-top: 6px;
+  font-size: var(--mrj-font-size-sm);
+  max-width: 36ch;
+}
+.new-job {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 14px;
+  padding: 8px 12px;
+  border-radius: var(--mrj-radius-sm);
+  background: var(--mrj-color-primary);
+  color: var(--mrj-color-on-primary);
+  font-size: var(--mrj-font-size-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.new-job > span {
+  font-size: 22px;
+  line-height: 1;
+}
+.painel-vagas {
+  margin: 16px 12px 0;
+  padding: 12px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-lg);
+  background: var(--mrj-color-secondary);
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.section-title h2 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.quantidade-vagas {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 2px 6px;
+  border-radius: var(--mrj-radius-pill);
+  font-size: 12px;
+  background: var(--mrj-color-surface);
+}
+.job-card {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 8px 10px;
+  padding: 12px 10px;
+  min-width: 0;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
+}
+.vaga-icone {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  grid-row: 1 / 3;
+  width: 32px;
+  height: 36px;
+  border-radius: var(--mrj-radius-sm);
+  background: var(--mrj-color-primary);
+  color: var(--mrj-color-on-primary);
+  font-size: 16px;
+}
+.vaga-conteudo {
+  display: contents;
+}
+.job-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+  grid-column: 2;
+}
+.job-header :is(h3, h4) {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--mrj-font-size-sm);
+  font-weight: 600;
+  line-height: 1.4;
+}
 .titulo-vaga {
   display: inline-block;
-  padding-block: 4px;
+  padding-block: 2px;
   color: inherit;
   font-weight: inherit;
   text-decoration: none;
 }
 .titulo-vaga:hover {
   text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.home {
-  min-height: calc(100dvh - 92px);
-  padding: 4px 16px calc(104px + env(safe-area-inset-bottom, 0px));
-  background-color: var(--mrj-color-background);
-  background-size: 100% auto;
-  background-blend-mode: soft-light;
-  background-repeat: no-repeat;
-  color: var(--mrj-color-text-secondary);
-  font-family: var(--mrj-font-family);
-  line-height: var(--mrj-line-height);
-}
-.welcome {
-  padding: var(--mrj-space-6) 0 var(--mrj-space-2);
-}
-.welcome h2 {
-  font-size: 24px;
-  line-height: 1.35;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-.welcome p {
-  margin-top: 6px;
-  max-width: 34ch;
-  font-size: var(--mrj-font-size-sm);
-  line-height: 1.5;
-  color: var(--mrj-color-text-secondary);
-}
-.new-job {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: var(--mrj-space-4);
-  min-height: 46px;
-  padding: 10px 16px;
-  border-radius: var(--mrj-radius-md);
-  background: var(--mrj-color-primary);
-  color: var(--mrj-color-on-primary);
-  font-size: var(--mrj-font-size-sm);
-  font-weight: 600;
-  text-decoration: none;
-  box-shadow: 0 3px 8px #59318c14;
-}
-.new-job span {
-  font-size: 23px;
-  line-height: 1;
-}
-.section {
-  margin-top: 22px;
-  min-width: 0;
-}
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--mrj-space-3);
-  margin-bottom: var(--mrj-space-3);
-}
-.section-title h3 {
-  font-size: 16px;
-  font-weight: 650;
-  color: var(--mrj-color-text);
-}
-.job-card {
-  min-width: 0;
-  padding: var(--mrj-space-4);
-  border: 1px solid var(--mrj-color-border-subtle);
-  border-radius: var(--mrj-radius-lg);
-  background: var(--mrj-color-surface);
-  overflow-wrap: anywhere;
-  box-shadow: var(--mrj-shadow-card);
-}
-.job-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: start;
-  gap: var(--mrj-space-2);
-}
-.job-header h4 {
-  min-width: 0;
-  flex: 1 1 120px;
-  color: var(--mrj-color-text);
-  font-size: 15px;
-  font-weight: 650;
-  line-height: 1.4;
 }
 .price {
   max-width: 100%;
-  padding: 3px 9px;
+  padding: 3px 6px;
   border: 1px solid var(--mrj-color-border-subtle);
-  border-radius: var(--mrj-radius-lg);
-  background: var(--mrj-color-surface);
-  color: var(--mrj-color-text-secondary);
-  font-size: var(--mrj-font-size-sm);
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-.descricao-publicada {
-  margin: 12px 0;
-  color: var(--mrj-color-text-secondary);
-  font-size: var(--mrj-font-size-sm);
-  line-height: 1.6;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  border-radius: var(--mrj-radius-pill);
+  color: var(--mrj-color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 .job-footer {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 8px 12px;
-  margin-top: var(--mrj-space-3);
+  align-items: center;
+  gap: 4px 8px;
+  grid-column: 2;
+  min-width: 0;
 }
 .job-info {
+  font-size: 12px;
   color: var(--mrj-color-text-secondary);
-  font-size: var(--mrj-font-size-sm);
-  line-height: 1.5;
 }
 .job-info:first-child {
-  border: 1px solid var(--mrj-color-border-subtle);
+  padding: 2px 7px;
+  border-radius: var(--mrj-radius-pill);
   background: var(--mrj-color-secondary);
-  padding: 2px 9px;
-  border-radius: var(--mrj-radius-lg);
+}
+.destaque-vaga {
+  color: inherit;
+  text-decoration: none;
+}
+.abrir-vaga {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mrj-color-primary);
+}
+.abrir-vaga > span {
+  font-size: 22px;
 }
 .lista-vagas {
   display: grid;
-  gap: var(--mrj-space-3);
-}
-.lista-vagas .job-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--mrj-space-3);
-  padding: 14px 12px;
-  border-radius: var(--mrj-radius-md);
-}
-.vaga-icone {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 44px;
-  height: 48px;
-  border-radius: var(--mrj-radius-md);
-  background: var(--mrj-color-secondary);
-  color: var(--mrj-color-primary);
-  font-size: 19px;
-}
-.vaga-conteudo {
-  flex: 1;
-  min-width: 0;
-}
-.lista-vagas .job-header h4 {
-  font-size: var(--mrj-font-size-sm);
-}
-.lista-vagas .price {
-  font-size: var(--mrj-font-size-sm);
-}
-.lista-vagas .descricao-publicada {
-  margin-block: 6px;
-  font-size: var(--mrj-font-size-sm);
+  gap: 8px;
 }
 .acoes-vaga {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--mrj-space-2);
-  margin-top: var(--mrj-space-3);
-}
-.acoes-vaga .ver-detalhes {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
   grid-column: 1 / -1;
-  grid-row: 2;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--mrj-color-border-subtle);
 }
-.acoes-vaga button,
-.acoes-vaga a,
+.acoes-vaga :is(a, button),
 .section button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 9px 14px;
+  min-width: 0;
+  padding: 6px 4px;
   border: 1px solid var(--mrj-color-border);
-  border-radius: var(--mrj-radius-md);
-  background: var(--mrj-color-surface);
-  color: var(--mrj-color-text-secondary);
+  border-radius: var(--mrj-radius-sm);
+  background: transparent;
+  color: var(--mrj-color-text);
   font: inherit;
-  font-size: var(--mrj-font-size-sm);
+  font-size: 12px;
   text-decoration: none;
   cursor: pointer;
 }
-.acoes-vaga a {
+.acoes-vaga .ver-detalhes {
   background: var(--mrj-color-primary);
   border-color: var(--mrj-color-primary);
   color: var(--mrj-color-on-primary);
 }
-.acoes-vaga button:disabled {
+button:disabled {
   opacity: var(--mrj-disabled-opacity);
   cursor: wait;
 }
 .filtros-vagas {
   display: grid;
-  gap: 9px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 .busca-vagas {
   display: flex;
   align-items: center;
-  gap: 9px;
-  background: var(--mrj-color-surface);
+  gap: 8px;
+  padding-inline: 10px;
   border: 1px solid var(--mrj-color-border);
-  border-radius: var(--mrj-radius-md);
-  padding-inline: 12px;
-  color: var(--mrj-color-text-secondary);
+  border-radius: var(--mrj-radius-sm);
+  background: var(--mrj-color-surface);
 }
 .busca-vagas input {
-  flex: 1;
   width: 100%;
   min-width: 0;
   min-height: 44px;
+  border: 0;
   background: transparent;
-  border: none;
-  color: var(--mrj-color-text-secondary);
+  color: inherit;
   font: inherit;
-  font-size: var(--mrj-font-size-sm);
+  font-size: var(--mrj-font-size-md);
 }
 .categoria-vagas select {
   width: 100%;
   min-height: 44px;
+  padding: 8px 10px;
   border: 1px solid var(--mrj-color-border);
-  border-radius: var(--mrj-radius-md);
-  background: var(--mrj-color-secondary);
-  padding: 8px 12px;
-  font: inherit;
-  font-size: var(--mrj-font-size-sm);
-  color: var(--mrj-color-text-secondary);
-}
-.sem-publicacao {
-  margin-top: var(--mrj-space-3);
-  padding: 14px;
-  border-radius: 12px;
+  border-radius: var(--mrj-radius-sm);
   background: var(--mrj-color-surface);
-  color: var(--mrj-color-text-secondary);
-  font-size: var(--mrj-font-size-sm);
-  line-height: 1.6;
+  color: inherit;
+  font: inherit;
+  font-size: var(--mrj-font-size-md);
 }
-.sem-publicacao a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--mrj-color-text-secondary);
+.sem-publicacao,
+.estado-vagas {
+  padding: 12px;
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
+  font-size: var(--mrj-font-size-sm);
+}
+.vazio-publicacao {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: start;
+}
+.vazio-publicacao > svg {
+  grid-row: 1 / 3;
+  font-size: 26px;
+  color: var(--mrj-color-primary);
+}
+.vazio-publicacao h3 {
+  font-size: var(--mrj-font-size-sm);
   font-weight: 600;
+}
+.vazio-publicacao p {
+  grid-column: 2;
+}
+.vazio-publicacao a {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 4px;
+  border: 1px solid var(--mrj-color-border);
+  border-radius: var(--mrj-radius-sm);
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+.estado-vagas button {
+  width: 100%;
+  margin-top: 8px;
+}
+.estado-vagas--erro {
+  color: var(--mrj-color-danger);
 }
 .confirmacao-publicacao {
   display: flex;
-  align-items: flex-start;
-  gap: var(--mrj-space-3);
-  margin-block: 12px;
-  padding: 14px;
-  border: 1px solid #bde2ca;
-  border-radius: 12px;
-  background: #e9f8ee;
-  color: var(--mrj-color-text-secondary);
+  align-items: start;
+  gap: 12px;
+  margin: 12px;
+  padding: 12px;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-md);
+  background: var(--mrj-color-surface);
+  color: var(--mrj-color-success);
   font-size: var(--mrj-font-size-sm);
-}
-.confirmacao-publicacao p {
-  margin-top: 4px;
-  font-size: var(--mrj-font-size-sm);
-  line-height: 1.5;
 }
 .confirmacao-publicacao button {
   margin-left: auto;
+  min-width: 44px;
+  min-height: 44px;
   border: 0;
   background: transparent;
   color: inherit;
-  min-width: var(--mrj-control-height-md);
-  min-height: var(--mrj-control-height-md);
   font-size: 22px;
   cursor: pointer;
 }
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible {
-  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
-  outline-offset: var(--mrj-focus-offset);
-}
-/* A largura vem do opt-in wide da rota; o mobile mantém a composição original. */
-@media (min-width: 48rem) {
-  .home {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-content: start;
-    gap: var(--mrj-space-6, 24px);
-    padding: 32px 32px calc(104px + env(safe-area-inset-bottom, 0px));
-  }
-  .welcome {
-    align-self: center;
-    padding-block: 0;
-  }
-  .home > .welcome + .section {
-    margin-top: 0;
-  }
-  .home > .section + .section,
-  .home > .confirmacao-publicacao {
-    grid-column: 1 / -1;
-  }
-  .lista-vagas {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-  .filtros-vagas {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  }
-}
-@media (min-width: 75rem) {
-  .lista-vagas {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+:is(button, a, input, select):focus-visible {
+  outline: 3px solid var(--mrj-color-focus);
+  outline-offset: 3px;
 }
 .sr-only {
   position: absolute;
@@ -539,89 +534,76 @@ select:focus-visible {
 }
 .aviso-senha {
   position: fixed;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(388px, calc(100% - 32px));
-  z-index: 1000;
-  padding: 18px;
-  border: 1px solid var(--mrj-color-border-subtle);
+  inset: 0;
+  background: #24133266;
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.aviso-conteudo {
+  width: min(340px, calc(100% - 32px));
+  min-width: 0;
+  background: var(--mrj-color-surface);
   border-radius: var(--mrj-radius-lg);
-  background: var(--mrj-color-secondary);
-  box-shadow: 0 8px 30px #39234f22;
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+.aviso-conteudo strong {
+  font-size: 20px;
+  font-weight: 700;
+}
+.aviso-conteudo span {
+  font-size: var(--mrj-font-size-sm);
 }
 .fechar-aviso {
   position: absolute;
-  top: 4px;
-  right: 8px;
-  min-width: var(--mrj-control-height-md);
-  min-height: var(--mrj-control-height-md);
-  border: none;
-  background: transparent;
-  color: var(--mrj-color-text-secondary);
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--mrj-radius-pill);
+  background: var(--mrj-color-surface);
+  color: inherit;
   font-size: 24px;
   cursor: pointer;
 }
-.aviso-conteudo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--mrj-space-2);
-  padding-right: 32px;
-}
-.aviso-conteudo strong {
-  color: var(--mrj-color-text-secondary);
-  font-size: 15px;
-}
-.aviso-conteudo span {
-  color: var(--mrj-color-text-secondary);
-  font-size: var(--mrj-font-size-sm);
-  line-height: 1.5;
-}
 .btn-criar-senha {
-  align-self: flex-start;
   min-height: 44px;
   border: 0;
-  border-radius: var(--mrj-radius-md);
-  padding: 8px 16px;
+  border-radius: var(--mrj-radius-sm);
   background: var(--mrj-color-primary);
   color: var(--mrj-color-on-primary);
   font: inherit;
-  font-size: var(--mrj-font-size-sm);
   cursor: pointer;
 }
 @media (max-width: 359px) {
-  .home {
+  .welcome {
     padding-inline: 12px;
   }
+  .painel-vagas {
+    margin-inline: 8px;
+    padding: 10px;
+  }
+  .job-card {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 6px 8px;
+    padding: 10px 8px;
+  }
   .vaga-icone {
-    width: 34px;
-    height: 40px;
-    font-size: 16px;
+    width: 28px;
+    height: 32px;
   }
-  .lista-vagas .job-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
+  .job-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
   }
-}
-.estado-vagas {
-  display: grid;
-  gap: var(--mrj-space-3);
-  padding: var(--mrj-space-4);
-  border: 1px solid var(--mrj-color-border-subtle);
-  border-radius: var(--mrj-radius-lg);
-  background: var(--mrj-color-surface);
-  font-size: var(--mrj-font-size-sm);
-}
-.estado-vagas--erro {
-  color: var(--mrj-color-danger);
-}
-.acoes-vaga a:hover,
-.new-job:hover {
-  background: var(--mrj-color-primary-hover);
-}
-.busca-vagas input::placeholder {
-  color: var(--mrj-color-text-secondary);
-  opacity: 1;
+  .price {
+    padding-inline: 4px;
+    font-size: 12px;
+  }
 }
 </style>
