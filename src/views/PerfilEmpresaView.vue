@@ -62,7 +62,7 @@ function editar() {
 <template>
   <div class="perfil-empresa mrj-ui">
     <EmpresaHeader voltar />
-    <main>
+    <main :aria-busy="carregando">
       <div class="titulo-perfil">
         <h1>{{ editando ? 'Editar perfil da empresa' : 'Perfil da empresa' }}</h1>
         <BaseButton

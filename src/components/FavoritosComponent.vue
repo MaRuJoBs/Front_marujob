@@ -22,7 +22,7 @@ watch(
 </script>
 
 <template>
-  <main class="body mrj-ui freelancer-page">
+  <main class="body mrj-ui freelancer-page" :aria-busy="store.carregando">
     <RouterLink to="/home" class="voltar-pagina"
       ><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Início</RouterLink
     >

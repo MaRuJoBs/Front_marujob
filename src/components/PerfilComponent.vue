@@ -15,7 +15,7 @@ const logout = () => {
 onMounted(carregar)
 </script>
 <template>
-  <div class="perfil mrj-ui freelancer-page">
+  <main class="perfil mrj-ui freelancer-page" :aria-busy="carregando">
     <p v-if="carregando" role="status">Carregando perfil...</p>
     <div v-else-if="erro" role="alert">
       {{ erro }} <button @click="carregar">Tentar novamente</button>
@@ -170,7 +170,7 @@ onMounted(carregar)
         </section>
       </div>
     </template>
-  </div>
+  </main>
 </template>
 
 <style scoped src="../styles/freelancer.css"></style>

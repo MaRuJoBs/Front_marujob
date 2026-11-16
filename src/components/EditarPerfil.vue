@@ -77,34 +77,44 @@ function selecionarHabilidade(event) {
   })
 }
 
+const botaoFoto = ref(null)
+const painelFoto = ref(null)
+const camera = ref(null)
 const mostrarOpcoesFoto = ref(false)
 const mostrarCamera = ref(false)
 
-const abrirOpcoesFoto = () => {
+const abrirOpcoesFoto = async () => {
   mostrarOpcoesFoto.value = true
+  await nextTick()
+  painelFoto.value?.querySelector('input')?.focus()
 }
 
 const fecharOpcoesFoto = () => {
   mostrarOpcoesFoto.value = false
+  nextTick(() => botaoFoto.value?.focus())
 }
 
-const abrirCamera = () => {
+const abrirCamera = async () => {
   mostrarOpcoesFoto.value = false
   mostrarCamera.value = true
+  await nextTick()
+  camera.value?.$el.querySelector('button')?.focus()
 }
 
 const fecharCamera = () => {
   mostrarCamera.value = false
+  nextTick(() => botaoFoto.value?.focus())
 }
 
 const receberFotoCamera = (arquivo) => {
   definirImagem(arquivo)
   mostrarCamera.value = false
+  nextTick(() => botaoFoto.value?.focus())
 }
 </script>
 
 <template>
-  <div class="editar-perfil mrj-ui freelancer-page">
+  <main class="editar-perfil mrj-ui freelancer-page" :aria-busy="carregando && !salvando">
     <header class="topo">
       <button class="voltar" aria-label="Voltar ao perfil" @click="voltar">
         <i class="fa-solid fa-arrow-left"></i>
@@ -118,285 +128,329 @@ const receberFotoCamera = (arquivo) => {
     <div v-else-if="!pronto" role="alert">
       {{ erro }} <button @click="carregarPerfil">Tentar novamente</button>
     </div>
-    <fieldset v-else class="conteudo" :disabled="salvando">
-      <section class="foto-section">
-        <div class="foto-container">
-          <img
-            @error="falhaImagemPerfil"
-            v-if="previewImagem"
-            :src="previewImagem"
-            class="foto"
-            alt="Foto de perfil"
-            referrerpolicy="no-referrer"
-          />
-
-          <div v-else class="foto foto-vazia">
-            <i class="fa-solid fa-user"></i>
-          </div>
-
-          <button
-            type="button"
-            class="botao-camera"
-            aria-label="Alterar foto de perfil"
-            @click="abrirOpcoesFoto"
-          >
-            <i class="fa-solid fa-camera"></i>
-          </button>
-        </div>
-
-        <p>Alterar foto de perfil</p>
-
-        <div v-if="mostrarOpcoesFoto" class="opcoes-foto">
-          <p>Como deseja adicionar sua foto?</p>
-
-          <label class="opcao-foto">
-            <i class="fa-solid fa-image"></i>
-            Escolher da galeria
-
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              @change="
-                (event) => {
-                  selecionarImagem(event)
-                  fecharOpcoesFoto()
-                }
-              "
+    <form v-else novalidate @submit.prevent="salvarPerfil">
+      <fieldset class="conteudo" :aria-busy="salvando" :disabled="salvando">
+        <section class="foto-section">
+          <div class="foto-container">
+            <img
+              @error="falhaImagemPerfil"
+              v-if="previewImagem"
+              :src="previewImagem"
+              class="foto"
+              alt="Foto de perfil"
+              referrerpolicy="no-referrer"
             />
-          </label>
 
-          <label class="opcao-foto">
-            <i class="fa-solid fa-mobile-screen"></i>
-            Tirar foto pelo celular
-
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              capture="user"
-              @change="
-                (event) => {
-                  selecionarImagem(event)
-                  fecharOpcoesFoto()
-                }
-              "
-            />
-          </label>
-
-          <button type="button" class="opcao-foto" @click="abrirCamera">
-            <i class="fa-solid fa-video"></i>
-            Abrir câmera ao vivo
-          </button>
-
-          <button type="button" class="cancelar-foto" @click="fecharOpcoesFoto">Cancelar</button>
-        </div>
-
-        <CameraCapture
-          v-if="mostrarCamera"
-          class="camera-perfil"
-          @captured="receberFotoCamera"
-          @close="fecharCamera"
-        />
-      </section>
-
-      <section class="formulario">
-        <div class="campo">
-          <label for="perfil-nome">Nome</label>
-          <p v-if="camposErro.name" id="erro-nome" role="alert">{{ camposErro.name }}</p>
-          <input
-            id="perfil-nome"
-            aria-label="Nome"
-            :aria-invalid="!!camposErro.name"
-            :aria-describedby="camposErro.name ? 'erro-nome' : undefined"
-            v-model="nome"
-            type="text"
-            placeholder="Digite seu nome"
-          />
-        </div>
-
-        <div class="campo">
-          <label for="perfil-profissao">Profissão</label>
-          <p v-if="camposErro.profissao" id="erro-profissao" role="alert">
-            {{ camposErro.profissao }}
-          </p>
-          <input
-            aria-label="Profissão"
-            id="perfil-profissao"
-            :aria-invalid="!!camposErro.profissao"
-            :aria-describedby="camposErro.profissao ? 'erro-profissao' : undefined"
-            v-model="profissao"
-            type="text"
-            placeholder="Ex.: Designer Gráfico"
-          />
-        </div>
-
-        <div class="campo campo-localizacao">
-          <label for="perfil-localizacao">Localização</label>
-          <p v-if="camposErro.localizacao" role="alert">{{ camposErro.localizacao }}</p>
-
-          <p class="localizacao-descricao">
-            Escolha sua cidade e estado. Sua localização exata não será exibida no perfil público.
-          </p>
-
-          <input
-            aria-label="Localização"
-            id="perfil-localizacao"
-            :aria-invalid="!!camposErro.localizacao"
-            :value="localizacao"
-            type="text"
-            placeholder="Nenhuma cidade selecionada"
-            readonly
-          />
-
-          <button
-            type="button"
-            class="btn-localizacao"
-            :disabled="loadingLocation || buscandoEndereco"
-            @click="usarLocalizacaoAtual"
-          >
-            <i class="fa-solid fa-location-crosshairs"></i>
-
-            {{
-              loadingLocation
-                ? 'Obtendo localização...'
-                : buscandoEndereco
-                  ? 'Identificando cidade...'
-                  : 'Usar minha localização atual'
-            }}
-          </button>
-
-          <p v-if="locationError" class="localizacao-erro">
-            {{ locationError }}
-          </p>
-          <p v-if="erroLocalizacao" class="localizacao-erro">
-            {{ erroLocalizacao }}
-          </p>
-
-          <div class="busca-cidade">
-            <p class="localizacao-descricao">Ou pesquise sua cidade manualmente:</p>
-
-            <div class="busca-cidade-controles">
-              <input
-                aria-label="Pesquisar cidade"
-                v-model="pesquisaCidade"
-                type="text"
-                placeholder="Ex.: Joinville"
-                @keyup.enter="buscarCidades"
-              />
-
-              <button
-                type="button"
-                class="btn-buscar-cidade"
-                :disabled="buscandoCidades"
-                @click="buscarCidades"
-              >
-                {{ buscandoCidades ? 'Buscando...' : 'Buscar' }}
-              </button>
+            <div v-else class="foto foto-vazia">
+              <i class="fa-solid fa-user"></i>
             </div>
 
-            <p v-if="erroBuscaCidade" class="localizacao-erro">
-              {{ erroBuscaCidade }}
+            <button
+              type="button"
+              ref="botaoFoto"
+              :aria-expanded="mostrarOpcoesFoto || mostrarCamera"
+              :aria-controls="
+                mostrarOpcoesFoto
+                  ? 'opcoes-foto-perfil'
+                  : mostrarCamera
+                    ? 'camera-perfil'
+                    : undefined
+              "
+              class="botao-camera"
+              aria-label="Alterar foto de perfil"
+              @click="abrirOpcoesFoto"
+            >
+              <i class="fa-solid fa-camera"></i>
+            </button>
+          </div>
+
+          <p>Alterar foto de perfil</p>
+
+          <div
+            v-if="mostrarOpcoesFoto"
+            id="opcoes-foto-perfil"
+            ref="painelFoto"
+            class="opcoes-foto"
+            @keydown.esc.stop.prevent="fecharOpcoesFoto"
+          >
+            <p>Como deseja adicionar sua foto?</p>
+
+            <label class="opcao-foto">
+              <i class="fa-solid fa-image"></i>
+              Escolher da galeria
+
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                @change="
+                  (event) => {
+                    selecionarImagem(event)
+                    fecharOpcoesFoto()
+                  }
+                "
+              />
+            </label>
+
+            <label class="opcao-foto">
+              <i class="fa-solid fa-mobile-screen"></i>
+              Tirar foto pelo celular
+
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="user"
+                @change="
+                  (event) => {
+                    selecionarImagem(event)
+                    fecharOpcoesFoto()
+                  }
+                "
+              />
+            </label>
+
+            <button type="button" class="opcao-foto" @click="abrirCamera">
+              <i class="fa-solid fa-video"></i>
+              Abrir câmera ao vivo
+            </button>
+
+            <button type="button" class="cancelar-foto" @click="fecharOpcoesFoto">Cancelar</button>
+          </div>
+
+          <CameraCapture
+            v-if="mostrarCamera"
+            id="camera-perfil"
+            ref="camera"
+            @keydown.esc.stop.prevent="fecharCamera"
+            class="camera-perfil"
+            @captured="receberFotoCamera"
+            @close="fecharCamera"
+          />
+        </section>
+
+        <section class="formulario">
+          <div class="campo">
+            <label for="perfil-nome">Nome</label>
+            <p v-if="camposErro.name" id="erro-nome" role="alert">{{ camposErro.name }}</p>
+            <input
+              id="perfil-nome"
+              aria-label="Nome"
+              :aria-invalid="!!camposErro.name"
+              :aria-describedby="camposErro.name ? 'erro-nome' : undefined"
+              v-model="nome"
+              type="text"
+              placeholder="Digite seu nome"
+            />
+          </div>
+
+          <div class="campo">
+            <label for="perfil-profissao">Profissão</label>
+            <p v-if="camposErro.profissao" id="erro-profissao" role="alert">
+              {{ camposErro.profissao }}
+            </p>
+            <input
+              aria-label="Profissão"
+              id="perfil-profissao"
+              :aria-invalid="!!camposErro.profissao"
+              :aria-describedby="camposErro.profissao ? 'erro-profissao' : undefined"
+              v-model="profissao"
+              type="text"
+              placeholder="Ex.: Designer Gráfico"
+            />
+          </div>
+
+          <div class="campo campo-localizacao">
+            <label for="perfil-localizacao">Localização</label>
+            <p id="erro-localizacao" v-if="camposErro.localizacao" role="alert">
+              {{ camposErro.localizacao }}
             </p>
 
-            <div v-if="resultadosCidades.length" class="resultados-cidades">
-              <button
-                v-for="(cidade, index) in resultadosCidades"
-                :key="`${cidade.nome}-${index}`"
-                type="button"
-                class="resultado-cidade"
-                @click="selecionarCidade(cidade)"
+            <p id="localizacao-ajuda" class="localizacao-descricao">
+              Escolha sua cidade e estado. Sua localização exata não será exibida no perfil público.
+            </p>
+
+            <input
+              aria-label="Localização"
+              id="perfil-localizacao"
+              :aria-invalid="!!camposErro.localizacao"
+              :aria-describedby="
+                camposErro.localizacao ? 'localizacao-ajuda erro-localizacao' : 'localizacao-ajuda'
+              "
+              :value="localizacao"
+              type="text"
+              placeholder="Nenhuma cidade selecionada"
+              readonly
+            />
+
+            <button
+              type="button"
+              class="btn-localizacao"
+              :disabled="loadingLocation || buscandoEndereco"
+              @click="usarLocalizacaoAtual"
+            >
+              <i class="fa-solid fa-location-crosshairs"></i>
+
+              {{
+                loadingLocation
+                  ? 'Obtendo localização...'
+                  : buscandoEndereco
+                    ? 'Identificando cidade...'
+                    : 'Usar minha localização atual'
+              }}
+            </button>
+
+            <p v-if="locationError" role="alert" class="localizacao-erro">
+              {{ locationError }}
+            </p>
+            <p v-if="erroLocalizacao" role="alert" class="localizacao-erro">
+              {{ erroLocalizacao }}
+            </p>
+
+            <div class="busca-cidade">
+              <label for="pesquisa-cidade" class="localizacao-descricao"
+                >Ou pesquise sua cidade manualmente:</label
               >
-                <i class="fa-solid fa-location-dot"></i>
-                {{ cidade.nome }}
-              </button>
+
+              <div class="busca-cidade-controles">
+                <input
+                  id="pesquisa-cidade"
+                  :aria-describedby="erroBuscaCidade ? 'erro-busca-cidade' : undefined"
+                  v-model="pesquisaCidade"
+                  type="text"
+                  placeholder="Ex.: Joinville"
+                  @keydown.enter.stop.prevent="buscarCidades"
+                />
+
+                <button
+                  type="button"
+                  class="btn-buscar-cidade"
+                  :disabled="buscandoCidades"
+                  @click="buscarCidades"
+                >
+                  {{ buscandoCidades ? 'Buscando...' : 'Buscar' }}
+                </button>
+              </div>
+
+              <p
+                id="erro-busca-cidade"
+                v-if="erroBuscaCidade"
+                role="alert"
+                class="localizacao-erro"
+              >
+                {{ erroBuscaCidade }}
+              </p>
+
+              <div v-if="resultadosCidades.length" class="resultados-cidades">
+                <button
+                  v-for="(cidade, index) in resultadosCidades"
+                  :key="`${cidade.nome}-${index}`"
+                  type="button"
+                  class="resultado-cidade"
+                  @click="selecionarCidade(cidade)"
+                >
+                  <i class="fa-solid fa-location-dot"></i>
+                  {{ cidade.nome }}
+                </button>
+              </div>
+            </div>
+
+            <p v-if="localizacaoConfirmada" role="status" class="localizacao-sucesso">
+              <i class="fa-solid fa-circle-check"></i>
+              Cidade selecionada: {{ localizacao }}
+            </p>
+          </div>
+
+          <div class="campo">
+            <label for="perfil-telefone">Telefone</label>
+            <p v-if="camposErro.telefone" id="erro-telefone" role="alert">
+              {{ camposErro.telefone }}
+            </p>
+            <input
+              aria-label="Telefone"
+              id="perfil-telefone"
+              :aria-invalid="!!camposErro.telefone"
+              :aria-describedby="camposErro.telefone ? 'erro-telefone' : undefined"
+              v-model="telefone"
+              type="tel"
+              placeholder="(47) 99999-9999"
+            />
+          </div>
+
+          <div class="campo campo-sobre">
+            <label for="perfil-sobre">Sobre você</label>
+            <p v-if="camposErro.sobre" id="erro-sobre" role="alert">{{ camposErro.sobre }}</p>
+            <textarea
+              aria-label="Sobre você"
+              id="perfil-sobre"
+              :aria-invalid="!!camposErro.sobre"
+              :aria-describedby="camposErro.sobre ? 'erro-sobre' : undefined"
+              v-model="sobre"
+              rows="5"
+              placeholder="Conte um pouco sobre você..."
+            ></textarea>
+          </div>
+
+          <div class="campo campo-habilidades">
+            <label for="perfil-habilidades">Habilidades</label>
+            <p id="erro-habilidades" v-if="camposErro.habilidades" role="alert">
+              {{ camposErro.habilidades }}
+            </p>
+
+            <div class="adicionar-habilidade">
+              <select
+                aria-label="Habilidades"
+                id="perfil-habilidades"
+                :aria-invalid="!!camposErro.habilidades || !!erroHabilidade"
+                :aria-describedby="
+                  [
+                    camposErro.habilidades && 'erro-habilidades',
+                    erroHabilidade && 'erro-habilidade',
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || undefined
+                "
+                v-model="novaHabilidade"
+                @change="selecionarHabilidade"
+              >
+                <option value="" disabled>Selecionar habilidade</option>
+                <option v-for="opcao in opcoesHabilidades" :key="opcao" :value="opcao">
+                  {{ opcao }}
+                </option>
+              </select>
+            </div>
+
+            <div class="habilidades">
+              <span v-for="habilidade in habilidades" :key="habilidade" class="habilidade">
+                {{ habilidade }}
+
+                <button
+                  type="button"
+                  :aria-label="`Remover habilidade ${habilidade}`"
+                  @click="retirarHabilidade(habilidade)"
+                >
+                  ×
+                </button>
+              </span>
             </div>
           </div>
 
-          <p v-if="localizacaoConfirmada" class="localizacao-sucesso">
-            <i class="fa-solid fa-circle-check"></i>
-            Cidade selecionada: {{ localizacao }}
+          <p v-if="erroImagem" role="alert">{{ erroImagem }}</p>
+          <p id="erro-habilidade" v-if="erroHabilidade" role="alert">{{ erroHabilidade }}</p>
+          <p v-if="erro" role="alert" class="mensagem erro">
+            {{ erro }}
           </p>
-        </div>
 
-        <div class="campo">
-          <label for="perfil-telefone">Telefone</label>
-          <p v-if="camposErro.telefone" id="erro-telefone" role="alert">
-            {{ camposErro.telefone }}
+          <p v-if="sucesso" role="status" class="mensagem sucesso">
+            {{ sucesso }}
           </p>
-          <input
-            aria-label="Telefone"
-            id="perfil-telefone"
-            :aria-invalid="!!camposErro.telefone"
-            :aria-describedby="camposErro.telefone ? 'erro-telefone' : undefined"
-            v-model="telefone"
-            type="tel"
-            placeholder="(47) 99999-9999"
-          />
-        </div>
 
-        <div class="campo campo-sobre">
-          <label for="perfil-sobre">Sobre você</label>
-          <p v-if="camposErro.sobre" id="erro-sobre" role="alert">{{ camposErro.sobre }}</p>
-          <textarea
-            aria-label="Sobre você"
-            id="perfil-sobre"
-            :aria-invalid="!!camposErro.sobre"
-            :aria-describedby="camposErro.sobre ? 'erro-sobre' : undefined"
-            v-model="sobre"
-            rows="5"
-            placeholder="Conte um pouco sobre você..."
-          ></textarea>
-        </div>
-
-        <div class="campo campo-habilidades">
-          <label for="perfil-habilidades">Habilidades</label>
-          <p v-if="camposErro.habilidades" role="alert">{{ camposErro.habilidades }}</p>
-
-          <div class="adicionar-habilidade">
-            <select
-              aria-label="Habilidades"
-              id="perfil-habilidades"
-              :aria-invalid="!!camposErro.habilidades || !!erroHabilidade"
-              v-model="novaHabilidade"
-              @change="selecionarHabilidade"
-            >
-              <option value="" disabled>Selecionar habilidade</option>
-              <option v-for="opcao in opcoesHabilidades" :key="opcao" :value="opcao">
-                {{ opcao }}
-              </option>
-            </select>
-          </div>
-
-          <div class="habilidades">
-            <span v-for="habilidade in habilidades" :key="habilidade" class="habilidade">
-              {{ habilidade }}
-
-              <button
-                type="button"
-                :aria-label="`Remover habilidade ${habilidade}`"
-                @click="retirarHabilidade(habilidade)"
-              >
-                ×
-              </button>
-            </span>
-          </div>
-        </div>
-
-        <p v-if="erroImagem" role="alert">{{ erroImagem }}</p>
-        <p v-if="erroHabilidade" role="alert">{{ erroHabilidade }}</p>
-        <p v-if="erro" role="alert" class="mensagem erro">
-          {{ erro }}
-        </p>
-
-        <p v-if="sucesso" role="status" class="mensagem sucesso">
-          {{ sucesso }}
-        </p>
-
-        <button class="btn-salvar" :disabled="salvando" @click="salvarPerfil">
-          {{ salvando ? 'Salvando...' : 'Salvar alterações' }}
-        </button>
-      </section>
-    </fieldset>
-  </div>
+          <button class="btn-salvar" type="submit" :disabled="salvando">
+            {{ salvando ? 'Salvando...' : 'Salvar alterações' }}
+          </button>
+        </section>
+      </fieldset>
+    </form>
+    <p v-if="salvando" role="status">Salvando perfil. Aguarde a confirmação...</p>
+  </main>
 </template>
 
 <style scoped src="../styles/freelancer.css"></style>
@@ -518,7 +572,7 @@ fieldset.conteudo {
   font-size: 0.8125rem;
 }
 .habilidade button {
-  min-width: 36px;
+  min-width: 44px;
   border: 0;
   border-radius: 8px;
   background: transparent;

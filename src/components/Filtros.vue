@@ -109,18 +109,30 @@ defineExpose({ abrir, abrirTags: (origem) => abrir('tags', origem) })
               <div class="campo">
                 <label for="preco-min">Mínimo</label>
                 <div class="input-wrapper">
-                  <input id="preco-min" v-model="rascunho.preco_min" inputmode="decimal" />
+                  <input
+                    :aria-describedby="erro ? 'filtro-preco-erro' : undefined"
+                    :aria-invalid="!!erro"
+                    id="preco-min"
+                    v-model="rascunho.preco_min"
+                    inputmode="decimal"
+                  />
                 </div>
               </div>
               <div class="campo">
                 <label for="preco-max">Máximo</label>
                 <div class="input-wrapper">
-                  <input id="preco-max" v-model="rascunho.preco_max" inputmode="decimal" />
+                  <input
+                    :aria-describedby="erro ? 'filtro-preco-erro' : undefined"
+                    :aria-invalid="!!erro"
+                    id="preco-max"
+                    v-model="rascunho.preco_max"
+                    inputmode="decimal"
+                  />
                 </div>
               </div>
             </div>
           </section>
-          <p v-if="erro" role="alert">{{ erro }}</p>
+          <p id="filtro-preco-erro" v-if="erro" role="alert">{{ erro }}</p>
         </div>
         <footer class="filtros-footer">
           <button type="button" class="limpar" @click="limpar">

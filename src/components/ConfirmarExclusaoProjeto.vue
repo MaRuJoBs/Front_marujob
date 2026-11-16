@@ -1,22 +1,33 @@
 ﻿<script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, onUnmounted, nextTick } from 'vue'
 defineProps({ titulo: String, excluindo: Boolean, erro: String })
 const emit = defineEmits(['cancelar', 'confirmar'])
 const dialogo = ref(null)
 let anterior
+let pagina
 onMounted(() => {
   anterior = document.activeElement
+  pagina = dialogo.value.closest('main')
   dialogo.value.showModal()
   dialogo.value.querySelector('button')?.focus()
 })
 onBeforeUnmount(() => {
   dialogo.value?.close()
+})
+onUnmounted(async () => {
+  await nextTick()
   if (anterior?.isConnected) anterior.focus()
+  else if (pagina?.isConnected) {
+    const destino = pagina.querySelector('[role="status"]') || pagina
+    destino.setAttribute('tabindex', '-1')
+    destino.focus()
+  }
 })
 </script>
 <template>
   <dialog
     ref="dialogo"
+    :aria-busy="excluindo"
     aria-labelledby="excluir-titulo"
     aria-describedby="excluir-descricao"
     @cancel.prevent="!excluindo && emit('cancelar')"

@@ -43,7 +43,7 @@ const contatoSeguro = (n) =>
 </script>
 <template>
   <EmpresaHeader voltar />
-  <main class="notificacoes-empresa mrj-ui">
+  <main class="notificacoes-empresa mrj-ui" :aria-busy="carregando">
     <div class="cabecalho">
       <div>
         <p class="sobretitulo">Sua empresa</p>

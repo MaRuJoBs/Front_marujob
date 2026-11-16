@@ -43,7 +43,7 @@ onMounted(carregar)
 </script>
 
 <template>
-  <div class="portfolio mrj-ui freelancer-page">
+  <main class="portfolio mrj-ui freelancer-page" :aria-busy="carregando">
     <!-- Cabeçalho -->
     <p v-if="carregando" role="status">Carregando portfólio...</p>
     <div v-else-if="erro" role="alert">
@@ -71,13 +71,14 @@ onMounted(carregar)
       </section>
 
       <!-- Barra de pesquisa -->
+      <label class="rotulo-busca" for="pesquisa-projeto">Pesquisar projeto</label>
       <section class="pesquisa">
         <div class="input-busca">
           <FontAwesomeIcon :icon="['fas', 'magnifying-glass']" class="icone" />
 
           <input
-            type="text"
-            aria-label="Pesquisar projeto"
+            type="search"
+            id="pesquisa-projeto"
             v-model="pesquisa"
             placeholder="Pesquisar projeto..."
           />
@@ -96,7 +97,7 @@ onMounted(carregar)
         <h1>Meus Projetos</h1>
         <router-link to="/portfolio/adicionar">Adicionar projeto</router-link>
 
-        <span>{{ projetosPesquisados.length }} projetos</span>
+        <span role="status">{{ projetosPesquisados.length }} projetos</span>
       </section>
 
       <!-- Grid -->
@@ -128,7 +129,7 @@ onMounted(carregar)
           </div>
 
           <div class="conteudo">
-            <h4>{{ projeto.titulo }}</h4>
+            <h2>{{ projeto.titulo }}</h2>
 
             <p>{{ projeto.categoria }}</p>
 
@@ -142,11 +143,16 @@ onMounted(carregar)
       </section>
       <p v-if="!projetosPesquisados.length" role="status">Nenhum projeto encontrado.</p></template
     >
-  </div>
+  </main>
 </template>
 
 <style scoped src="../styles/freelancer.css"></style>
 <style scoped>
+.rotulo-busca {
+  display: block;
+  padding: 16px 24px 0;
+  font-weight: 600;
+}
 .portfolio {
   min-height: 100dvh;
   padding-bottom: 120px;
@@ -302,7 +308,7 @@ onMounted(carregar)
 .conteudo {
   padding: 20px;
 }
-.conteudo h4 {
+.conteudo h2 {
   font-size: 1rem;
   line-height: 1.5;
 }

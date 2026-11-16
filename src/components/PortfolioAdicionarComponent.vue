@@ -63,7 +63,7 @@ function selecionarTag(event) {
 </script>
 
 <template>
-  <div class="portfolio-add mrj-ui freelancer-page">
+  <main class="portfolio-add mrj-ui freelancer-page" :aria-busy="carregando && !salvando">
     <div v-if="mostrarSucesso" role="status" class="toast-sucesso">
       <FontAwesomeIcon :icon="['fas', 'check']" />
       Projeto salvo com sucesso!
@@ -85,153 +85,174 @@ function selecionarTag(event) {
     <div v-if="erro" role="alert">
       {{ erro }} <button v-if="!pronto" @click="carregarProjeto">Tentar novamente</button>
     </div>
-    <fieldset v-if="pronto" class="formulario" :disabled="salvando || mostrarSucesso">
-      <div class="upload">
-        <div class="preview">
-          <img
-            @load="
-              (event) => {
-                event.target.hidden = false
-              }
-            "
-            @error="
-              (event) => {
-                event.target.hidden = true
-              }
-            "
-            v-if="preview"
-            :src="preview"
-            alt="Prévia da imagem do projeto"
-            class="preview-img"
-          />
+    <form v-if="pronto" novalidate @submit.prevent="salvarProjeto">
+      <fieldset class="formulario" :aria-busy="salvando" :disabled="salvando || mostrarSucesso">
+        <div class="upload">
+          <div class="preview">
+            <img
+              @load="
+                (event) => {
+                  event.target.hidden = false
+                }
+              "
+              @error="
+                (event) => {
+                  event.target.hidden = true
+                }
+              "
+              v-if="preview"
+              :src="preview"
+              alt="Prévia da imagem do projeto"
+              class="preview-img"
+            />
 
-          <FontAwesomeIcon v-else :icon="['fas', 'image']" class="icone-preview" />
-        </div>
-
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          ref="inputImagem"
-          @change="selecionarImagem"
-          hidden
-        />
-
-        <button class="btn-upload" type="button" @click="abrirUpload">
-          <FontAwesomeIcon :icon="['fas', 'camera']" />
-          Escolher imagem
-        </button>
-      </div>
-
-      <div class="campos-projeto">
-        <!-- Título -->
-        <div class="campo">
-          <label for="projeto-titulo">Título do Projeto</label>
-          <p v-if="camposErro.titulo" role="alert">{{ camposErro.titulo }}</p>
-
-          <input
-            aria-label="Título do Projeto"
-            id="projeto-titulo"
-            :aria-invalid="!!camposErro.titulo"
-            type="text"
-            v-model="titulo"
-            placeholder="Ex: Landing Page para Restaurante"
-          />
-        </div>
-
-        <!-- Categoria -->
-        <div class="campo">
-          <label for="projeto-categoria">Categoria</label>
-          <p v-if="camposErro.categoria" role="alert">{{ camposErro.categoria }}</p>
-
-          <select
-            aria-label="Categoria"
-            id="projeto-categoria"
-            :aria-invalid="!!camposErro.categoria"
-            v-model="categoria"
-          >
-            <option value="" disabled>Selecionar categoria</option>
-            <option v-if="categoria && !categorias.includes(categoria)" :value="categoria">
-              {{ categoria }}
-            </option>
-            <option v-for="item in categorias" :key="item" :value="item">
-              {{ item }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Descrição -->
-        <div class="campo">
-          <label for="projeto-descricao">Descrição</label>
-          <p v-if="camposErro.descricao" role="alert">{{ camposErro.descricao }}</p>
-
-          <textarea
-            aria-label="Descrição"
-            id="projeto-descricao"
-            :aria-invalid="!!camposErro.descricao"
-            rows="5"
-            v-model="descricao"
-            placeholder="Conte um pouco sobre esse projeto..."
-          ></textarea>
-        </div>
-
-        <!-- Tags -->
-        <div class="campo">
-          <label for="projeto-tags">Tecnologias / Tags</label>
-          <p v-if="camposErro.tags" role="alert">{{ camposErro.tags }}</p>
-
-          <div class="tags">
-            <div class="tag" v-for="(tag, index) in tags" :key="index">
-              {{ tag }}
-
-              <button type="button" :aria-label="`Remover tag ${tag}`" @click="retirarTag(index)">
-                ×
-              </button>
-            </div>
+            <FontAwesomeIcon v-else :icon="['fas', 'image']" class="icone-preview" />
           </div>
 
-          <div class="nova-tag">
+          <input
+            aria-label="Imagem do projeto (opcional)"
+            aria-describedby="projeto-imagem-ajuda projeto-imagem-erro"
+            :aria-invalid="!!erroImagem"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            ref="inputImagem"
+            @change="selecionarImagem"
+            hidden
+          />
+
+          <button class="btn-upload" type="button" @click="abrirUpload">
+            <FontAwesomeIcon :icon="['fas', 'camera']" />
+            Escolher imagem
+          </button>
+        </div>
+
+        <p id="projeto-imagem-ajuda">Imagem opcional: JPEG, PNG ou WebP, até 5 MiB.</p>
+        <div class="campos-projeto">
+          <!-- Título -->
+          <div class="campo">
+            <label for="projeto-titulo">Título do Projeto (obrigatório)</label>
+            <p id="projeto-titulo-erro" v-if="camposErro.titulo" role="alert">
+              {{ camposErro.titulo }}
+            </p>
+
+            <input
+              aria-label="Título do Projeto"
+              id="projeto-titulo"
+              aria-required="true"
+              :aria-invalid="!!camposErro.titulo"
+              :aria-describedby="camposErro.titulo ? 'projeto-titulo-erro' : undefined"
+              type="text"
+              v-model="titulo"
+              placeholder="Ex: Landing Page para Restaurante"
+            />
+          </div>
+
+          <!-- Categoria -->
+          <div class="campo">
+            <label for="projeto-categoria">Categoria (obrigatório)</label>
+            <p id="projeto-categoria-erro" v-if="camposErro.categoria" role="alert">
+              {{ camposErro.categoria }}
+            </p>
+
             <select
-              aria-label="Tecnologias / Tags"
-              id="projeto-tags"
-              :aria-invalid="!!camposErro.tags"
-              v-model="novaTag"
-              @change="selecionarTag"
+              aria-label="Categoria"
+              id="projeto-categoria"
+              aria-required="true"
+              :aria-invalid="!!camposErro.categoria"
+              :aria-describedby="camposErro.categoria ? 'projeto-categoria-erro' : undefined"
+              v-model="categoria"
             >
-              <option value="" disabled>Selecionar tecnologia ou tag</option>
-              <option v-for="opcao in opcoesTecnologias" :key="opcao" :value="opcao">
-                {{ opcao }}
+              <option value="" disabled>Selecionar categoria</option>
+              <option v-if="categoria && !categorias.includes(categoria)" :value="categoria">
+                {{ categoria }}
+              </option>
+              <option v-for="item in categorias" :key="item" :value="item">
+                {{ item }}
               </option>
             </select>
           </div>
+
+          <!-- Descrição -->
+          <div class="campo">
+            <label for="projeto-descricao">Descrição (obrigatório)</label>
+            <p id="projeto-descricao-erro" v-if="camposErro.descricao" role="alert">
+              {{ camposErro.descricao }}
+            </p>
+
+            <textarea
+              aria-label="Descrição"
+              id="projeto-descricao"
+              aria-required="true"
+              :aria-invalid="!!camposErro.descricao"
+              :aria-describedby="camposErro.descricao ? 'projeto-descricao-erro' : undefined"
+              rows="5"
+              v-model="descricao"
+              placeholder="Conte um pouco sobre esse projeto..."
+            ></textarea>
+          </div>
+
+          <!-- Tags -->
+          <div class="campo">
+            <label for="projeto-tags">Tecnologias / Tags</label>
+            <p id="projeto-tags-erro" v-if="camposErro.tags" role="alert">{{ camposErro.tags }}</p>
+
+            <div class="tags">
+              <div class="tag" v-for="(tag, index) in tags" :key="index">
+                {{ tag }}
+
+                <button type="button" :aria-label="`Remover tag ${tag}`" @click="retirarTag(index)">
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div class="nova-tag">
+              <select
+                aria-label="Tecnologias / Tags"
+                id="projeto-tags"
+                :aria-invalid="!!camposErro.tags"
+                :aria-describedby="camposErro.tags ? 'projeto-tags-erro' : undefined"
+                v-model="novaTag"
+                @change="selecionarTag"
+              >
+                <option value="" disabled>Selecionar tecnologia ou tag</option>
+                <option v-for="opcao in opcoesTecnologias" :key="opcao" :value="opcao">
+                  {{ opcao }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Link -->
+          <div class="campo">
+            <label for="projeto-link">Link do Projeto</label>
+            <p id="projeto-link-erro" v-if="camposErro.link" role="alert">{{ camposErro.link }}</p>
+
+            <input
+              id="projeto-link"
+              :aria-invalid="!!camposErro.link"
+              :aria-describedby="camposErro.link ? 'projeto-link-erro' : undefined"
+              aria-label="Link do Projeto"
+              type="url"
+              v-model="link"
+              placeholder="https://..."
+            />
+          </div>
+
+          <p id="projeto-imagem-erro" v-if="erroImagem" role="alert">{{ erroImagem }}</p>
+          <!-- Botões -->
+          <div class="acoes">
+            <button class="cancelar" type="button" @click="cancelar">Cancelar</button>
+
+            <button class="salvar" type="submit" :disabled="salvando">
+              {{ salvando ? 'Salvando...' : editando ? 'Salvar Alterações' : 'Salvar Projeto' }}
+            </button>
+          </div>
         </div>
-
-        <!-- Link -->
-        <div class="campo">
-          <label for="projeto-link">Link do Projeto</label>
-          <p v-if="camposErro.link" role="alert">{{ camposErro.link }}</p>
-
-          <input
-            id="projeto-link"
-            :aria-invalid="!!camposErro.link"
-            aria-label="Link do Projeto"
-            type="url"
-            v-model="link"
-            placeholder="https://..."
-          />
-        </div>
-
-        <p v-if="erroImagem" role="alert">{{ erroImagem }}</p>
-        <!-- Botões -->
-        <div class="acoes">
-          <button class="cancelar" type="button" @click="cancelar">Cancelar</button>
-
-          <button class="salvar" type="button" @click="salvarProjeto" :disabled="salvando">
-            {{ salvando ? 'Salvando...' : editando ? 'Salvar Alterações' : 'Salvar Projeto' }}
-          </button>
-        </div>
-      </div>
-    </fieldset>
-  </div>
+      </fieldset>
+    </form>
+    <p v-if="salvando" role="status">Salvando projeto. Aguarde a confirmação...</p>
+  </main>
 </template>
 
 <style scoped src="../styles/freelancer.css"></style>
@@ -347,7 +368,7 @@ fieldset.formulario {
   font-size: 0.8125rem;
 }
 .tag button {
-  min-width: 36px;
+  min-width: 44px;
   border: 0;
   border-radius: 8px;
   background: transparent;
