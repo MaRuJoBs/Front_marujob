@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import { extractAddressLabel } from '@/utils/location'
+import { extractAddressLabel, extractCityState } from '../utils/location.js'
 
 const REVERSE_URL = 'https://nominatim.openstreetmap.org/reverse'
 const SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
@@ -28,6 +28,7 @@ const geocodingApi = {
     })
 
     return {
+      ...extractCityState(result),
       label: extractAddressLabel(result),
       displayName: result.display_name ?? null,
     }

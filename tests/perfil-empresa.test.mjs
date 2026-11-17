@@ -14,11 +14,17 @@ const vite = await createServer({
   server: { middlewareMode: true, watch: null, ws: false },
   appType: 'custom',
 })
-after(() => vite.close())
+const navegadorOriginal = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+after(() => {
+  if (navegadorOriginal) Object.defineProperty(globalThis, 'navigator', navegadorOriginal)
+  else delete globalThis.navigator
+  return vite.close()
+})
 const load = (p) => vite.ssrLoadModule('/src/' + p)
 const { default: api } = await load('services/api.js')
 const { sessao, limparSessao } = await load('services/authSession.js')
 const { usePerfilEmpresa } = await load('composables/usePerfilEmpresa.js')
+const { default: geocodingApi } = await load('services/geocodingApi.js')
 const { payloadPerfil, validarPerfil } = await load('services/empresaPerfilService.js')
 const { protegerRota } = await load('router/authGuard.js')
 const { routes } = await load('router/routes.js')
@@ -47,6 +53,16 @@ function montar() {
 }
 let banco, chamadas, falha
 beforeEach(async () => {
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: {
+      geolocation: {
+        getCurrentPosition: (ok) =>
+          ok({ coords: { latitude: -26, longitude: -48, accuracy: 5 }, timestamp: Date.now() }),
+      },
+    },
+  })
+  geocodingApi.reverse = async () => ({ cidade: 'Joinville', uf: 'SC' })
   limparSessao()
   await nextTick()
   storage.set('token', 'teste')
@@ -72,8 +88,7 @@ test('carrega, altera somente campos necessários, salva e relê; cancelar resta
     await e.carregar()
     assert.equal(e.perfil.value.name, banco.name)
     e.editando.value = true
-    e.form.value.cidade = 'Joinville'
-    e.form.value.uf = 'SC'
+    await e.localizacao.usarLocalizacaoAtual()
     await Promise.all([e.salvar(), e.salvar()])
     assert.equal(chamadas.filter((c) => c.method === 'patch').length, 1)
     assert.deepEqual(JSON.parse(chamadas[1].data), { cidade: 'Joinville', uf: 'SC' })
@@ -109,7 +124,7 @@ test('erros 400, 403, 503 e rede preservam formulário e permitem nova tentativa
   try {
     await e.carregar()
     e.editando.value = true
-    e.form.value.cidade = 'Joinville'
+    await e.localizacao.usarLocalizacaoAtual()
     for (const status of [400, 403, 503, 'rede']) {
       falha = status
       await e.salvar()

@@ -1,5 +1,5 @@
 import { ref, watch, onUnmounted } from 'vue'
-import { sessao } from '@/services/authSession'
+import { sessao } from '../services/authSession.js'
 
 export function useGeolocation() {
   const loadingLocation = ref(false)
@@ -79,5 +79,6 @@ export function useGeolocation() {
     locationError,
     location,
     requestCurrentLocation,
+    cancelCurrentLocation: limpar,
   }
 }
