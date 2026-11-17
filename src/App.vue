@@ -3,11 +3,25 @@ import { nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Footer from './components/Footer.vue'
 import FooterEmpresa from './components/FooterEmpresaComponent.vue'
+import ChatToastHost from './features/chat/components/ChatToastHost.vue'
+import { useChatStore } from './features/chat/stores/chat'
 import { sessao } from './services/authService'
 import './styles/tokens.css'
 import './styles/shell.css'
 
 const route = useRoute()
+const chat = useChatStore()
+
+// Chat em tempo real ligado só com usuário logado. Trocar de conta (ou sair) desliga e limpa tudo,
+// para nada de uma conta sobrar na outra.
+watch(
+  () => [sessao.usuario?.id ?? null, sessao.revisao],
+  ([id]) => {
+    chat.stop()
+    if (id != null) chat.start()
+  },
+  { immediate: true },
+)
 const conteudo = ref(null)
 const focarConteudo = () => conteudo.value?.focus()
 watch(
@@ -68,5 +82,7 @@ const paginasComReserva = new Set([
       <FooterEmpresa v-if="sessao.tipo === 'empresa'" />
       <Footer v-else />
     </template>
+
+    <ChatToastHost />
   </div>
 </template>

@@ -89,7 +89,8 @@ export const routes = [
     path: '/mensagens',
     name: 'mensagens',
     component: () => import('../views/MensagensView.vue'),
-    meta: { requiresAuth: true },
+    // Chat em duas colunas (lista + conversa) quando houver espaço.
+    meta: { requiresAuth: true, layout: 'wide' },
   },
   {
     path: '/perfil',
