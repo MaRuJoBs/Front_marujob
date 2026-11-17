@@ -131,16 +131,17 @@ function preview(room) {
   flex-direction: column;
   min-height: 0;
   background-color: var(--chat-deep);
-  border-radius: var(--mrj-radius-lg, 1rem) var(--mrj-radius-lg, 1rem) 0 0;
 }
 
-/* Mesmo cabeçalho da conversa aberta: degradê roxo com os cantos de cima arredondados. */
+/* Mesmo cabeçalho da conversa aberta: degradê roxo encostado no topo e nas laterais
+   (respeita a área do notch com safe-area-inset-top). */
 .rooms__header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   min-height: 4.25rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--mrj-radius-lg, 1rem) var(--mrj-radius-lg, 1rem) 0 0;
+  padding: calc(0.875rem + env(safe-area-inset-top, 0px)) 1.25rem 0.875rem;
+  box-shadow: 0 2px 10px rgba(79, 43, 165, 0.18);
   background: linear-gradient(
     135deg,
     var(--mrj-color-primary, #6e4ab7) 0%,
@@ -159,13 +160,13 @@ function preview(room) {
 /* Busca em pílula logo abaixo do cabeçalho, com respiro dos lados. */
 .rooms__search {
   position: relative;
-  padding: 0.875rem 0.875rem 0.375rem;
+  padding: 1rem 1rem 0.5rem;
 }
 
 .rooms__lupa {
   position: absolute;
   top: 50%;
-  left: 1.875rem;
+  left: 2rem;
   margin-top: 0.25rem;
   color: var(--mrj-color-border, #796197);
   font-size: 0.875rem;
@@ -178,10 +179,10 @@ function preview(room) {
   padding: 0 1rem 0 2.5rem;
   color: var(--mrj-color-text, #533581);
   font-size: 0.875rem;
-  border: 1px solid var(--mrj-color-border-subtle, #dcd0e8);
+  border: 1px solid transparent;
   border-radius: var(--mrj-radius-pill, 999px);
   background-color: #ffffff;
-  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
+  box-shadow: var(--chat-shadow, 0 4px 14px rgba(76, 53, 103, 0.1));
 }
 
 .rooms__search input::placeholder {
@@ -214,10 +215,17 @@ function preview(room) {
   padding: 1.5rem 1rem;
 }
 
+/* Ícone num círculo branco com sombra suave, para não sumir no lilás. */
 .rooms__state-icon {
-  margin-bottom: 0.25rem;
-  color: color-mix(in srgb, var(--mrj-color-primary, #6e4ab7) 55%, #ffffff);
-  font-size: 4rem;
+  box-sizing: content-box;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.5rem;
+  padding: 1.5rem;
+  color: var(--mrj-color-primary, #6e4ab7);
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: var(--chat-shadow, 0 4px 14px rgba(76, 53, 103, 0.1));
 }
 
 .rooms__state-title {
@@ -246,7 +254,7 @@ function preview(room) {
   text-decoration: none;
   border-radius: var(--mrj-radius-pill, 999px);
   background-color: var(--mrj-color-primary, #6e4ab7);
-  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
+  box-shadow: 0 6px 16px rgba(110, 74, 183, 0.32);
 }
 
 .rooms__pill:hover {
@@ -259,9 +267,9 @@ function preview(room) {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
   min-height: 0;
-  padding: 0.5rem 0.875rem 1rem;
+  padding: 0.5rem 1rem 1rem;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -271,11 +279,11 @@ function preview(room) {
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.875rem 0.875rem 0.875rem 0.75rem;
   text-align: left;
-  border-radius: 0.875rem;
-  background-color: var(--chat-bubble, #fbf9fd);
-  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
+  border-radius: 1rem;
+  background-color: var(--chat-bubble, #ffffff);
+  box-shadow: var(--chat-shadow, 0 4px 14px rgba(76, 53, 103, 0.1));
 }
 
 .room:hover {

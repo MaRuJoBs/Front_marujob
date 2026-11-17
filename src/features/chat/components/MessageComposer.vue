@@ -164,8 +164,9 @@ function replyLabel(message) {
   flex-direction: column;
   gap: 0.375rem;
   padding: 0.5rem 0.625rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) 0.875rem;
-  /* Protótipo: barra clara colada embaixo. */
-  background-color: var(--mrj-color-background, #eee7f4);
+  /* Protótipo: barra clara colada embaixo, destacada do fundo lilás por uma sombra suave. */
+  background-color: var(--mrj-color-surface, #f6f1fa);
+  box-shadow: 0 -2px 10px rgba(76, 53, 103, 0.08);
 }
 
 .composer__context {

@@ -72,7 +72,7 @@ watch(
 }
 
 .pane__info {
-  border-radius: var(--mrj-radius-lg, 1rem) var(--mrj-radius-lg, 1rem) 0 0;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 @media (prefers-reduced-motion: no-preference) {

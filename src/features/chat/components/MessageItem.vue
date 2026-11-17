@@ -226,7 +226,7 @@ function replyPreview(reply) {
   line-height: 1.4;
   border-radius: 0.75rem;
   background-color: var(--bubble-bg);
-  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
+  box-shadow: 0 2px 8px rgba(76, 53, 103, 0.08);
   --bubble-bg: var(--chat-bubble, #f6f1fa);
 }
 

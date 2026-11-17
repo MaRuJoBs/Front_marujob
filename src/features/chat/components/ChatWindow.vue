@@ -178,14 +178,16 @@ function onEdit(payload) {
   background-color: var(--chat-deep, var(--chat-bg));
 }
 
-/* Cabeçalho do protótipo: degradê roxo com os cantos de cima arredondados. */
+/* Cabeçalho do protótipo: degradê roxo encostado no topo e nas laterais (tela cheia; respeita o
+   notch com safe-area-inset-top). */
 .window__header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 0.625rem;
-  padding: 0.75rem 0.5rem 0.75rem 0.25rem;
+  padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 0.5rem 0.75rem 0.25rem;
   color: #ffffff;
-  border-radius: var(--mrj-radius-lg, 1rem) var(--mrj-radius-lg, 1rem) 0 0;
+  box-shadow: 0 2px 10px rgba(79, 43, 165, 0.18);
   background: linear-gradient(
     135deg,
     var(--mrj-color-primary, #6e4ab7) 0%,

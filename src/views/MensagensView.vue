@@ -115,7 +115,9 @@ function selectRoom(id) {
 </template>
 
 <style scoped>
-/* Mesma largura de celular do resto do app (o shell limita a 26.25rem). */
+/* A tela de mensagens é uma camada fixa que cobre a viewport inteira, de ponta a ponta: não depende
+   da largura do shell nem deixa aparecer o fundo do body (escuro no modo escuro do sistema).
+   Fica abaixo do rodapé de navegação (z-index 999) e dos avisos (1000). */
 .mensagens {
   /* Cores do chat a partir dos tokens do MaruJob (src/styles/tokens.css). */
   --color-primary: var(--mrj-color-primary);
@@ -132,41 +134,29 @@ function selectRoom(id) {
   --radius-lg: var(--mrj-radius-lg);
   --shadow-md: 0 6px 20px rgba(76, 53, 103, 0.18);
   --chat-bg: #ffffff;
-  /* Protótipo: área das mensagens lilás acinzentada e balões claros. */
-  --chat-deep: color-mix(in srgb, var(--mrj-color-border) 42%, var(--mrj-color-background));
-  --chat-bubble: color-mix(in srgb, #ffffff 70%, var(--mrj-color-surface));
+  /* Fundo lilás claro da paleta (tokens.css), o mesmo na lista e na conversa; itens e balões brancos. */
+  --chat-deep: var(--mrj-color-secondary);
+  --chat-bubble: #ffffff;
+  --chat-shadow: 0 4px 14px rgba(76, 53, 103, 0.1);
   /* Cinza das prévias e textos auxiliares (mesmo text-secondary das páginas do app, freelancer.css). */
   --chat-muted: #666b80;
 
+  position: fixed;
+  z-index: 10;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  height: calc(100dvh - var(--mrj-navigation-height, 85px) - env(safe-area-inset-bottom, 0px));
-  padding: 16px 16px 12px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   box-sizing: border-box;
   font-family: var(--mrj-font-family);
+  background-color: var(--chat-deep);
 }
 
-/* Lista: de ponta a ponta até o rodapé. Como as outras páginas (Início, Freelances, Perfil), pinta o
-   próprio fundo claro em vez de herdar o do body (que fica escuro no modo escuro do sistema). */
-.mensagens--lista {
-  gap: 0;
-  height: 100dvh;
-  padding: 8px 0 0;
-  background-color: #ffffff;
-}
-
-/* A página reserva o espaço do rodapé (App.vue: paginasComReserva), então o lilás da lista passa por
-   trás dos cantos arredondados do rodapé, como o fundo da Início. */
+/* Lista: o conteúdo rola acima do rodapé de navegação; o lilás continua por trás dele. */
 .mensagens--lista .mensagens__lista {
   padding-bottom: calc(var(--mrj-navigation-height, 85px) + env(safe-area-inset-bottom, 0px));
-}
-
-/* Conversa aberta: ocupa a tela toda, com o campo de digitar colado embaixo. */
-.mensagens--conversa {
-  gap: 0;
-  height: 100dvh;
-  padding: 8px 0 0;
 }
 
 .mensagens :deep(button),
