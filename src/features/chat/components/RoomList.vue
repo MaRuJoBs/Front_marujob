@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faComments, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { RouterLink } from 'vue-router'
 import { sessao } from '@/services/authSession'
 import { formatListTime, messagePreview } from '../lib/format'
@@ -21,7 +21,7 @@ const filter = ref('')
 // Onde ficam as candidaturas de cada tipo de conta (para o estado vazio).
 const atalho = computed(() =>
   sessao.tipo === 'empresa'
-    ? { to: '/empresa/notificacoes', label: 'Ver candidaturas recebidas' }
+    ? { to: '/empresa/notificacoes', label: 'Ver candidaturas' }
     : { to: '/freelances', label: 'Ver oportunidades' },
 )
 
@@ -44,13 +44,18 @@ function preview(room) {
 </script>
 
 <template>
-  <section class="rooms" aria-label="Conversas">
+  <!-- Lista de conversas no mesmo estilo da conversa aberta (protótipo referencias/chat.png):
+       cabeçalho em degradê, fundo lilás e cada conversa como um item claro e arredondado. -->
+  <section class="rooms" aria-labelledby="rooms-titulo">
     <header class="rooms__header">
-      <h2 class="rooms__title">Conversas</h2>
+      <h1 id="rooms-titulo" class="rooms__title">Mensagens</h1>
     </header>
 
-    <div class="rooms__search">
-      <FontAwesomeIcon :icon="faMagnifyingGlass" :style="{ fontSize: '16px' }" aria-hidden="true" />
+    <!-- Avisos da página (ex.: reconectando). -->
+    <slot />
+
+    <div v-if="rooms.length" class="rooms__search">
+      <FontAwesomeIcon :icon="faMagnifyingGlass" class="rooms__lupa" aria-hidden="true" />
       <input
         v-model="filter"
         type="search"
@@ -62,19 +67,25 @@ function preview(room) {
     <p v-if="loading && !rooms.length" class="rooms__state" role="status">
       Carregando conversas...
     </p>
-    <div v-else-if="error && !rooms.length" class="rooms__state rooms__state--error" role="alert">
+    <div v-else-if="error && !rooms.length" class="rooms__state" role="alert">
+      <h2 class="rooms__state-title">Não foi possível carregar</h2>
       <p>{{ error }}</p>
-      <button type="button" class="rooms__link" @click="emit('retry')">Tentar novamente</button>
+      <button type="button" class="rooms__pill" @click="emit('retry')">Tentar novamente</button>
     </div>
     <div v-else-if="!rooms.length" class="rooms__state">
+      <FontAwesomeIcon :icon="faComments" class="rooms__state-icon" aria-hidden="true" />
+      <h2 class="rooms__state-title">Nenhuma conversa ainda</h2>
       <p>
-        Você ainda não tem conversas. Para falar com alguém, use "Conversar" em uma candidatura.
+        Para falar com {{ sessao.tipo === 'empresa' ? 'um freelancer' : 'uma empresa' }}, é só usar
+        o botão "Conversar" em uma candidatura.
       </p>
-      <RouterLink class="rooms__link" :to="atalho.to">{{ atalho.label }}</RouterLink>
+      <RouterLink class="rooms__pill" :to="atalho.to">{{ atalho.label }}</RouterLink>
     </div>
-    <p v-else-if="!visible.length" class="rooms__state">Nenhuma conversa encontrada.</p>
+    <p v-else-if="!visible.length" class="rooms__state rooms__state--compact">
+      Nenhuma conversa encontrada.
+    </p>
 
-    <TransitionGroup tag="ul" name="rooms" class="rooms__list">
+    <TransitionGroup v-if="rooms.length" tag="ul" name="rooms" class="rooms__list">
       <li
         v-for="(room, index) in visible"
         :key="room.id"
@@ -84,31 +95,29 @@ function preview(room) {
         <button
           type="button"
           class="room"
-          :class="{ 'room--active': room.id === activeId }"
+          :class="{ 'room--active': room.id === activeId, 'room--unread': room.unread > 0 }"
           :aria-current="room.id === activeId ? 'true' : undefined"
           @click="emit('select', room.id)"
         >
-          <ChatAvatar :name="room.name" :src="room.image" :size="40" />
+          <ChatAvatar :name="room.name" :src="room.image" :size="44" />
           <span class="room__body">
-            <span class="room__top">
-              <span class="room__name">{{ room.name }}</span>
-              <time v-if="room.last_message_at" class="room__time">{{
-                formatListTime(room.last_message_at)
-              }}</time>
-            </span>
-            <span class="room__bottom">
-              <span class="room__preview">{{ preview(room) }}</span>
-              <Transition name="badge" mode="out-in">
-                <span
-                  v-if="room.unread > 0"
-                  :key="room.unread"
-                  class="room__badge"
-                  :aria-label="`${room.unread} não lidas`"
-                >
-                  {{ room.unread > 99 ? '99+' : room.unread }}
-                </span>
-              </Transition>
-            </span>
+            <span class="room__name">{{ room.name }}</span>
+            <span class="room__preview">{{ preview(room) }}</span>
+          </span>
+          <span class="room__side">
+            <time v-if="room.last_message_at" class="room__time">{{
+              formatListTime(room.last_message_at)
+            }}</time>
+            <Transition name="badge" mode="out-in">
+              <span
+                v-if="room.unread > 0"
+                :key="room.unread"
+                class="room__badge"
+                :aria-label="`${room.unread} não lidas`"
+              >
+                {{ room.unread > 99 ? '99+' : room.unread }}
+              </span>
+            </Transition>
           </span>
         </button>
       </li>
@@ -121,74 +130,140 @@ function preview(room) {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background-color: var(--chat-bg, var(--color-background));
+  background-color: var(--chat-deep);
+  border-radius: var(--mrj-radius-lg, 1rem) var(--mrj-radius-lg, 1rem) 0 0;
 }
 
+/* Mesmo cabeçalho da conversa aberta: degradê roxo com os cantos de cima arredondados. */
 .rooms__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem 1rem 0.75rem;
-}
-
-.rooms__title {
-  color: #6e4ab7;
-  font-size: 1.25rem;
-  font-weight: 800;
-}
-
-.rooms__search {
-  position: relative;
-  padding: 0 1rem 0.75rem;
-}
-
-.rooms__search svg {
-  position: absolute;
-  top: 0.625rem;
-  left: 1.75rem;
-  color: var(--color-text-secondary);
-}
-
-.rooms__search input {
-  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
-  border: none;
-  border-radius: 999px;
-  background-color: color-mix(
-    in srgb,
-    var(--color-primary) 6%,
-    var(--chat-bg, var(--color-background))
+  min-height: 4.25rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--mrj-radius-lg, 1rem) var(--mrj-radius-lg, 1rem) 0 0;
+  background: linear-gradient(
+    135deg,
+    var(--mrj-color-primary, #6e4ab7) 0%,
+    var(--mrj-color-primary-active, #4f2ba5) 100%
   );
 }
 
+.rooms__title {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Busca em pílula logo abaixo do cabeçalho, com respiro dos lados. */
+.rooms__search {
+  position: relative;
+  padding: 0.875rem 0.875rem 0.375rem;
+}
+
+.rooms__lupa {
+  position: absolute;
+  top: 50%;
+  left: 1.875rem;
+  margin-top: 0.25rem;
+  color: var(--mrj-color-border, #796197);
+  font-size: 0.875rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.rooms__search input {
+  height: 2.5rem;
+  padding: 0 1rem 0 2.5rem;
+  color: var(--mrj-color-text, #533581);
+  font-size: 0.875rem;
+  border: 1px solid var(--mrj-color-border-subtle, #dcd0e8);
+  border-radius: var(--mrj-radius-pill, 999px);
+  background-color: #ffffff;
+  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
+}
+
+.rooms__search input::placeholder {
+  color: var(--chat-muted, #666b80);
+}
+
+.rooms__search input:focus {
+  border-color: var(--mrj-color-primary, #6e4ab7);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mrj-color-primary, #6e4ab7) 20%, transparent);
+}
+
+/* Estados (vazio, erro, carregando): centralizados na área da lista. */
 .rooms__state {
-  padding: 1.5rem 1rem;
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-.rooms__state--error {
-  color: var(--color-danger);
-}
-
-.rooms__link {
-  margin-top: 0.5rem;
-  color: var(--color-primary);
-  font-weight: 500;
-}
-
-.rooms__list {
+  display: flex;
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  border-top: 1px solid var(--color-border);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 2rem 2rem 3rem;
+  color: var(--chat-muted, #666b80);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
 }
 
+.rooms__state--compact {
+  flex: 0;
+  padding: 1.5rem 1rem;
+}
+
+.rooms__state-icon {
+  margin-bottom: 0.25rem;
+  color: color-mix(in srgb, var(--mrj-color-primary, #6e4ab7) 55%, #ffffff);
+  font-size: 4rem;
+}
+
+.rooms__state-title {
+  margin: 0;
+  color: var(--mrj-color-text, #533581);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.rooms__state p {
+  max-width: 17rem;
+  /* Sobre o lilás, o cinza não tem contraste suficiente: usa a cor de texto do MaruJob. */
+  color: var(--mrj-color-text, #533581);
+}
+
+.rooms__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mrj-control-height-md, 2.75rem);
+  margin-top: 0.5rem;
+  padding: 0 1.5rem;
+  color: #ffffff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--mrj-radius-pill, 999px);
+  background-color: var(--mrj-color-primary, #6e4ab7);
+  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
+}
+
+.rooms__pill:hover {
+  background-color: var(--mrj-color-primary-hover, #63369e);
+}
+
+/* Itens claros e arredondados (como os balões), com espaço entre eles e sem divisórias. */
 .rooms__list {
   position: relative;
-}
-
-.rooms__list li {
-  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: 0.5rem 0.875rem 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .room {
@@ -196,21 +271,19 @@ function preview(room) {
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 1rem;
+  padding: 0.75rem;
   text-align: left;
-}
-
-.room {
-  border-left: 3px solid transparent;
+  border-radius: 0.875rem;
+  background-color: var(--chat-bubble, #fbf9fd);
+  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
 }
 
 .room:hover {
-  background-color: #f6f1fa;
+  background-color: #ffffff;
 }
 
 .room--active {
-  border-left-color: #6e4ab7;
-  background-color: #eae1f3;
+  outline: 2px solid var(--mrj-color-primary, #6e4ab7);
 }
 
 .room__body {
@@ -221,64 +294,76 @@ function preview(room) {
   min-width: 0;
 }
 
-.room__top,
-.room__bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
 .room__name {
   overflow: hidden;
-  color: var(--color-text);
-  font-weight: 600;
+  color: var(--mrj-color-text, #533581);
+  font-size: 0.9375rem;
+  font-weight: 700;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.room__time {
-  flex-shrink: 0;
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
 }
 
 .room__preview {
   overflow: hidden;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  color: var(--chat-muted, #666b80);
+  font-size: 0.8125rem;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.room__badge {
-  flex-shrink: 0;
-  min-width: 1.5rem;
-  padding: 0.125rem 0.5rem;
-  color: var(--color-primary);
-  font-size: 0.75rem;
+.room--unread .room__preview {
+  color: var(--mrj-color-text, #533581);
   font-weight: 600;
-  line-height: 1.25;
-  text-align: center;
-  border-radius: 0.5rem;
-  background-color: color-mix(
-    in srgb,
-    var(--color-primary) 14%,
-    var(--chat-bg, var(--color-background))
-  );
 }
 
-/* Animações: salas entram em cascata, trocam de lugar suavemente quando chega mensagem nova. */
+/* Lado direito: hora em cima e, se houver não lidas, o círculo roxo com o número. */
+.room__side {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  align-self: stretch;
+  justify-content: space-between;
+  gap: 0.25rem;
+  padding: 0.125rem 0;
+}
+
+.room__time {
+  color: var(--chat-muted, #666b80);
+  font-size: 0.6875rem;
+}
+
+.room--unread .room__time {
+  color: var(--mrj-color-primary, #6e4ab7);
+  font-weight: 600;
+}
+
+.room__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 0.375rem;
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 999px;
+  background-color: var(--mrj-color-primary, #6e4ab7);
+}
+
 .room {
   transition: background-color 0.15s ease;
 }
 
 .rooms__search input {
   transition:
-    background-color 0.15s ease,
+    border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
+/* Animações: conversas entram em cascata e trocam de lugar suavemente quando chega mensagem nova. */
 @media (prefers-reduced-motion: no-preference) {
   .rooms__item {
     animation: room-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -291,7 +376,7 @@ function preview(room) {
 
   .rooms-leave-active {
     position: absolute;
-    width: 100%;
+    width: calc(100% - 1.75rem);
     transition: opacity 0.2s ease;
   }
 
@@ -322,7 +407,7 @@ function preview(room) {
 @keyframes room-in {
   from {
     opacity: 0;
-    transform: translateX(-0.75rem);
+    transform: translateY(0.5rem);
   }
 }
 </style>

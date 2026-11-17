@@ -56,6 +56,7 @@ const paginasComReserva = new Set([
   'perfil-empresa',
   'configuracoes-empresa',
   'notificacoes-empresa',
+  'mensagens',
 ])
 </script>
 

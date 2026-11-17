@@ -1,9 +1,10 @@
 <script setup>
 import { computed, onBeforeUnmount, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faComments, faPlugCircleXmark } from '@fortawesome/free-solid-svg-icons'
+import { faComments } from '@fortawesome/free-solid-svg-icons'
 import ChatPane from '@/features/chat/components/ChatPane.vue'
+import ConnectionBanner from '@/features/chat/components/ConnectionBanner.vue'
 import RoomList from '@/features/chat/components/RoomList.vue'
 import { useChatToast } from '@/features/chat/composables/useChatToast'
 import { STATUS } from '@/features/chat/lib/socketClient'
@@ -80,19 +81,11 @@ function selectRoom(id) {
 <template>
   <!-- Layout de celular, uma tela por vez: a lista de conversas; ao tocar, a conversa ocupa a tela
        toda (sem título nem rodapé de navegação, que o App.vue esconde com ?room=). -->
-  <main class="mensagens mrj-ui" :class="{ 'mensagens--conversa': routeRoomId !== null }">
-    <h1 v-if="routeRoomId === null" class="mensagens__titulo">Mensagens</h1>
-
-    <p v-if="banner === 'offline'" class="banner" role="status">
-      <FontAwesomeIcon :icon="faPlugCircleXmark" aria-hidden="true" />
-      Reconectando...
-      <button type="button" @click="chat.retryConnection()">Tentar agora</button>
-    </p>
-    <p v-else-if="banner === 'unauthorized'" class="banner banner--error" role="alert">
-      Sua sessão expirou.
-      <RouterLink to="/">Entrar novamente</RouterLink>
-    </p>
-
+  <main
+    class="mensagens mrj-ui"
+    :class="routeRoomId !== null ? 'mensagens--conversa' : 'mensagens--lista'"
+  >
+    <!-- Lista: o título "Mensagens" fica no cabeçalho em degradê do próprio RoomList. -->
     <RoomList
       v-if="routeRoomId === null"
       class="mensagens__lista"
@@ -102,16 +95,22 @@ function selectRoom(id) {
       :error="chat.roomsError"
       @select="selectRoom"
       @retry="chat.loadRooms()"
-    />
-    <ChatPane
-      v-else-if="room"
-      class="mensagens__conversa"
-      @back="router.push({ name: 'mensagens' })"
-    />
-    <section v-else class="mensagens__abrindo" role="status">
-      <FontAwesomeIcon :icon="faComments" :style="{ fontSize: '40px' }" aria-hidden="true" />
-      <p>Abrindo conversa...</p>
-    </section>
+    >
+      <ConnectionBanner :state="banner" @retry="chat.retryConnection()" />
+    </RoomList>
+
+    <template v-else>
+      <ConnectionBanner :state="banner" @retry="chat.retryConnection()" />
+      <ChatPane
+        v-if="room"
+        class="mensagens__conversa"
+        @back="router.push({ name: 'mensagens' })"
+      />
+      <section v-else class="mensagens__abrindo" role="status">
+        <FontAwesomeIcon :icon="faComments" :style="{ fontSize: '40px' }" aria-hidden="true" />
+        <p>Abrindo conversa...</p>
+      </section>
+    </template>
   </main>
 </template>
 
@@ -136,6 +135,8 @@ function selectRoom(id) {
   /* Protótipo: área das mensagens lilás acinzentada e balões claros. */
   --chat-deep: color-mix(in srgb, var(--mrj-color-border) 42%, var(--mrj-color-background));
   --chat-bubble: color-mix(in srgb, #ffffff 70%, var(--mrj-color-surface));
+  /* Cinza das prévias e textos auxiliares (mesmo text-secondary das páginas do app, freelancer.css). */
+  --chat-muted: #666b80;
 
   display: flex;
   flex-direction: column;
@@ -144,6 +145,21 @@ function selectRoom(id) {
   padding: 16px 16px 12px;
   box-sizing: border-box;
   font-family: var(--mrj-font-family);
+}
+
+/* Lista: de ponta a ponta até o rodapé. Como as outras páginas (Início, Freelances, Perfil), pinta o
+   próprio fundo claro em vez de herdar o do body (que fica escuro no modo escuro do sistema). */
+.mensagens--lista {
+  gap: 0;
+  height: 100dvh;
+  padding: 8px 0 0;
+  background-color: #ffffff;
+}
+
+/* A página reserva o espaço do rodapé (App.vue: paginasComReserva), então o lilás da lista passa por
+   trás dos cantos arredondados do rodapé, como o fundo da Início. */
+.mensagens--lista .mensagens__lista {
+  padding-bottom: calc(var(--mrj-navigation-height, 85px) + env(safe-area-inset-bottom, 0px));
 }
 
 /* Conversa aberta: ocupa a tela toda, com o campo de digitar colado embaixo. */
@@ -159,25 +175,9 @@ function selectRoom(id) {
   font-family: inherit;
 }
 
-.mensagens__titulo {
-  margin: 0;
-  color: var(--mrj-color-text);
-  font-size: 1.5rem;
-}
-
 .mensagens__lista {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  border: 1px solid var(--mrj-color-border-subtle);
-  border-radius: var(--mrj-radius-lg);
-  background-color: #ffffff;
-  box-shadow: var(--mrj-shadow-card);
-}
-
-/* O título da página já diz "Mensagens". */
-.mensagens__lista :deep(.rooms__header) {
-  display: none;
 }
 
 .mensagens__conversa {
@@ -193,39 +193,6 @@ function selectRoom(id) {
   justify-content: center;
   gap: 0.75rem;
   color: var(--mrj-color-text-secondary);
-}
-
-.banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0.375rem 1rem;
-  color: var(--mrj-color-text);
-  font-size: 0.875rem;
-  border-radius: var(--mrj-radius-sm);
-  background-color: var(--mrj-color-secondary);
-}
-
-.mensagens--conversa .banner {
-  border-radius: 0;
-}
-
-.banner--error {
-  color: var(--mrj-color-danger);
-  background-color: #fff0f0;
-}
-
-.banner button,
-.banner a {
-  padding: 0;
-  color: inherit;
-  font-weight: 600;
-  text-decoration: underline;
-  border: none;
-  background: none;
-  cursor: pointer;
 }
 </style>
 
