@@ -63,11 +63,13 @@ const local = computed(() =>
 }
 
 .card--bar {
-  margin: 0 24px;
+  margin: 0.5rem 0.75rem 0;
   padding-right: 8px;
+  background-color: #ffffff;
 }
 
 .card__link {
+  text-decoration: none;
   display: flex;
   flex: 1;
   align-items: center;
@@ -121,11 +123,5 @@ const local = computed(() =>
 .card__close:hover {
   background-color: #eae1f3;
   color: #6e4ab7;
-}
-
-@container (max-width: 650px) {
-  .card--bar {
-    margin: 0 12px;
-  }
 }
 </style>

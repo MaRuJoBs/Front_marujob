@@ -231,6 +231,7 @@ function preview(room) {
 
 .room__name {
   overflow: hidden;
+  color: var(--color-text);
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;

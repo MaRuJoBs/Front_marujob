@@ -78,121 +78,147 @@ function selectRoom(id) {
 </script>
 
 <template>
-  <main class="mensagens">
-    <h1 class="mensagens__titulo">Mensagens</h1>
+  <!-- Layout de celular, uma tela por vez: a lista de conversas; ao tocar, a conversa ocupa a tela
+       toda (sem título nem rodapé de navegação, que o App.vue esconde com ?room=). -->
+  <main class="mensagens mrj-ui" :class="{ 'mensagens--conversa': routeRoomId !== null }">
+    <h1 v-if="routeRoomId === null" class="mensagens__titulo">Mensagens</h1>
 
-    <div class="chat" :class="{ 'chat--room': routeRoomId !== null }">
-      <p v-if="banner === 'offline'" class="chat__banner" role="status">
-        <FontAwesomeIcon :icon="faPlugCircleXmark" aria-hidden="true" />
-        Reconectando...
-        <button type="button" @click="chat.retryConnection()">Tentar agora</button>
-      </p>
-      <p
-        v-else-if="banner === 'unauthorized'"
-        class="chat__banner chat__banner--error"
-        role="alert"
-      >
-        Sua sessão expirou.
-        <RouterLink to="/">Entrar novamente</RouterLink>
-      </p>
+    <p v-if="banner === 'offline'" class="banner" role="status">
+      <FontAwesomeIcon :icon="faPlugCircleXmark" aria-hidden="true" />
+      Reconectando...
+      <button type="button" @click="chat.retryConnection()">Tentar agora</button>
+    </p>
+    <p v-else-if="banner === 'unauthorized'" class="banner banner--error" role="alert">
+      Sua sessão expirou.
+      <RouterLink to="/">Entrar novamente</RouterLink>
+    </p>
 
-      <RoomList
-        class="chat__rooms"
-        :rooms="chat.rooms"
-        :active-id="routeRoomId"
-        :loading="chat.loadingRooms"
-        :error="chat.roomsError"
-        @select="selectRoom"
-        @retry="chat.loadRooms()"
-      />
-
-      <ChatPane v-if="room" class="chat__pane" @back="router.push({ name: 'mensagens' })" />
-      <section v-else class="chat__empty">
-        <FontAwesomeIcon :icon="faComments" :style="{ fontSize: '48px' }" aria-hidden="true" />
-        <p v-if="routeRoomId !== null">Abrindo conversa...</p>
-        <p v-else>Escolha uma conversa ou use "Conversar" em uma candidatura.</p>
-      </section>
-    </div>
+    <RoomList
+      v-if="routeRoomId === null"
+      class="mensagens__lista"
+      :rooms="chat.rooms"
+      :active-id="null"
+      :loading="chat.loadingRooms"
+      :error="chat.roomsError"
+      @select="selectRoom"
+      @retry="chat.loadRooms()"
+    />
+    <ChatPane
+      v-else-if="room"
+      class="mensagens__conversa"
+      @back="router.push({ name: 'mensagens' })"
+    />
+    <section v-else class="mensagens__abrindo" role="status">
+      <FontAwesomeIcon :icon="faComments" :style="{ fontSize: '40px' }" aria-hidden="true" />
+      <p>Abrindo conversa...</p>
+    </section>
   </main>
 </template>
 
 <style scoped>
-/* A largura disponível muda conforme o shell (freelancer: amplo; empresa: compacto), então o
-   layout do chat responde ao próprio container, não à janela. */
+/* Mesma largura de celular do resto do app (o shell limita a 26.25rem). */
 .mensagens {
-  container-type: inline-size;
+  /* Cores do chat a partir dos tokens do MaruJob (src/styles/tokens.css). */
+  --color-primary: var(--mrj-color-primary);
+  --color-primary-hover: var(--mrj-color-primary-hover);
+  --color-background: #ffffff;
+  --color-surface: var(--mrj-color-surface);
+  --color-border: var(--mrj-color-border-subtle);
+  --color-text: var(--mrj-color-text);
+  --color-text-secondary: var(--mrj-color-text-secondary);
+  --color-danger: var(--mrj-color-danger);
+  --color-success: var(--mrj-color-success);
+  --color-bg-page: var(--mrj-color-background);
+  --radius-sm: var(--mrj-radius-sm);
+  --radius-lg: var(--mrj-radius-lg);
+  --shadow-md: 0 6px 20px rgba(76, 53, 103, 0.18);
+  --chat-bg: #ffffff;
+  /* Protótipo: área das mensagens lilás acinzentada e balões claros. */
+  --chat-deep: color-mix(in srgb, var(--mrj-color-border) 42%, var(--mrj-color-background));
+  --chat-bubble: color-mix(in srgb, #ffffff 70%, var(--mrj-color-surface));
+
   display: flex;
   flex-direction: column;
   gap: 12px;
   height: calc(100dvh - var(--mrj-navigation-height, 85px) - env(safe-area-inset-bottom, 0px));
-  min-height: 28rem;
   padding: 16px 16px 12px;
   box-sizing: border-box;
+  font-family: var(--mrj-font-family);
+}
+
+/* Conversa aberta: ocupa a tela toda, com o campo de digitar colado embaixo. */
+.mensagens--conversa {
+  gap: 0;
+  height: 100dvh;
+  padding: 8px 0 0;
+}
+
+.mensagens :deep(button),
+.mensagens :deep(input),
+.mensagens :deep(textarea) {
+  font-family: inherit;
 }
 
 .mensagens__titulo {
   margin: 0;
-  color: #533581;
+  color: var(--mrj-color-text);
   font-size: 1.5rem;
 }
 
-/* Paleta do MaruJob para os componentes do chat (as variáveis são herdadas por todos eles). */
-.chat {
-  --color-primary: #6e4ab7;
-  --color-primary-hover: #63369e;
-  --color-background: #ffffff;
-  --color-surface: #f6f1fa;
-  --color-border: #dcd0e8;
-  --color-text: #2f2140;
-  --color-text-secondary: #5c3a8b;
-  --color-danger: #b30000;
-  --color-success: #195539;
-  --color-bg-page: #eee7f4;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
-  --shadow-md: 0 6px 20px rgba(76, 53, 103, 0.18);
-  --chat-bg: #ffffff;
-  --chat-deep: #f6f1fa;
-
-  font-family: Arial, Helvetica, sans-serif;
-  display: grid;
+.mensagens__lista {
   flex: 1;
-  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
-  border: 1px solid #dcd0e8;
-  border-radius: 16px;
-  background-color: var(--chat-bg);
-  box-shadow: 0 2px 3px #4c356719;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: var(--mrj-radius-lg);
+  background-color: #ffffff;
+  box-shadow: var(--mrj-shadow-card);
 }
 
-.chat :deep(button),
-.chat :deep(input),
-.chat :deep(textarea) {
-  font-family: inherit;
+/* O título da página já diz "Mensagens". */
+.mensagens__lista :deep(.rooms__header) {
+  display: none;
 }
 
-.chat__banner {
+.mensagens__conversa {
+  flex: 1;
+  min-height: 0;
+}
+
+.mensagens__abrindo {
   display: flex;
-  grid-column: 1 / -1;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--mrj-color-text-secondary);
+}
+
+.banner {
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   margin: 0;
   padding: 0.375rem 1rem;
-  color: #533581;
+  color: var(--mrj-color-text);
   font-size: 0.875rem;
-  background-color: #eae1f3;
+  border-radius: var(--mrj-radius-sm);
+  background-color: var(--mrj-color-secondary);
 }
 
-.chat__banner--error {
-  color: #b30000;
+.mensagens--conversa .banner {
+  border-radius: 0;
+}
+
+.banner--error {
+  color: var(--mrj-color-danger);
   background-color: #fff0f0;
 }
 
-.chat__banner button,
-.chat__banner a {
+.banner button,
+.banner a {
   padding: 0;
   color: inherit;
   font-weight: 600;
@@ -201,49 +227,32 @@ function selectRoom(id) {
   background: none;
   cursor: pointer;
 }
+</style>
 
-.chat__rooms {
-  grid-row: 2;
-  border-right: 1px solid var(--color-border);
+<style>
+/* Reset dos controles do chat com especificidade zero (:where): tira o visual padrão do navegador
+   (fundo cinza e borda dos botões, marcadores de lista) sem competir com os estilos dos componentes.
+   .viewer é o visualizador de imagens, que é teleportado para o <body>. */
+:where(.mensagens, .viewer) :where(button) {
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
 }
 
-.chat__pane,
-.chat__empty {
-  grid-row: 2;
+:where(.mensagens, .viewer) :where(button:disabled) {
+  cursor: default;
 }
 
-.chat__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0 24px;
-  color: #796197;
-  text-align: center;
-  background-color: var(--chat-deep);
+:where(.mensagens) :where(ul, ol) {
+  list-style: none;
 }
 
-/* Espaço estreito: uma tela por vez (lista -> conversa). */
-@container (max-width: 700px) {
-  .chat {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .chat__rooms {
-    border-right: none;
-  }
-
-  .chat--room .chat__rooms,
-  .chat:not(.chat--room) .chat__pane,
-  .chat:not(.chat--room) .chat__empty {
-    display: none;
-  }
-}
-
-@container (max-width: 480px) {
-  .mensagens__titulo {
-    font-size: 1.25rem;
-  }
+:where(.mensagens) :where(input, textarea) {
+  width: 100%;
+  color: inherit;
+  font: inherit;
 }
 </style>

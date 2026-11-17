@@ -1,7 +1,9 @@
 <script setup>
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faPaperclip, faPaperPlane, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faPaperclip, faXmark } from '@fortawesome/free-solid-svg-icons'
+// Avião de papel só em contorno, como no protótipo.
+import { faPaperPlane } from '@fortawesome/free-regular-svg-icons'
 
 const MAX_LENGTH = 2000
 
@@ -115,6 +117,19 @@ function replyLabel(message) {
     <p v-if="fileError" class="composer__error" role="alert">{{ fileError }}</p>
 
     <div class="composer__row">
+      <textarea
+        ref="input"
+        v-model="text"
+        class="composer__input"
+        rows="1"
+        :maxlength="MAX_LENGTH"
+        placeholder="Digite uma Mensagem..."
+        aria-label="Mensagem"
+        :disabled="disabled"
+        @keydown="onKeydown"
+        @input="onInput"
+      />
+
       <button
         v-if="!editing"
         type="button"
@@ -124,22 +139,9 @@ function replyLabel(message) {
         :disabled="disabled"
         @click="fileInput.click()"
       >
-        <FontAwesomeIcon :icon="faPaperclip" :style="{ fontSize: '20px' }" aria-hidden="true" />
+        <FontAwesomeIcon :icon="faPaperclip" :style="{ fontSize: '18px' }" aria-hidden="true" />
       </button>
       <input ref="fileInput" type="file" class="composer__file" tabindex="-1" @change="onFile" />
-
-      <textarea
-        ref="input"
-        v-model="text"
-        class="composer__input"
-        rows="1"
-        :maxlength="MAX_LENGTH"
-        placeholder="Escreva uma mensagem"
-        aria-label="Mensagem"
-        :disabled="disabled"
-        @keydown="onKeydown"
-        @input="onInput"
-      />
 
       <button
         type="submit"
@@ -148,7 +150,7 @@ function replyLabel(message) {
         aria-label="Enviar"
         title="Enviar"
       >
-        <FontAwesomeIcon :icon="faPaperPlane" :style="{ fontSize: '20px' }" aria-hidden="true" />
+        <FontAwesomeIcon :icon="faPaperPlane" :style="{ fontSize: '18px' }" aria-hidden="true" />
       </button>
     </div>
 
@@ -161,9 +163,9 @@ function replyLabel(message) {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  padding: 0.75rem 1.5rem 1rem;
-  border-top: 1px solid var(--color-border);
-  background-color: var(--chat-bg, var(--color-background));
+  padding: 0.5rem 0.625rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) 0.875rem;
+  /* Protótipo: barra clara colada embaixo. */
+  background-color: var(--mrj-color-background, #eee7f4);
 }
 
 .composer__context {
@@ -204,8 +206,8 @@ function replyLabel(message) {
 
 .composer__row {
   display: flex;
-  align-items: flex-end;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.125rem;
 }
 
 .composer__file {
@@ -214,50 +216,61 @@ function replyLabel(message) {
 
 .composer__input {
   flex: 1;
+  min-width: 0;
   max-height: 8rem;
-  padding: 0.625rem 0.875rem;
+  margin-right: 0.25rem;
+  padding: 0.5rem 0.875rem;
+  color: var(--mrj-color-text, #533581);
+  font-size: 0.875rem;
+  line-height: 1.3;
   resize: none;
   field-sizing: content;
-  border: none;
-  border-radius: 1.25rem;
-  background-color: color-mix(
-    in srgb,
-    var(--color-primary) 6%,
-    var(--chat-bg, var(--color-background))
-  );
+  /* Pílula branca do protótipo. */
+  border: 1px solid var(--mrj-color-border-subtle, #dcd0e8);
+  border-radius: var(--mrj-radius-pill, 999px);
+  background-color: #ffffff;
+  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
+}
+
+.composer__input::placeholder {
+  color: var(--mrj-color-text-secondary, #5c3a8b);
+  opacity: 0.75;
 }
 
 .composer__input:focus {
-  border-color: var(--color-primary);
+  border-color: var(--mrj-color-primary, #6e4ab7);
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mrj-color-primary, #6e4ab7) 20%, transparent);
 }
 
+/* Clipe e enviar: só o ícone em contorno, sem botão preenchido (área de toque de 44px). */
 .composer__icon,
 .composer__send {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
+  width: 2.5rem;
   height: 2.75rem;
+  padding: 0;
+  /* Ícones em contorno, discretos como no protótipo. */
+  color: var(--mrj-color-border, #796197);
+  border: none;
   border-radius: 50%;
+  background: none;
+  cursor: pointer;
 }
 
-.composer__icon {
-  color: var(--color-text-secondary);
-}
-
-.composer__icon:hover:not(:disabled) {
-  background-color: var(--color-surface);
-}
-
-.composer__send {
-  color: #ffffff;
-  background-color: var(--color-primary);
-}
-
+.composer__icon:hover:not(:disabled),
 .composer__send:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
+  color: var(--mrj-color-primary, #6e4ab7);
+  background-color: var(--mrj-color-secondary, #eae1f3);
+}
+
+.composer__send:disabled,
+.composer__icon:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .composer__count {

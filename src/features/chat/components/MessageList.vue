@@ -195,18 +195,20 @@ onMounted(() => scrollToBottom())
 .list {
   flex: 1;
   min-height: 0;
-  padding: 1rem 1.5rem;
+  padding: 1rem 0.875rem;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Protótipo: fundo lilás acinzentado liso. */
   background-color: var(--chat-deep, var(--chat-bg, var(--color-background)));
-  background-image: radial-gradient(rgba(76, 53, 103, 0.07) 1px, transparent 1px);
-  background-size: 18px 18px;
 }
 
 .list__items {
   display: flex;
   flex-direction: column;
   gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .list__state {
@@ -240,10 +242,14 @@ onMounted(() => scrollToBottom())
 }
 
 .list__day {
+  list-style: none;
   align-self: center;
-  margin: 0.5rem 0 1.75rem;
+  margin: 0.25rem 0 0.875rem;
+  padding: 0.125rem 0.625rem;
   color: var(--color-text-secondary);
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
+  border-radius: 999px;
+  background-color: var(--bubble-bg, #ffffff);
 }
 
 @media (prefers-reduced-motion: no-preference) {

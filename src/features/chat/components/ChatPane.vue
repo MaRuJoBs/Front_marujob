@@ -58,17 +58,7 @@ watch(
 </template>
 
 <style scoped>
-/* Mesmas cores da página de salas (claro: branco; escuro: fundo da página, mensagens um degrau abaixo). */
-.pane {
-  --chat-bg: var(--color-background);
-  --chat-deep: var(--chat-bg);
-}
-
-:global(:root[data-theme='dark']) .pane {
-  --chat-bg: var(--color-bg-page, var(--color-surface));
-  --chat-deep: color-mix(in srgb, var(--chat-bg) 80%, #000000);
-}
-
+/* As cores (--chat-bg, --chat-deep, --chat-bubble) vêm da página de mensagens. */
 .pane {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -76,12 +66,13 @@ watch(
   min-height: 0;
 }
 
-.pane--info {
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+/* Uma tela por vez: os detalhes do contato cobrem a conversa (nunca em coluna ao lado). */
+.pane--info .pane__window {
+  display: none;
 }
 
 .pane__info {
-  border-left: 1px solid var(--color-border);
+  border-radius: var(--mrj-radius-lg, 1rem) var(--mrj-radius-lg, 1rem) 0 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -94,21 +85,6 @@ watch(
   from {
     opacity: 0;
     transform: translateX(1.5rem);
-  }
-}
-
-/* Celular: os detalhes cobrem a conversa. */
-@container (max-width: 767px) {
-  .pane--info {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .pane--info .pane__window {
-    display: none;
-  }
-
-  .pane__info {
-    border-left: none;
   }
 }
 </style>

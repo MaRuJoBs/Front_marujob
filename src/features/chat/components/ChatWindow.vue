@@ -1,14 +1,13 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowLeft, faEllipsis } from '@fortawesome/free-solid-svg-icons'
-import { formatLastSeen } from '../lib/format'
+import { faChevronLeft, faEllipsisVertical } from '@fortawesome/free-solid-svg-icons'
 import ChatAvatar from './ChatAvatar.vue'
 import ChatVagaCard from './ChatVagaCard.vue'
 import MessageComposer from './MessageComposer.vue'
 import MessageList from './MessageList.vue'
 
-const { room, messages, meId, typing, disabled, maxFileMb, members, presence } = defineProps({
+const { room, messages, meId, typing, disabled, maxFileMb } = defineProps({
   room: { type: Object, required: true },
   // { items, hasMore, loaded } ou null enquanto não há histórico.
   messages: { type: Object, default: null },
@@ -48,19 +47,15 @@ watch(
   },
 )
 
-const subtitle = computed(() => {
-  if (typing.length) {
-    return 'digitando'
-  }
+// Linha de baixo do cabeçalho (protótipo): a profissão como "@Web-Developer". Enquanto a outra
+// pessoa digita, mostra "digitando". Sem profissão (e sem digitação), a linha não aparece.
+// Online/visto por último continua nos detalhes do contato (botão ⋮).
+const handle = computed(() => {
+  const profissao = (room.other?.profissao ?? '').trim()
 
-  const other = members[0]
-  const live = other ? presence[other.user.id] : null
-  const online = live ? live.online : other?.online
-
-  if (online) return 'online'
-
-  return other ? formatLastSeen(live ? live.last_seen : other.last_seen) : ''
+  return profissao ? `@${profissao.replace(/\s+/g, '-')}` : ''
 })
+const subtitle = computed(() => (typing.length ? 'digitando' : handle.value))
 
 function startReply(message) {
   editing.value = null
@@ -106,18 +101,18 @@ function onEdit(payload) {
         aria-label="Voltar às conversas"
         @click="emit('back')"
       >
-        <FontAwesomeIcon :icon="faArrowLeft" :style="{ fontSize: '20px' }" aria-hidden="true" />
+        <FontAwesomeIcon :icon="faChevronLeft" :style="{ fontSize: '18px' }" aria-hidden="true" />
       </button>
       <ChatAvatar
         :key="`avatar-${room.id}`"
         class="window__swap"
         :name="room.name"
         :src="room.image"
-        :size="38"
+        :size="40"
       />
       <div :key="`title-${room.id}`" class="window__title window__swap">
         <h2>{{ room.name }}</h2>
-        <small :class="{ window__typing: typing.length }" aria-live="polite"
+        <small v-if="subtitle" :class="{ window__typing: typing.length }" aria-live="polite"
           >{{ subtitle
           }}<span v-if="typing.length" class="dots" aria-hidden="true"><i></i><i></i><i></i></span
         ></small>
@@ -128,7 +123,11 @@ function onEdit(payload) {
         aria-label="Detalhes do contato"
         @click="emit('info')"
       >
-        <FontAwesomeIcon :icon="faEllipsis" :style="{ fontSize: '20px' }" aria-hidden="true" />
+        <FontAwesomeIcon
+          :icon="faEllipsisVertical"
+          :style="{ fontSize: '18px' }"
+          aria-hidden="true"
+        />
       </button>
     </header>
 
@@ -176,16 +175,22 @@ function onEdit(payload) {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background-color: var(--chat-bg, var(--color-background));
+  background-color: var(--chat-deep, var(--chat-bg));
 }
 
+/* Cabeçalho do protótipo: degradê roxo com os cantos de cima arredondados. */
 .window__header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1.5rem;
+  gap: 0.625rem;
+  padding: 0.75rem 0.5rem 0.75rem 0.25rem;
   color: #ffffff;
-  background: linear-gradient(135deg, #6e4ab7 0%, #63369e 100%);
+  border-radius: var(--mrj-radius-lg, 1rem) var(--mrj-radius-lg, 1rem) 0 0;
+  background: linear-gradient(
+    135deg,
+    var(--mrj-color-primary, #6e4ab7) 0%,
+    var(--mrj-color-primary-active, #4f2ba5) 100%
+  );
 }
 
 .window__title {
@@ -193,16 +198,30 @@ function onEdit(payload) {
   min-width: 0;
 }
 
+.window__title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
 .window__title h2 {
   overflow: hidden;
-  font-size: 1.0625rem;
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 1.25;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .window__title small {
-  color: rgba(255, 255, 255, 0.82);
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  font-style: italic;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .window__typing {
@@ -219,20 +238,16 @@ function onEdit(payload) {
   min-height: 2.75rem;
   padding: 0.5rem;
   color: rgba(255, 255, 255, 0.9);
+  border: none;
   border-radius: 50%;
+  background: none;
+  cursor: pointer;
 }
 
 .window__back:hover,
 .window__info:hover {
   color: #ffffff;
   background-color: rgba(255, 255, 255, 0.16);
-}
-
-/* Só no celular existe a lista como tela separada. */
-@container (min-width: 701px) {
-  .window__back {
-    display: none;
-  }
 }
 
 .dots {

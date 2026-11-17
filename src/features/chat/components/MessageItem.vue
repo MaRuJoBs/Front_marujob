@@ -80,8 +80,10 @@ function replyPreview(reply) {
         </p>
 
         <div class="message__row">
+          <!-- tabindex: no celular (sem hover), tocar no balão mostra as ações (responder/editar/apagar). -->
           <div
             class="message__bubble"
+            tabindex="0"
             :class="{
               'message__bubble--deleted': message.is_deleted,
               'message__bubble--photo': isPhoto,
@@ -164,8 +166,10 @@ function replyPreview(reply) {
 </template>
 
 <style scoped>
-/* Visual minimalista: balões suaves sem borda, nome e hora acima, tons derivados da cor primária. */
+/* Visual do protótipo do MaruJob: balões claros com cantos arredondados, os meus à direita e os
+   do outro à esquerda, sem foto/nome ao lado; hora pequena no canto de baixo e tiques em roxo. */
 .message {
+  list-style: none;
   display: grid;
   grid-template-rows: 1fr;
   max-width: 100%;
@@ -174,74 +178,30 @@ function replyPreview(reply) {
 .message__inner {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
   min-height: 0;
   max-width: 100%;
-  padding-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
 }
 
 .message--own .message__inner {
   flex-direction: row-reverse;
 }
 
-.message__avatar--hidden {
-  visibility: hidden;
+/* Conversa a dois: a foto e o nome já estão no cabeçalho. */
+.message__avatar,
+.message__head {
+  display: none;
 }
 
 .message__main {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
   min-width: 0;
-  max-width: min(34rem, 85%);
+  max-width: 78%;
 }
 
 .message--own .message__main {
   align-items: flex-end;
-}
-
-.message__head {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  min-height: 1.25rem;
-}
-
-.message__author {
-  color: var(--color-text);
-  font-size: 0.875rem;
-}
-
-.message__meta {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-end;
-  gap: 0.375rem;
-  color: var(--color-text-secondary);
-  font-size: 0.6875rem;
-}
-
-.message__meta svg.message__read {
-  color: #2563eb;
-}
-
-/* Foto: a hora fica sobre a imagem (canto inferior direito). */
-.message__bubble--photo {
-  position: relative;
-}
-
-.message__bubble--photo .message__meta {
-  position: absolute;
-  right: 0.5rem;
-  bottom: 0.5rem;
-  padding: 0.0625rem 0.375rem;
-  color: #ffffff;
-  border-radius: 999px;
-  background-color: rgb(0 0 0 / 50%);
-}
-
-.message__bubble--photo .message__meta svg.message__read {
-  color: #60a5fa;
 }
 
 .message__row {
@@ -259,50 +219,20 @@ function replyPreview(reply) {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  min-width: 0;
-  padding: 0.4375rem 0.875rem;
-  color: var(--color-text);
-  border-radius: 1.125rem;
+  min-width: 4.5rem;
+  padding: 0.5rem 0.75rem 0.375rem;
+  color: var(--mrj-color-text, #533581);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  border-radius: 0.75rem;
   background-color: var(--bubble-bg);
-  box-shadow: 0 1px 2px rgba(76, 53, 103, 0.12);
-  --bubble-bg: #ffffff;
+  box-shadow: var(--mrj-shadow-card, 0 2px 3px #4c356719);
+  --bubble-bg: var(--chat-bubble, #f6f1fa);
 }
 
-.message--own .message__bubble {
-  --bubble-bg: #dfd1ee;
-}
-
-/* Rabinho de balão de fala apontando para a foto de perfil (só na 1ª mensagem da sequência). */
-.message__bubble--tail {
-  position: relative;
-  border-top-left-radius: 0;
-}
-
-.message--own .message__bubble--tail {
-  border-top-left-radius: 1rem;
-  border-top-right-radius: 0;
-}
-
-.message__bubble--tail::before {
-  position: absolute;
-  top: 0;
-  left: -0.5rem;
-  width: 0.5rem;
-  height: 0.75rem;
-  content: '';
-  background-color: var(--bubble-bg);
-  clip-path: polygon(100% 0, 100% 100%, 0 0);
-}
-
-.message--own .message__bubble--tail::before {
-  right: -0.5rem;
-  left: auto;
-  clip-path: polygon(0 0, 0 100%, 100% 0);
-}
-
-.message__bubble--photo {
-  width: fit-content;
-  padding: 0.1875rem;
+.message__bubble:focus-visible {
+  outline: var(--mrj-focus-width, 3px) solid var(--mrj-color-focus, #63369e);
+  outline-offset: 2px;
 }
 
 .message__bubble--deleted {
@@ -311,18 +241,70 @@ function replyPreview(reply) {
 }
 
 .message__text {
+  margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Rodapé do balão: hora no canto de baixo; nas minhas, os tiques à esquerda e a hora à direita. */
+.message__meta {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  justify-content: flex-start;
+  gap: 0.375rem;
+  color: var(--color-text-secondary);
+  font-size: 0.625rem;
+}
+
+.message--own .message__meta {
+  justify-content: flex-end;
+}
+
+.message--own .message__meta svg {
+  order: -1;
+  margin-right: auto;
+  color: var(--mrj-color-primary, #6e4ab7);
+}
+
+.message__meta svg.message__read {
+  color: var(--mrj-color-primary-active, #4f2ba5);
+}
+
+/* Foto: a hora fica sobre a imagem (canto inferior direito). */
+.message__bubble--photo {
+  position: relative;
+  width: fit-content;
+  min-width: 0;
+  padding: 0.1875rem;
+}
+
+.message__bubble--photo .message__meta {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  left: auto;
+  align-self: auto;
+  padding: 0.0625rem 0.375rem;
+  color: #ffffff;
+  border-radius: 999px;
+  background-color: rgb(0 0 0 / 50%);
+}
+
+.message--own .message__bubble--photo .message__meta svg {
+  margin-right: 0;
+  color: #ffffff;
 }
 
 .message__reply {
   display: flex;
   flex-direction: column;
+  margin: 0;
   padding: 0.25rem 0.625rem;
-  font-size: 0.8125rem;
-  border-left: 3px solid var(--color-primary);
+  font-size: 0.75rem;
+  border-left: 3px solid var(--mrj-color-primary, #6e4ab7);
   border-radius: var(--radius-sm);
-  background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  background-color: var(--mrj-color-secondary, #eae1f3);
 }
 
 .message__reply span {
@@ -332,39 +314,33 @@ function replyPreview(reply) {
   text-overflow: ellipsis;
 }
 
+/* Ações aparecem ao passar o mouse ou ao tocar/focar o balão (não ocupam espaço fora disso). */
 .message__actions {
-  display: flex;
+  display: none;
   gap: 0.125rem;
-  opacity: 0;
-  transition: opacity 0.15s ease;
 }
 
 .message:hover .message__actions,
 .message:focus-within .message__actions {
-  opacity: 1;
-}
-
-/* Sem hover (toque): as ações ficam sempre visíveis, discretas. */
-@media (hover: none) {
-  .message__actions {
-    opacity: 0.7;
-  }
+  display: flex;
 }
 
 .message__actions button {
   display: inline-flex;
   padding: 0.375rem;
-  color: var(--color-text-secondary);
+  color: var(--mrj-color-text, #533581);
+  border: none;
   border-radius: 50%;
+  background-color: rgb(255 255 255 / 55%);
+  cursor: pointer;
 }
 
 .message__actions button:hover {
-  color: var(--color-text);
-  background-color: var(--color-border);
+  background-color: #ffffff;
 }
 
 .message__actions .message__danger:hover {
-  color: var(--color-danger);
+  color: var(--mrj-color-danger, #b30000);
 }
 
 /* Animações: a mensagem nova abre espaço (as de cima sobem) e desliza para o lugar, com fade. */
