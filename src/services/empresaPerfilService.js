@@ -24,6 +24,8 @@ export function urlPublica(valor) {
 export function validarPerfil(form) {
   const erros = {}
   if (!form.name?.trim()) erros.name = 'Informe o nome comercial.'
+  if (form.cidade && form.cidade.length > 100)
+    erros.cidade = 'A cidade deve ter no máximo 100 caracteres.'
   if (form.uf && !ufs.includes(form.uf)) erros.uf = 'Selecione uma UF brasileira válida.'
   if (form.website && !/^https?:\/\//i.test(form.website))
     erros.website = 'Informe um endereço com http:// ou https://.'
@@ -47,4 +49,8 @@ export function payloadPerfil(form, original, imagem) {
 export const consultarPerfilEmpresa = (config) =>
   api.get('empresas/me/', config).then((r) => r.data)
 export const atualizarPerfilEmpresa = (dados, config) =>
-  api.patch('empresas/me/', dados, config).then((r) => r.data)
+  api.patch('empresas/me/', dados, config).then((r) => {
+    if (r.status !== 200 || !r.data || typeof r.data !== 'object' || Array.isArray(r.data))
+      throw new Error('O servidor não confirmou a atualização do perfil.')
+    return r.data
+  })

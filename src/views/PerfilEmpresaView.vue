@@ -1,14 +1,21 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { faGear, faBuilding, faCircleInfo } from '@fortawesome/free-solid-svg-icons'
+import {
+  faGear,
+  faBuilding,
+  faCircleInfo,
+  faLocationDot,
+  faPenToSquare,
+} from '@fortawesome/free-solid-svg-icons'
 const router = useRouter()
 import EmpresaHeader from '../components/EmpresaHeader.vue'
 import BaseButton from '../components/ui/BaseButton.vue'
 import BaseCard from '../components/ui/BaseCard.vue'
 import BaseInput from '../components/ui/BaseInput.vue'
+import EmpresaLocalizacao from '../components/EmpresaLocalizacao.vue'
 import { usePerfilEmpresa } from '../composables/usePerfilEmpresa.js'
-import { ufs, urlPublica } from '../services/empresaPerfilService.js'
+import { urlPublica } from '../services/empresaPerfilService.js'
 const {
   perfil,
   form,
@@ -20,6 +27,7 @@ const {
   erro,
   sucesso,
   erros,
+  localizacao,
   cancelar,
   selecionarImagem,
   removerImagem,
@@ -47,7 +55,6 @@ const vazio = computed(
 const campos = [
   ['name', 'Nome comercial'],
   ['area_atuacao', 'Área de atuação'],
-  ['cidade', 'Cidade'],
   ['website', 'Website'],
   ['contato_comercial', 'Contato comercial'],
 ]
@@ -64,7 +71,10 @@ function editar() {
     <EmpresaHeader voltar />
     <main :aria-busy="carregando">
       <div class="titulo-perfil">
-        <h1>{{ editando ? 'Editar perfil da empresa' : 'Perfil da empresa' }}</h1>
+        <div>
+          <p class="pagina-rotulo">SEU ESPAÇO NO MARUJOB</p>
+          <h1>{{ editando ? 'Editar perfil da empresa' : 'Perfil da empresa' }}</h1>
+        </div>
         <BaseButton
           variant="outline"
           aria-label="Configurações da empresa"
@@ -91,20 +101,22 @@ function editar() {
             <div class="resumo-empresa">
               <p class="rotulo">Perfil empresarial</p>
               <h2 id="nome-empresa">{{ perfil.name }}</h2>
-              <p v-if="perfil.area_atuacao">{{ perfil.area_atuacao }}</p>
+              <p v-if="perfil.area_atuacao" class="setor">{{ perfil.area_atuacao }}</p>
               <p v-if="perfil.cidade || perfil.uf" class="localizacao">
-                {{ [perfil.cidade, perfil.uf].filter(Boolean).join(' / ') }}
+                <FontAwesomeIcon :icon="faLocationDot" aria-hidden="true" />
+                {{ [perfil.cidade, perfil.uf].filter(Boolean).join(' — ') }}
               </p>
             </div>
           </div>
           <BaseButton class="editar-perfil" variant="outline" @click="editar"
-            >Editar informações</BaseButton
+            ><FontAwesomeIcon :icon="faPenToSquare" aria-hidden="true" />Editar
+            informações</BaseButton
           >
         </section>
         <BaseCard v-if="editando" class="card-edicao" elevated>
           <form novalidate @submit.prevent="salvar">
             <fieldset :disabled="salvando">
-              <legend>Editar informações da empresa</legend>
+              <legend>Apresente sua empresa</legend>
               <div class="logo-editor">
                 <div class="previa-logo">
                   <img v-if="logo" class="logo" :src="logo" alt="Prévia do logotipo da empresa" />
@@ -148,6 +160,7 @@ function editar() {
                   :error="erros[campo]"
                 />
               </div>
+              <EmpresaLocalizacao :estado="localizacao" :salva="perfil" :erros="erros" />
               <div class="campo-descricao">
                 <label for="descricao-empresa">Descrição institucional</label>
                 <textarea
@@ -165,19 +178,6 @@ function editar() {
                 >
                   {{ erros.descricao_institucional }}
                 </p>
-              </div>
-              <div class="campo-uf">
-                <label for="uf-empresa">UF</label>
-                <select
-                  id="uf-empresa"
-                  v-model="form.uf"
-                  :aria-invalid="!!erros.uf"
-                  aria-describedby="erro-uf"
-                >
-                  <option value="">Não informada</option>
-                  <option v-for="uf in ufs" :key="uf" :value="uf">{{ uf }}</option>
-                </select>
-                <p id="erro-uf" v-if="erros.uf" role="alert" class="erro">{{ erros.uf }}</p>
               </div>
             </fieldset>
             <div class="acoes">
@@ -224,7 +224,7 @@ function editar() {
               >
               <template v-if="perfil.cidade || perfil.uf"
                 ><dt>Localização</dt>
-                <dd>{{ [perfil.cidade, perfil.uf].filter(Boolean).join(' / ') }}</dd></template
+                <dd>{{ [perfil.cidade, perfil.uf].filter(Boolean).join(' — ') }}</dd></template
               >
               <template v-if="perfil.website"
                 ><dt>Website</dt>
@@ -253,7 +253,7 @@ function editar() {
 <style scoped>
 .perfil-empresa {
   min-height: 100dvh;
-  background: var(--mrj-color-secondary);
+  background: #f5f2f9;
   color: var(--mrj-color-text);
   font-family: var(--mrj-font-family);
   line-height: var(--mrj-line-height);
@@ -274,6 +274,13 @@ main {
   font-size: 20px;
   font-weight: 700;
   line-height: 1.3;
+  margin: 4px 0 0;
+}
+.pagina-rotulo {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+  color: var(--mrj-color-text-secondary);
 }
 .titulo-perfil > button {
   flex-shrink: 0;
@@ -293,26 +300,39 @@ p {
   min-width: 0;
 }
 .cabecalho-institucional {
+  position: relative;
   display: grid;
-  gap: 12px;
-  padding: 4px 0 16px;
-  border-bottom: 1px solid var(--mrj-color-border-subtle);
+  gap: 20px;
+  padding: 28px 20px 20px;
+  border: 1px solid #e2d9ed;
+  border-radius: 22px;
+  background: radial-gradient(ellipse at top right, #e9dff6, transparent 70%), #fff;
+  box-shadow: 0 6px 20px #53358108;
+  overflow: hidden;
+}
+.cabecalho-institucional::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, #6e4ab7, #bd9ae1);
 }
 .identidade-empresa {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   min-width: 0;
 }
 .logo,
 .sem-logo {
-  width: 72px;
-  height: 72px;
+  box-sizing: border-box;
+  width: 76px;
+  height: 76px;
   object-fit: contain;
-  border-radius: var(--mrj-radius-md);
+  border-radius: 20px;
   border: 1px solid var(--mrj-color-border-subtle);
-  background: var(--mrj-color-surface);
+  background: #fff;
 }
 .sem-logo {
   display: grid;
@@ -334,26 +354,42 @@ p {
 }
 .rotulo {
   color: var(--mrj-color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.resumo-empresa .setor {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: #eee7f7;
   font-size: 12px;
 }
 .localizacao {
-  margin-top: 4px;
+  margin-top: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.localizacao svg {
+  flex-shrink: 0;
 }
 .editar-perfil {
-  justify-self: start;
-  margin-left: 84px;
-  max-width: calc(100% - 84px);
+  width: 100%;
   min-height: 44px;
   font-size: var(--mrj-font-size-sm);
-  background: var(--mrj-color-surface);
+  background: #fff;
+  border-color: #d4c4e8;
+  border-radius: 12px;
 }
 .secoes-perfil > *,
 .card-edicao {
-  padding: 16px;
+  padding: 20px;
   gap: 12px;
   align-content: start;
-  border-radius: var(--mrj-radius-md);
+  border-radius: 20px;
   box-shadow: none;
+  background: #fff;
+  border-color: #e2d9ed;
 }
 .secoes-perfil h2 {
   display: flex;
@@ -366,7 +402,10 @@ p {
 .secoes-perfil h2 svg {
   flex-shrink: 0;
   color: var(--mrj-color-primary);
-  width: 16px;
+  width: 18px;
+  padding: 9px;
+  border-radius: 11px;
+  background: #f0e9f8;
 }
 .secoes-perfil p,
 dl {
@@ -382,13 +421,15 @@ dl {
   margin: 0;
 }
 dt {
-  font-weight: 600;
+  font-weight: 400;
+  font-size: 12px;
   color: var(--mrj-color-text-secondary);
 }
 dd {
   margin: 2px 0 12px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--mrj-color-border-subtle);
+  font-weight: 600;
 }
 dd:last-child {
   margin-bottom: 0;
@@ -497,8 +538,10 @@ main > .erro {
   grid-template-columns: 60px minmax(0, 1fr);
   align-items: start;
   gap: 12px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--mrj-color-border-subtle);
+  padding: 14px;
+  background: #f8f5fc;
+  border: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 16px;
 }
 .logo-editor .logo,
 .logo-editor .sem-logo {
