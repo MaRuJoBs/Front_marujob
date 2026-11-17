@@ -264,11 +264,12 @@ function replyPreview(reply) {
 .message--own .message__meta svg {
   order: -1;
   margin-right: auto;
-  color: var(--mrj-color-primary, #6e4ab7);
+  /* Enviada / entregue: cinza. Lida: roxo (abaixo). */
+  color: var(--chat-muted, #666b80);
 }
 
 .message__meta svg.message__read {
-  color: var(--mrj-color-primary-active, #4f2ba5);
+  color: var(--mrj-color-primary, #6e4ab7);
 }
 
 /* Foto: a hora fica sobre a imagem (canto inferior direito). */

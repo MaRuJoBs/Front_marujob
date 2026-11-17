@@ -115,9 +115,10 @@ function selectRoom(id) {
 </template>
 
 <style scoped>
-/* A tela de mensagens é uma camada fixa que cobre a viewport inteira, de ponta a ponta: não depende
-   da largura do shell nem deixa aparecer o fundo do body (escuro no modo escuro do sistema).
-   Fica abaixo do rodapé de navegação (z-index 999) e dos avisos (1000). */
+/* A tela de mensagens é a coluna do app: mesma largura e mesmo alinhamento do rodapé de navegação
+   (shell.css: .app .app-navigation), centralizada e da altura inteira da tela. Fixa e com fundo
+   próprio, então dentro da coluna nunca aparece o fundo do body nem margem; fora dela (computador)
+   fica o fundo normal das outras telas, como na Início. Fica abaixo do rodapé (999) e dos avisos. */
 .mensagens {
   /* Cores do chat a partir dos tokens do MaruJob (src/styles/tokens.css). */
   --color-primary: var(--mrj-color-primary);
@@ -143,7 +144,12 @@ function selectRoom(id) {
 
   position: fixed;
   z-index: 10;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--mrj-content-width, 26.25rem);
   display: flex;
   flex-direction: column;
   margin: 0;
