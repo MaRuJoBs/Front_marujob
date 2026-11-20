@@ -16,6 +16,7 @@ import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
 import { obterOportunidade } from '@/services/freelanceService'
 import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
 import { useCandidatura } from '@/composables/useCandidatura'
+import ConversarButton from '@/features/chat/components/ConversarButton.vue'
 import { formularioDaVaga, detalhesComplementaresVaga } from '@/utils/vagaForm'
 const informacoes = computed(() => (job.value ? formularioDaVaga(job.value) : null))
 const complementos = computed(() => detalhesComplementaresVaga(job.value))
@@ -165,6 +166,11 @@ onBeforeUnmount(() => {
           >
           <template v-else>Consulte sua candidatura para continuar.</template>
         </p>
+        <ConversarButton
+          v-if="candidatura && job.empresa"
+          class="btn-candidatar btn-conversar"
+          :candidatura="candidatura.id"
+        />
         <p v-if="feedbackCandidatura" class="ajuda" role="status">{{ feedbackCandidatura }}</p>
         <p v-if="erroCandidatura" class="ajuda" role="alert">{{ erroCandidatura }}</p>
         <button
@@ -327,6 +333,14 @@ onBeforeUnmount(() => {
 }
 .btn-candidatar:hover:not(:disabled) {
   background: var(--mrj-color-primary-hover);
+}
+.btn-conversar {
+  margin-top: 12px;
+  color: var(--mrj-color-primary);
+  background: var(--mrj-color-secondary);
+}
+.btn-conversar:hover:not(:disabled) {
+  color: white;
 }
 .ajuda {
   margin-top: 12px !important;

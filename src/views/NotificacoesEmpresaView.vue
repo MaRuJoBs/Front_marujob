@@ -9,6 +9,7 @@ import {
   urlWhatsApp,
 } from '@/utils/notificacoes'
 import { resolverImagem } from '@/services/perfilPortfolioService'
+import ConversarButton from '@/features/chat/components/ConversarButton.vue'
 const {
   notificacoes,
   filtro,
@@ -133,7 +134,7 @@ const contatoSeguro = (n) =>
             <div class="acoes">
               <button type="button" :disabled="ocupada" @click="visualizar(n)">
                 Visualizar candidato</button
-              ><button
+              ><ConversarButton :candidatura="n.candidatura" :disabled="ocupada" /><button
                 v-if="n.lida === false"
                 type="button"
                 :disabled="ocupada"
