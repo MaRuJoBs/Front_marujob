@@ -73,7 +73,7 @@
   width: 100%;
   max-width: var(--mrj-content-width);
   height: calc(var(--mrj-navigation-height) + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px));
 }
 
 .app-navigation .item {
