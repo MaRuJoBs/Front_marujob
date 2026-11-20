@@ -1,4 +1,6 @@
 <script setup>
+import AvisosChat from '@/components/AvisosChat.vue'
+import { useContadorNotificacoes } from '@/stores/contadorNotificacoes'
 import EmpresaHeader from '@/components/EmpresaHeader.vue'
 import NotificacoesDialog from '@/components/NotificacoesDialog.vue'
 import { useNotificacoesEmpresa } from '@/composables/useNotificacoesEmpresa'
@@ -39,20 +41,34 @@ const {
   confirmarDecisao,
   marcarLida,
 } = useNotificacoesEmpresa()
+const contador = useContadorNotificacoes()
+async function atualizarCandidaturas() {
+  await Promise.all([carregar(), contador.atualizar()])
+}
+async function lerCandidatura(n) {
+  if (await marcarLida(n)) await contador.atualizar({ reiniciar: true })
+}
 const contatoSeguro = (n) =>
   urlWhatsApp({ status: n.status, whatsapp: contatos.value[n.candidatura] })
 </script>
 <template>
   <EmpresaHeader voltar />
-  <main class="notificacoes-empresa mrj-ui" :aria-busy="carregando">
+  <main class="notificacoes-empresa mrj-ui">
     <div class="cabecalho">
       <div>
         <p class="sobretitulo">Sua empresa</p>
         <h1 tabindex="-1">Notificações</h1>
       </div>
-      <button type="button" :disabled="carregando || ocupada" @click="carregar()">Atualizar</button>
+      <button type="button" :disabled="carregando || ocupada" @click="atualizarCandidaturas">
+        Atualizar
+      </button>
     </div>
-    <p class="introducao">Acompanhe os profissionais interessados nas suas oportunidades.</p>
+    <AvisosChat />
+    <h2>Candidaturas</h2>
+    <p v-if="contador.total !== null" class="introducao">
+      {{ contador.total }}
+      {{ contador.total === 1 ? 'candidatura não lida' : 'candidaturas não lidas' }}
+    </p>
     <nav class="filtros" aria-label="Filtrar candidaturas por status">
       <button
         v-for="opcao in filtrosNotificacoes"
@@ -70,7 +86,7 @@ const contatoSeguro = (n) =>
     <div v-if="carregando" role="status" class="estado">Carregando notificações...</div>
     <div v-else-if="erro" role="alert" class="estado falha">
       <p>{{ erro }}</p>
-      <button type="button" @click="carregar()">Tentar novamente</button>
+      <button type="button" @click="atualizarCandidaturas">Tentar novamente</button>
     </div>
     <template v-else>
       <div v-if="!notificacoes.length" role="status" class="estado">
@@ -121,6 +137,10 @@ const contatoSeguro = (n) =>
                 >{{ dataCandidatura(n.candidatura_criado_em) }}</time
               ><span v-else>Data não informada</span>
             </p>
+            <p v-if="dataCandidatura(n.criado_em)" class="data">
+              Notificação recebida em
+              <time :datetime="n.criado_em">{{ dataCandidatura(n.criado_em) }}</time>
+            </p>
             <div class="indicadores">
               <span class="status" :class="n.status">{{ statusCandidatura[n.status] }}</span
               ><span class="leitura">{{
@@ -138,7 +158,7 @@ const contatoSeguro = (n) =>
                 v-if="n.lida === false"
                 type="button"
                 :disabled="ocupada"
-                @click="marcarLida(n)"
+                @click="lerCandidatura(n)"
               >
                 {{ lendo[n.id] ? 'Marcando...' : 'Marcar como lida' }}
               </button>

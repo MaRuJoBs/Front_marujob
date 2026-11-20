@@ -28,6 +28,18 @@ import {sessao} from '/src/services/authSession.js'
 library.add(fas);api.defaults.baseURL='/api/'
 const scenario=new URLSearchParams(location.search).get('scenario')||'lista'
 const profissional={id:7,name:'Profissional de teste com nome extenso',profissao:'Especialista em desenvolvimento e design',habilidades:['Vue.js','API','Acessibilidade'],profile_image:'/__imagem44',email:'email-privado@teste.invalid',telefone:'telefone-privado',latitude:-26.12345,groups:['administrativo']}
+const freelancer=scenario==='freelancer'
+let sala={id:42,name:'Conversa de teste com nome muito longo para a tela',other:{id:7},unread:2,last_message_at:'2026-11-03T13:00:00Z',last_message:{id:91,body:'Mensagem de teste',author:{id:7}}}
+let resolverSalas
+const esperaSalas = new Promise(resolve => { resolverSalas = resolve })
+window.WebSocket = class WebSocketSimulado {
+ static OPEN=1
+ readyState=0
+ constructor(){window.socketTeste=this;setTimeout(()=>{this.readyState=1;this.onopen?.()},0)}
+ emitir(event){this.onmessage?.({data:JSON.stringify(event)})}
+ send(){}
+ close(){this.readyState=3}
+}
 let lista=[
 {id:31,candidatura:12,status:'pendente',lida:false},
 {id:32,candidatura:13,status:'aprovada',lida:false},
@@ -36,7 +48,7 @@ let lista=[
 {id:45,candidatura:29,status:'pendente',lida:false}
 ].map(n=>({...n,freelancer:7,freelancer_detalhes:profissional,oportunidade:45,oportunidade_titulo:'Oportunidade com título longo para teste de quebra de linha e layout compacto',candidatura_criado_em:'2026-11-03T12:00:00-03:00',criado_em:'2026-11-03T13:00:00-03:00'}))
 const requests=[];let falha=scenario==='erro'
-sessao.usuario={id:80,name:'Empresa de teste',groups:['Empresa']};sessao.tipo='empresa';localStorage.setItem('token','jwt-somente-teste')
+sessao.usuario={id:80,name:'Conta de teste',groups:freelancer?[]:['Empresa']};sessao.tipo=freelancer?'usuario':'empresa';localStorage.setItem('token','jwt-somente-teste')
 function candidatura(n){return {id:n.candidatura,freelancer:n.freelancer,oportunidade:n.oportunidade,status:n.status,freelancer_detalhes:profissional,whatsapp:{disponivel:n.status==='aprovada'&&n.candidatura!==14,modo:'link',url:n.status==='aprovada'&&n.candidatura!==14?'https://wa.me/5547999999999?text=Ol%C3%A1%21+Teste':null,mensagem_enviada:false}}}
 function erro(c,status){throw new axios.AxiosError('erro de teste','ERR_BAD_RESPONSE',c,null,{status,data:{detail:'erro de teste'},config:c,headers:{}})}
 api.defaults.adapter=async config=>{
@@ -44,11 +56,17 @@ api.defaults.adapter=async config=>{
  let data,status=200
  if(config.url==='notificacoes/') {
   if(falha)erro(config,503)
-  const filtered=scenario==='vazio'?[]:lista.filter(n=>!config.params.status||n.status===config.params.status)
+  const filtered=scenario==='vazio'?[]:lista.filter(n=>(!config.params.status||n.status===config.params.status)&&(config.params.lida===undefined||n.lida===config.params.lida))
   const p=config.params.page||1,per=4,count=filtered.length
   const params=config.params.status?'&status='+config.params.status:''
   data={count,results:filtered.slice((p-1)*per,p*per),next:p*per<count?'?page='+(p+1)+params:null,previous:p>1?'?page='+(p-1)+params:null}
- } else if(config.url.includes('/marcar-lida/')) {const id=Number(config.url.split('/')[1]);const n=lista.find(n=>n.id===id);n.lida=true;data={...n}}
+ } else if(config.url==='chat/rooms/') {
+  if(freelancer) await esperaSalas
+  data={results:scenario==='lista'||freelancer?[sala]:[],next:null}
+ } else if(config.url==='chat/rooms/42/read/'){
+  sala={...sala,unread:0};status=204
+ } else if(config.url==='chat/rooms/42/messages/') data={results:[],next_before:null}
+ else if(config.url.includes('/marcar-lida/')) {const id=Number(config.url.split('/')[1]);const n=lista.find(n=>n.id===id);n.lida=true;data={...n}}
  else if(config.url.startsWith('candidaturas/')) {
   const id=Number(config.url.split('/')[1]),n=lista.find(n=>n.candidatura===id)
   if(config.method==='post') {
@@ -64,10 +82,15 @@ api.defaults.adapter=async config=>{
 }
 const testRoutes=routes.map(r=>r.name==='login'?{...r,component:{render:()=>h('p','Entre novamente')}}:r)
 const router=createRouter({history:createMemoryHistory(),routes:testRoutes});instalarProtecao(router)
-await router.push('/empresa/notificacoes');await router.isReady()
+await router.push(freelancer?'/notificacoes':'/empresa/notificacoes');await router.isReady()
 const app=createApp(App);app.use(createPinia());app.use(router);app.component('FontAwesomeIcon',FontAwesomeIcon);app.mount('#app')
 await new Promise(r=>setTimeout(r,180));await nextTick();await document.fonts.ready
-window.teste={router,requests,set falha(v){falha=v}}
+window.teste={router,requests,resolverSalas,novaMensagem(){
+ const message={id:92,body:'Mensagem em tempo real de teste',author:{id:7,name:'Contato de teste'}}
+ sala={...sala,unread:3,last_message:message}
+ window.socketTeste.emitir({type:'message.new',room:42,message})
+ window.socketTeste.emitir({type:'room.updated',room:42,summary:sala})
+},set falha(v){falha=v}}
 document.body.dataset.pronto='sim'
 `
 const vite = await createServer({
@@ -178,8 +201,8 @@ try {
   }
   await cdp('Page.enable')
   let total = 0
-  for (const largura of [320, 375, 768, 1280])
-    for (const scenario of ['lista', 'vazio', 'erro', 'conflito', 'sessao']) {
+  for (const largura of [320, 375, 390, 430, 1280])
+    for (const scenario of ['lista', 'vazio', 'erro', 'conflito', 'sessao', 'freelancer']) {
       await cdp('Emulation.setDeviceMetricsOverride', {
         width: largura,
         height: 1000,
@@ -190,12 +213,54 @@ try {
       await aguardar("document.body.dataset.pronto==='sim'")
       await semOverflow()
       assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 1)
-      assert.ok(
+      if (scenario === 'freelancer') {
+        assert.ok(
+          await avaliar(
+            "document.querySelector('.avisos-chat [role=status]').textContent.includes('Carregando')",
+          ),
+        )
+        await avaliar('window.teste.resolverSalas()')
+        await aguardar(
+          "document.querySelector('.conversa')?.getAttribute('href')==='/mensagens?room=42'",
+        )
+        assert.equal(
+          await avaliar(
+            'document.querySelector(\'nav a[href="/notificacoes"] .indicador\')?.textContent',
+          ),
+          '2',
+        )
+        await avaliar('window.teste.novaMensagem()')
+        await aguardar(
+          "document.querySelector('.avisos-chat [role=status]').textContent.includes('3 mensagens')",
+        )
+        assert.equal(await avaliar("document.querySelectorAll('.conversa').length"), 1)
+        await foto('freelancer-' + largura)
         await avaliar(
-          'document.querySelector(\'.empresa-header a[aria-label="Notificações de candidaturas"]\')!==null',
-        ),
-      )
-      if (scenario === 'lista') {
+          "document.querySelector('.conversa').focus();document.querySelector('.conversa').click()",
+        )
+        await aguardar("window.teste.router.currentRoute.value.query.room==='42'")
+        await aguardar(
+          "window.teste.requests.some(r=>r.method==='post'&&r.url==='chat/rooms/42/read/')",
+        )
+        await avaliar("window.teste.router.push('/notificacoes')")
+        await aguardar(
+          "document.querySelector('.avisos-chat [role=status]')?.textContent.includes('não tem mensagens')",
+        )
+        assert.equal(
+          await avaliar("window.teste.requests.filter(r=>r.url==='chat/rooms/').length"),
+          1,
+        )
+        assert.equal(
+          await avaliar("window.teste.requests.filter(r=>r.url==='notificacoes/').length"),
+          0,
+        )
+      } else if (scenario === 'lista') {
+        assert.ok(
+          await avaliar(
+            "document.querySelector('.empresa-header a.notificacoes').textContent.includes('Notificações')",
+          ),
+        )
+        await aguardar("document.querySelector('.empresa-header .indicador')?.textContent==='5'")
         await aguardar(
           "document.querySelectorAll('.card').length===4 && document.querySelectorAll('.whatsapp').length===1",
         )
@@ -237,6 +302,7 @@ try {
           'Visualizar candidato',
         )
         await clicarTexto('.card:first-child button', 'Marcar como lida')
+        await aguardar("document.querySelector('.empresa-header .indicador')?.textContent==='4'")
         await aguardar(
           "document.querySelector('.card:first-child .leitura').textContent.includes('Lida')",
         )
@@ -300,7 +366,7 @@ try {
       } else if (scenario === 'erro') {
         assert.ok(
           await avaliar(
-            "document.querySelector('[role=alert]').textContent.includes('temporariamente')",
+            "document.querySelector('.estado[role=alert]').textContent.includes('temporariamente')",
           ),
         )
         await foto('erro-' + largura)
@@ -333,7 +399,7 @@ try {
       console.log('PASSOU', scenario, largura)
       total++
     }
-  console.log(total + '/20 cenários de navegador aprovados; artefatos: ' + pasta)
+  console.log(total + '/30 cenários de navegador aprovados; artefatos: ' + pasta)
 } finally {
   ws?.close()
   proc.kill()

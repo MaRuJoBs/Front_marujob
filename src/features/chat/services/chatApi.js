@@ -1,16 +1,19 @@
 // Chamadas REST do chat. A instância `api` (src/services/api.js) já tem a base `.../api/`, envia o JWT
 // e renova o token expirado; por isso as rotas aqui são relativas (`chat/rooms/`).
 import api from '@/services/api'
+import { sessao } from '@/services/authSession'
 
 const unwrap = (response) => response.data
 
 /** Todas as conversas do usuário (a API pagina com PageNumberPagination; segue o `next`). */
-export async function listRooms() {
+export async function listRooms({ signal, revision = sessao.revisao } = {}) {
   const rooms = []
   let page = 1
 
   for (;;) {
-    const data = await api.get('chat/rooms/', { params: { page } }).then(unwrap)
+    const data = await api
+      .get('chat/rooms/', { params: { page }, signal, _sessionRevision: revision })
+      .then(unwrap)
 
     rooms.push(...(data.results ?? []))
 
@@ -22,7 +25,8 @@ export async function listRooms() {
 
 export const getRoom = (roomId) => api.get(`chat/rooms/${roomId}/`).then(unwrap)
 
-export const markRead = (roomId) => api.post(`chat/rooms/${roomId}/read/`)
+export const markRead = (roomId) =>
+  api.post(`chat/rooms/${roomId}/read/`, undefined, { _sessionRevision: sessao.revisao })
 
 export const listMessages = (roomId, before = null) =>
   api.get(`chat/rooms/${roomId}/messages/`, { params: before ? { before } : {} }).then(unwrap)

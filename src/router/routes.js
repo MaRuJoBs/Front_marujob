@@ -55,6 +55,12 @@ export const routes = [
     meta: { requiresAuth: true, tipo: 'empresa' },
   },
   {
+    path: '/notificacoes',
+    name: 'notificacoes-freelancer',
+    component: () => import('../views/NotificacoesFreelancerView.vue'),
+    meta: { requiresAuth: true, tipo: 'usuario' },
+  },
+  {
     path: '/empresa/notificacoes',
     name: 'notificacoes-empresa',
     component: () => import('../views/NotificacoesEmpresaView.vue'),

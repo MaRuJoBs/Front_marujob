@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'vite'
 import { createRenderer, h } from 'vue'
+import { createPinia } from 'pinia'
 import { resolve } from 'node:path'
 import { setTimeout as esperar } from 'node:timers/promises'
 import { readFileSync } from 'node:fs'
@@ -27,6 +28,7 @@ const utils = await load('utils/notificacoes.js')
 const { useNotificacoesEmpresa } = await load('composables/useNotificacoesEmpresa.js')
 const { protegerRota } = await load('router/authGuard.js')
 const { routes } = await load('router/routes.js')
+const { useContadorNotificacoes } = await load('stores/contadorNotificacoes.js')
 let chamadas, transporte, notificacoes, candidatura, acoes
 const profissional = () => ({
   id: 7,
@@ -616,6 +618,9 @@ test('resposta da decisão com ID incorreto ou status pendente não confirma suc
 test('componentes compilam, preservam navegação e não renderizam dados privados', () => {
   for (const nome of [
     'src/components/EmpresaHeader.vue',
+    'src/components/AvisosChat.vue',
+    'src/components/IndicadorAvisos.vue',
+    'src/views/NotificacoesFreelancerView.vue',
     'src/components/NotificacoesDialog.vue',
     'src/views/NotificacoesEmpresaView.vue',
   ]) {
@@ -702,4 +707,56 @@ test('última página removida após decisão retorna à anterior preservando fi
   } finally {
     fechar()
   }
+})
+
+test('contador empresarial usa o total DRF do filtro lida=false e reúne consultas concorrentes', async () => {
+  const contador = useContadorNotificacoes(createPinia())
+  transporte = (c) => {
+    assert.equal(c.url, 'notificacoes/')
+    assert.deepEqual(c.params, { lida: false })
+    return respostaPagina([notificacao()], null, null, 37)
+  }
+  await Promise.all([contador.atualizar(), contador.atualizar()])
+  assert.equal(contador.total, 37)
+  assert.equal(chamadas.length, 1)
+})
+
+test('contador descarta resposta anterior ao logout e freelancer não consulta notificações empresariais', async () => {
+  const contador = useContadorNotificacoes(createPinia())
+  const resposta = deferred()
+  transporte = () => resposta.promise
+  const antiga = contador.atualizar()
+  while (!chamadas.length) await esperar(1)
+  limparSessao()
+  contador.limpar()
+  sessao.usuario = { id: 81 }
+  sessao.tipo = 'usuario'
+  await contador.atualizar()
+  resposta.resolve(respostaPagina([notificacao()], null, null, 9))
+  await antiga
+  assert.equal(contador.total, null)
+  assert.equal(chamadas.length, 1)
+})
+
+test('contador mantém valor desconhecido em caso de erro ou resposta inválida', async () => {
+  const contador = useContadorNotificacoes(createPinia())
+  for (const status of [403, 500]) {
+    transporte = () => falhar(status)
+    await contador.atualizar()
+    assert.equal(contador.total, null)
+  }
+  transporte = () => ({ count: '4' })
+  await contador.atualizar()
+  assert.equal(contador.total, null)
+})
+
+test('central freelancer usa a proteção por tipo de conta existente', async () => {
+  const rota = routes.find((r) => r.name === 'notificacoes-freelancer')
+  assert.equal(rota.path, '/notificacoes')
+  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'usuario' })
+  assert.deepEqual(await protegerRota({ meta: rota.meta }), { path: '/homeEmpresa', replace: true })
+  sessao.tipo = 'usuario'
+  assert.equal(await protegerRota({ meta: rota.meta }), true)
+  limparSessao()
+  assert.deepEqual(await protegerRota({ meta: rota.meta }), { name: 'login', replace: true })
 })

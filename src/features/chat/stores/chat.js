@@ -51,6 +51,8 @@ export const useChatStore = defineStore('chatStore', () => {
   let hasOpenedBefore = false
   let lastTypingSentAt = 0
   let started = false
+  let roomsRequest = null
+  const readRequests = new Map()
 
   // Usuário logado, no formato das mensagens do chat.
   const me = computed(() => {
@@ -118,6 +120,11 @@ export const useChatStore = defineStore('chatStore', () => {
   /** Desliga o chat e limpa tudo (nada de um usuário pode sobrar para o próximo). */
   function stop() {
     started = false
+    roomsRequest?.controller.abort()
+    roomsRequest = null
+    readRequests.clear()
+    loadingRooms.value = false
+    loadingHistory.value = false
     hasOpenedBefore = false
     socket?.close()
     socket = null
@@ -141,6 +148,7 @@ export const useChatStore = defineStore('chatStore', () => {
   }
 
   async function handleOpen() {
+    const currentSocket = socket
     const reconnected = hasOpenedBefore
 
     hasOpenedBefore = true
@@ -151,9 +159,14 @@ export const useChatStore = defineStore('chatStore', () => {
 
     await loadRooms()
 
-    if (reconnected && activeRoomId.value && state.rooms[activeRoomId.value]) {
+    if (
+      socket === currentSocket &&
+      reconnected &&
+      activeRoomId.value &&
+      state.rooms[activeRoomId.value]
+    ) {
       await loadHistory(activeRoomId.value, { reset: true })
-      markActiveRead()
+      if (socket === currentSocket) markActiveRead()
     }
   }
 
@@ -199,6 +212,10 @@ export const useChatStore = defineStore('chatStore', () => {
 
   function handleEvent(original) {
     let event = original
+
+    if (event.type === 'room.updated' || event.type === 'room.removed') {
+      roomsRequest?.changedRooms.add(String(event.room))
+    }
 
     // A confirmação do servidor "assenta" a mensagem provisória (mesmo elemento, sem recriar).
     if (event.type === 'message.new' && event.message?.author?.id === me.value?.id) {
@@ -250,19 +267,48 @@ export const useChatStore = defineStore('chatStore', () => {
 
   // ---- conversas ----
 
-  async function loadRooms() {
+  function loadRooms() {
+    if (!started || !me.value) return
+    if (roomsRequest) return roomsRequest.promise
+
+    const controller = new AbortController()
+    const revision = sessao.revisao
+    const changedRooms = new Set()
+    const userId = me.value.id
+    const current = () =>
+      !controller.signal.aborted && revision === sessao.revisao && userId === me.value?.id
+
     loadingRooms.value = true
     roomsError.value = ''
 
-    try {
-      setRooms(state, await chatApi.listRooms())
-      markActiveRead()
-    } catch (error) {
-      roomsError.value = apiErrorMessage(error, 'Não foi possível carregar as conversas.')
-    } finally {
-      loadingRooms.value = false
-      roomsLoaded.value = true
-    }
+    const promise = chatApi
+      .listRooms({ signal: controller.signal, revision })
+      .then((result) => {
+        if (!current()) return
+        const unchanged = result.filter((room) => !changedRooms.has(String(room.id)))
+        const updated = [...changedRooms].map((id) => state.rooms[id]).filter(Boolean)
+        setRooms(state, [...unchanged, ...updated])
+        markActiveRead()
+      })
+      .catch((error) => {
+        if (!current()) return
+        const status = error?.response?.status
+        roomsError.value =
+          status === 401
+            ? 'Sua sessão expirou. Entre novamente para ver as mensagens.'
+            : status === 403
+              ? 'Sua conta não tem permissão para acessar as mensagens.'
+              : apiErrorMessage(error, 'Não foi possível carregar as conversas.')
+      })
+      .finally(() => {
+        if (roomsRequest?.controller !== controller) return
+        roomsRequest = null
+        if (!current()) return
+        loadingRooms.value = false
+        roomsLoaded.value = true
+      })
+    roomsRequest = { controller, promise, changedRooms }
+    return promise
   }
 
   /**
@@ -270,7 +316,9 @@ export const useChatStore = defineStore('chatStore', () => {
    * e deixa o cartão da vaga pendente para a próxima mensagem. Devolve a conversa.
    */
   async function contactCandidatura(candidaturaId) {
+    const currentSocket = socket
     const room = await chatApi.openContact(candidaturaId)
+    if (socket !== currentSocket) throw new Error('A sessão foi alterada.')
 
     state.rooms[room.id] = room
 
@@ -278,6 +326,7 @@ export const useChatStore = defineStore('chatStore', () => {
   }
 
   async function openRoom(roomId) {
+    const currentSocket = socket
     activeRoomId.value = roomId
 
     if (roomId == null) return
@@ -285,8 +334,11 @@ export const useChatStore = defineStore('chatStore', () => {
     if (!state.rooms[roomId]) {
       // Link direto/atualização da página: a lista ainda pode não ter chegado.
       try {
-        state.rooms[roomId] = await chatApi.getRoom(roomId)
+        const room = await chatApi.getRoom(roomId)
+        if (socket !== currentSocket || activeRoomId.value !== roomId) return
+        state.rooms[roomId] = room
       } catch {
+        if (socket !== currentSocket || activeRoomId.value !== roomId) return
         activeRoomId.value = null
         historyError.value = 'Conversa não encontrada.'
 
@@ -296,7 +348,7 @@ export const useChatStore = defineStore('chatStore', () => {
 
     if (!state.messages[roomId]?.loaded) await loadHistory(roomId)
 
-    markActiveRead()
+    if (socket === currentSocket && activeRoomId.value === roomId) markActiveRead()
   }
 
   function closeRoom() {
@@ -304,16 +356,19 @@ export const useChatStore = defineStore('chatStore', () => {
   }
 
   async function loadHistory(roomId, { reset = false } = {}) {
+    const currentSocket = socket
     loadingHistory.value = true
     historyError.value = ''
 
     try {
       const page = await chatApi.listMessages(roomId)
+      if (socket !== currentSocket) return
 
       if (reset && state.messages[roomId]) state.messages[roomId].items = []
 
       setHistory(state, roomId, page)
     } catch (error) {
+      if (socket !== currentSocket) return
       if (activeRoomId.value === roomId) {
         historyError.value = apiErrorMessage(error, 'Não foi possível carregar as mensagens.')
       }
@@ -321,11 +376,12 @@ export const useChatStore = defineStore('chatStore', () => {
       // 404: a conversa deixou de existir para este usuário.
       if (error?.response?.status === 404) handleEvent({ type: 'room.removed', room: roomId })
     } finally {
-      loadingHistory.value = false
+      if (socket === currentSocket) loadingHistory.value = false
     }
   }
 
   async function loadOlder() {
+    const currentSocket = socket
     const roomId = activeRoomId.value
     const entry = state.messages[roomId]
 
@@ -334,36 +390,55 @@ export const useChatStore = defineStore('chatStore', () => {
     loadingHistory.value = true
 
     try {
-      prependHistory(state, roomId, await chatApi.listMessages(roomId, entry.nextBefore))
+      const page = await chatApi.listMessages(roomId, entry.nextBefore)
+      if (socket !== currentSocket || state.messages[roomId] !== entry) return false
+      prependHistory(state, roomId, page)
 
       return true
     } catch (error) {
-      toast.error(apiErrorMessage(error, 'Não foi possível carregar mensagens anteriores.'))
+      if (socket === currentSocket) {
+        toast.error(apiErrorMessage(error, 'Não foi possível carregar mensagens anteriores.'))
+      }
 
       return false
     } finally {
-      loadingHistory.value = false
+      if (socket === currentSocket) loadingHistory.value = false
     }
   }
 
-  function markActiveRead() {
+  async function markActiveRead() {
     const roomId = activeRoomId.value
-
-    if (roomId == null || document.visibilityState !== 'visible') return
+    if (roomId == null || document.visibilityState !== 'visible' || readRequests.has(roomId)) return
 
     const room = state.rooms[roomId]
+    if (!room || !(room.unread > 0) || !state.messages[roomId]?.loaded) return
 
-    if (!room || room.unread === 0) return
+    const request = Symbol()
+    let lerAtualizacao = false
+    readRequests.set(roomId, request)
+    try {
+      await chatApi.markRead(roomId)
+      if (readRequests.get(roomId) !== request) return
 
-    room.unread = 0
-
-    if (!socket?.send({ action: 'read', room: roomId })) {
-      chatApi.markRead(roomId).catch(() => {})
+      if (state.rooms[roomId] === room) {
+        room.unread = 0
+        roomsRequest?.changedRooms.add(String(roomId))
+      } else {
+        // Um resumo recebido durante a leitura pode incluir mensagens posteriores.
+        lerAtualizacao = activeRoomId.value === roomId && state.rooms[roomId]?.unread > 0
+      }
+    } catch {
+      // Mantém a contagem e permite tentar de novo ao reabrir a conversa.
+    } finally {
+      if (readRequests.get(roomId) === request) readRequests.delete(roomId)
     }
+
+    if (lerAtualizacao) markActiveRead()
   }
 
   /** O usuário desistiu de anexar o cartão da vaga à próxima mensagem. */
   async function dismissContext(roomId) {
+    const currentSocket = socket
     const room = state.rooms[roomId]
     const previous = room?.pending_vaga ?? null
 
@@ -374,6 +449,7 @@ export const useChatStore = defineStore('chatStore', () => {
     try {
       await chatApi.clearContext(roomId)
     } catch (error) {
+      if (socket !== currentSocket) return
       room.pending_vaga = previous
       toast.error(apiErrorMessage(error))
     }
@@ -383,6 +459,7 @@ export const useChatStore = defineStore('chatStore', () => {
 
   /** Texto: pelo WebSocket quando conectado; senão pelo REST (que também notifica os demais). */
   async function sendText(body, replyTo = null) {
+    const currentSocket = socket
     const roomId = activeRoomId.value
     const text = body.trim()
 
@@ -411,11 +488,13 @@ export const useChatStore = defineStore('chatStore', () => {
     try {
       const message = await chatApi.sendMessage(roomId, { body: text, replyTo })
 
+      if (socket !== currentSocket) return false
       handleEvent({ type: 'message.new', room: roomId, message })
       removePending(roomId, item.id)
 
       return true
     } catch (error) {
+      if (socket !== currentSocket) return false
       removePending(roomId, item.id)
       toast.error(apiErrorMessage(error))
 
@@ -424,6 +503,7 @@ export const useChatStore = defineStore('chatStore', () => {
   }
 
   async function sendFile(file, replyTo = null) {
+    const currentSocket = socket
     const roomId = activeRoomId.value
 
     if (!roomId || !file) return false
@@ -431,11 +511,14 @@ export const useChatStore = defineStore('chatStore', () => {
     try {
       const message = await chatApi.sendMessage(roomId, { file, replyTo })
 
+      if (socket !== currentSocket) return false
       handleEvent({ type: 'message.new', room: roomId, message })
 
       return true
     } catch (error) {
-      toast.error(apiErrorMessage(error, 'Não foi possível enviar o arquivo.'))
+      if (socket === currentSocket) {
+        toast.error(apiErrorMessage(error, 'Não foi possível enviar o arquivo.'))
+      }
 
       return false
     }

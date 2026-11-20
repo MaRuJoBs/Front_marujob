@@ -1,6 +1,7 @@
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'vite'
+import { createPinia } from 'pinia'
 import { resolve } from 'node:path'
 
 const storage = new Map()
@@ -12,7 +13,19 @@ globalThis.localStorage = {
 
 const vite = await createServer({
   configFile: false,
-  resolve: { alias: { '@': resolve('src') } },
+  plugins: [
+    {
+      name: 'chat-router-em-memoria',
+      resolveId: (id) => (id === 'virtual:chat-router' ? '\0chat-router' : null),
+      load: (id) => (id === '\0chat-router' ? 'export default { push() {} }' : null),
+    },
+  ],
+  resolve: {
+    alias: [
+      { find: /^@\/router$/, replacement: 'virtual:chat-router' },
+      { find: '@', replacement: resolve('src') },
+    ],
+  },
   optimizeDeps: { noDiscovery: true, include: [] },
   server: { middlewareMode: true, watch: null, ws: false },
   appType: 'custom',
@@ -339,4 +352,95 @@ test('cabeçalho: digitando > @profissão > online > visto por último', () => {
     'visto por último às 14:05',
   )
   assert.deepEqual(status(room({})), { text: '', kind: 'none' })
+})
+
+test('contagem do chat preserva eventos mais recentes, reúne consultas e limpa a sessão', async () => {
+  const { useChatStore } = await load('features/chat/stores/chat.js')
+  const { sessao, limparSessao } = await load('services/authSession.js')
+  const previousWebSocket = globalThis.WebSocket
+  const previousAdapter = api.defaults.adapter
+  const sockets = []
+  const pending = []
+  const pendingReads = []
+  const pendingOlder = []
+  globalThis.document = {
+    visibilityState: 'visible',
+    addEventListener() {},
+    removeEventListener() {},
+  }
+  globalThis.WebSocket = class {
+    constructor() {
+      sockets.push(this)
+    }
+    close() {}
+    emit(event) {
+      this.onmessage({ data: JSON.stringify(event) })
+    }
+  }
+  api.defaults.adapter = (config) => {
+    const response = (data, status = 200) => ({ data, status, headers: {}, config })
+    if (config.url === 'chat/rooms/42/messages/') {
+      if (config.params.before) {
+        return new Promise((resolve) =>
+          pendingOlder.push(() => resolve(response({ results: [{ id: 8 }] }))),
+        )
+      }
+      return Promise.resolve(response({ results: [{ id: 9 }], has_more: true, next_before: 9 }))
+    }
+    if (config.url === 'chat/rooms/42/read/' && config.method === 'post') {
+      return new Promise((resolve) => pendingReads.push(() => resolve(response(undefined, 204))))
+    }
+    assert.equal(config.url, 'chat/rooms/')
+    return new Promise((resolve) =>
+      pending.push((rooms) => resolve(response({ results: rooms, next: null }))),
+    )
+  }
+  const chat = useChatStore(createPinia())
+  try {
+    sessao.usuario = { id: 1 }
+    localStorage.setItem('token', 'token-simulado')
+    const primeira = chat.start()
+    const simultanea = chat.loadRooms()
+    sockets[0].emit({ type: 'room.updated', room: 42, summary: { id: 42, unread: 3 } })
+    assert.equal(chat.unreadTotal, 3)
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(pending.length, 1)
+    pending.shift()([{ id: 42, unread: 1 }])
+    await Promise.all([primeira, simultanea])
+    assert.equal(chat.unreadTotal, 3)
+    assert.equal(chat.rooms.length, 1)
+
+    await chat.openRoom(42)
+    await chat.openRoom(42)
+    assert.equal(pendingReads.length, 1)
+    assert.equal(chat.unreadTotal, 3)
+    sockets[0].emit({ type: 'room.updated', room: 42, summary: { id: 42, unread: 1 } })
+    pendingReads.shift()()
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(chat.unreadTotal, 1)
+    assert.equal(pendingReads.length, 1)
+    pendingReads.shift()()
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(chat.unreadTotal, 0)
+    const paginaAntiga = chat.loadOlder()
+    chat.closeRoom()
+
+    const antiga = chat.loadRooms()
+    await new Promise((resolve) => setImmediate(resolve))
+    limparSessao()
+    chat.stop()
+    sessao.usuario = { id: 2 }
+    assert.equal(chat.unreadTotal, 0)
+    pending.shift()([{ id: 42, unread: 7 }])
+    await antiga
+    pendingOlder.shift()()
+    assert.equal(await paginaAntiga, false)
+    assert.deepEqual(chat.rooms, [])
+  } finally {
+    chat.stop()
+    limparSessao()
+    api.defaults.adapter = previousAdapter
+    globalThis.WebSocket = previousWebSocket
+    delete globalThis.document
+  }
 })
