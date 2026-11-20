@@ -1,5 +1,17 @@
 export const routes = [
   {
+    path: '/empresa/freelancers',
+    name: 'busca-freelancers',
+    component: () => import('../views/BuscaFreelancersView.vue'),
+    meta: { requiresAuth: true, tipo: 'empresa' },
+  },
+  {
+    path: '/empresa/freelancers/:id',
+    name: 'perfil-publico-freelancer',
+    component: () => import('../views/PerfilPublicoFreelancerView.vue'),
+    meta: { requiresAuth: true, tipo: 'empresa' },
+  },
+  {
     path: '/empresa/configuracoes',
     name: 'configuracoes-empresa',
     component: () => import('../views/ConfiguracoesEmpresaView.vue'),

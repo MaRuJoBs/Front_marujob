@@ -21,6 +21,8 @@ export function useEditarPerfil() {
     salvando = ref(false),
     sucesso = ref(''),
     camposErro = ref({})
+  const perfilPublico = ref(false)
+  const cidadePublica = ref('')
   let envio = 0
   let fotoAlternativa = null
   function limpar() {
@@ -33,6 +35,8 @@ export function useEditarPerfil() {
     pronto.value = false
     salvando.value = false
     camposErro.value = {}
+    perfilPublico.value = false
+    cidadePublica.value = ''
   }
   const recurso = useRecursoPrivado(limpar)
   function preencher(user) {
@@ -40,6 +44,8 @@ export function useEditarPerfil() {
     profissao.value = user.profissao || ''
     sobre.value = user.sobre || ''
     telefone.value = user.telefone || ''
+    perfilPublico.value = user.perfil_publico === true
+    cidadePublica.value = user.cidade_publica || ''
     local.carregarLocalizacao(user)
     fotoAlternativa = obterFotoGoogle(user.id)
     foto.carregarImagem(user.profile_image || fotoAlternativa)
@@ -60,6 +66,8 @@ export function useEditarPerfil() {
       geolocation_accuracy: local.precisao.value,
       geolocation_timestamp: local.dataLocalizacao.value,
       habilidades: [...habilidades.habilidades.value],
+      perfil_publico: perfilPublico.value,
+      cidade_publica: cidadePublica.value.trim(),
     }
     camposErro.value = {}
     for (const [k, max] of Object.entries({
@@ -67,6 +75,7 @@ export function useEditarPerfil() {
       profissao: 255,
       localizacao: 255,
       telefone: 30,
+      cidade_publica: 120,
     }))
       if (dados[k].length > max) camposErro.value[k] = `Use até ${max} caracteres.`
     const listaErro = validarLista(dados.habilidades)
@@ -112,6 +121,11 @@ export function useEditarPerfil() {
           if (!config.signal.aborted) {
             preencher(confirmado)
             sessao.usuario = confirmado
+            if (confirmado.perfil_publico !== dados.perfil_publico) {
+              sucesso.value = ''
+              recurso.erro.value =
+                'O servidor não confirmou a visibilidade do perfil. Tente salvar novamente.'
+            }
           }
         } catch {
           if (!config.signal.aborted)
@@ -134,6 +148,8 @@ export function useEditarPerfil() {
     profissao,
     sobre,
     telefone,
+    perfilPublico,
+    cidadePublica,
     ...local,
     ...foto,
     ...habilidades,

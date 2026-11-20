@@ -215,6 +215,41 @@ test('edição perfil salva valores reais e mantém dados com erro 400', async (
     fechar()
   }
 })
+test('publicação exige escolha, persiste e pode ser revogada sem copiar endereço privado', async () => {
+  user.perfil_publico = false
+  user.cidade_publica = ''
+  const { e, fechar } = await montar(useEditarPerfil)
+  try {
+    assert.equal(e.perfilPublico.value, false)
+    assert.equal(e.cidadePublica.value, '')
+    e.perfilPublico.value = true
+    e.cidadePublica.value = 'Blumenau'
+    await e.salvarPerfil()
+    assert.equal(user.perfil_publico, true)
+    assert.equal(user.cidade_publica, 'Blumenau')
+    assert.match(e.sucesso.value, /sucesso/)
+    e.perfilPublico.value = false
+    await e.salvarPerfil()
+    assert.equal(user.perfil_publico, false)
+    assert.equal(sessao.usuario.perfil_publico, false)
+  } finally {
+    fechar()
+  }
+})
+test('servidor que ignora publicação não produz confirmação falsa', async () => {
+  user.perfil_publico = false
+  const { e, fechar } = await montar(useEditarPerfil)
+  try {
+    transporte = () => ({ ...user })
+    e.perfilPublico.value = true
+    await e.salvarPerfil()
+    assert.equal(e.sucesso.value, '')
+    assert.match(e.erro.value, /não confirmou a visibilidade/)
+    assert.equal(e.perfilPublico.value, false)
+  } finally {
+    fechar()
+  }
+})
 test('sessão trocada durante salvamento não altera usuário nem navegação', async () => {
   const { e, router, fechar } = await montar(useEditarPerfil)
   try {
