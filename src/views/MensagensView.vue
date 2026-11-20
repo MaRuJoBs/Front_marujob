@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, watch } from 'vue'
+import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faComments } from '@fortawesome/free-solid-svg-icons'
@@ -23,6 +23,39 @@ const routeRoomId = computed(() => {
   return Number.isSafeInteger(id) && id > 0 ? id : null
 })
 const room = computed(() => chat.activeRoom)
+const viewportStyle = shallowRef(null)
+
+// Quando o teclado reduz só o viewport visual, a conversa precisa caber nele.
+watch(
+  routeRoomId,
+  (id, _, onCleanup) => {
+    viewportStyle.value = null
+
+    const viewport = window.visualViewport
+
+    if (id === null || !viewport) return
+
+    function syncViewport() {
+      viewportStyle.value =
+        viewport.scale === 1 && viewport.height < document.documentElement.clientHeight - 1
+          ? {
+              top: `${viewport.offsetTop}px`,
+              height: `${viewport.height}px`,
+              '--chat-bottom-inset': '0px',
+            }
+          : null
+    }
+
+    syncViewport()
+    viewport.addEventListener('resize', syncViewport)
+    viewport.addEventListener('scroll', syncViewport)
+    onCleanup(() => {
+      viewport.removeEventListener('resize', syncViewport)
+      viewport.removeEventListener('scroll', syncViewport)
+    })
+  },
+  { immediate: true },
+)
 
 // A conversa da URL precisa existir para este usuário; senão volta para a lista.
 const roomMissing = computed(
@@ -83,6 +116,7 @@ function selectRoom(id) {
        toda (sem título nem rodapé de navegação, que o App.vue esconde com ?room=). -->
   <main
     class="mensagens mrj-ui"
+    :style="viewportStyle"
     :class="routeRoomId !== null ? 'mensagens--conversa' : 'mensagens--lista'"
   >
     <!-- Lista: o título "Mensagens" fica no cabeçalho em degradê do próprio RoomList. -->
@@ -93,6 +127,7 @@ function selectRoom(id) {
       :active-id="null"
       :loading="chat.loadingRooms"
       :error="chat.roomsError"
+      :presence="chat.presence"
       @select="selectRoom"
       @retry="chat.loadRooms()"
     >

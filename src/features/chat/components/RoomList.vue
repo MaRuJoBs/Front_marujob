@@ -1,22 +1,30 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faComments, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faBriefcase, faComments, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { RouterLink } from 'vue-router'
 import { sessao } from '@/services/authSession'
-import { formatListTime, messagePreview } from '../lib/format'
+import { formatListTime } from '../lib/format'
+import { filterRooms, isOnline, roomPreview, roomVaga, roomsSubtitle } from '../lib/roomList'
 import ChatAvatar from './ChatAvatar.vue'
 
-const { rooms, activeId, loading, error } = defineProps({
+const { rooms, activeId, loading, error, presence } = defineProps({
   rooms: { type: Array, required: true },
   activeId: { type: Number, default: null },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  // Presença em tempo real (id do usuário -> { online }), para a bolinha verde do avatar.
+  presence: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['select', 'retry'])
 
 const filter = ref('')
+const tab = ref('todas')
+const tabs = [
+  { id: 'todas', label: 'Todas' },
+  { id: 'nao-lidas', label: 'Não lidas' },
+]
 
 // Onde ficam as candidaturas de cada tipo de conta (para o estado vazio).
 const atalho = computed(() =>
@@ -25,22 +33,17 @@ const atalho = computed(() =>
     : { to: '/freelances', label: 'Ver oportunidades' },
 )
 
-const visible = computed(() => {
-  const term = filter.value.trim().toLowerCase()
+const subtitle = computed(() => roomsSubtitle(rooms))
 
-  return term ? rooms.filter((room) => room.name.toLowerCase().includes(term)) : rooms
-})
+const visible = computed(() =>
+  filterRooms(rooms, { term: filter.value, onlyUnread: tab.value === 'nao-lidas' }),
+)
 
-function preview(room) {
-  const message = room.last_message
-
-  if (!message) return room.pending_vaga ? `Vaga: ${room.pending_vaga.titulo}` : 'Sem mensagens'
-
-  const who =
-    message.author && message.author.id !== room.other?.id && !message.is_deleted ? 'Você: ' : ''
-
-  return `${who}${messagePreview(message)}`
-}
+const emptyFilter = computed(() =>
+  tab.value === 'nao-lidas' && !filter.value.trim()
+    ? 'Nenhuma conversa não lida.'
+    : 'Nenhuma conversa encontrada.',
+)
 </script>
 
 <template>
@@ -49,19 +52,36 @@ function preview(room) {
   <section class="rooms" aria-labelledby="rooms-titulo">
     <header class="rooms__header">
       <h1 id="rooms-titulo" class="rooms__title">Mensagens</h1>
+      <p v-if="subtitle" class="rooms__subtitle" aria-live="polite">{{ subtitle }}</p>
     </header>
 
     <!-- Avisos da página (ex.: reconectando). -->
     <slot />
 
-    <div v-if="rooms.length" class="rooms__search">
-      <FontAwesomeIcon :icon="faMagnifyingGlass" class="rooms__lupa" aria-hidden="true" />
-      <input
-        v-model="filter"
-        type="search"
-        placeholder="Buscar conversa"
-        aria-label="Buscar conversa"
-      />
+    <div v-if="rooms.length" class="rooms__tools">
+      <div class="rooms__search">
+        <FontAwesomeIcon :icon="faMagnifyingGlass" class="rooms__lupa" aria-hidden="true" />
+        <input
+          v-model="filter"
+          type="search"
+          placeholder="Buscar conversa"
+          aria-label="Buscar conversa"
+        />
+      </div>
+
+      <div class="rooms__tabs" role="group" aria-label="Filtrar conversas">
+        <button
+          v-for="item in tabs"
+          :key="item.id"
+          type="button"
+          class="rooms__tab"
+          :class="{ 'rooms__tab--active': tab === item.id }"
+          :aria-pressed="tab === item.id ? 'true' : 'false'"
+          @click="tab = item.id"
+        >
+          {{ item.label }}
+        </button>
+      </div>
     </div>
 
     <p v-if="loading && !rooms.length" class="rooms__state" role="status">
@@ -82,7 +102,7 @@ function preview(room) {
       <RouterLink class="rooms__pill" :to="atalho.to">{{ atalho.label }}</RouterLink>
     </div>
     <p v-else-if="!visible.length" class="rooms__state rooms__state--compact">
-      Nenhuma conversa encontrada.
+      {{ emptyFilter }}
     </p>
 
     <TransitionGroup v-if="rooms.length" tag="ul" name="rooms" class="rooms__list">
@@ -99,25 +119,39 @@ function preview(room) {
           :aria-current="room.id === activeId ? 'true' : undefined"
           @click="emit('select', room.id)"
         >
-          <ChatAvatar :name="room.name" :src="room.image" :size="44" />
+          <ChatAvatar
+            :name="room.name"
+            :src="room.image"
+            :size="52"
+            colored
+            :online="isOnline(room, presence) ? true : null"
+          />
           <span class="room__body">
-            <span class="room__name">{{ room.name }}</span>
-            <span class="room__preview">{{ preview(room) }}</span>
-          </span>
-          <span class="room__side">
-            <time v-if="room.last_message_at" class="room__time">{{
-              formatListTime(room.last_message_at)
-            }}</time>
-            <Transition name="badge" mode="out-in">
-              <span
-                v-if="room.unread > 0"
-                :key="room.unread"
-                class="room__badge"
-                :aria-label="`${room.unread} não lidas`"
-              >
-                {{ room.unread > 99 ? '99+' : room.unread }}
-              </span>
-            </Transition>
+            <span class="room__line">
+              <span class="room__name">{{ room.name }}</span>
+              <span v-if="isOnline(room, presence)" class="visually-hidden">, online</span>
+              <time v-if="room.last_message_at" class="room__time" :datetime="room.last_message_at">
+                {{ formatListTime(room.last_message_at) }}
+              </time>
+            </span>
+            <span v-if="roomVaga(room)" class="room__vaga">
+              <FontAwesomeIcon :icon="faBriefcase" class="room__vaga-icon" aria-hidden="true" />
+              <span class="visually-hidden">Vaga: </span>
+              <span class="room__vaga-titulo">{{ roomVaga(room).titulo }}</span>
+            </span>
+            <span class="room__line">
+              <span class="room__preview">{{ roomPreview(room) }}</span>
+              <Transition name="badge" mode="out-in">
+                <span
+                  v-if="room.unread > 0"
+                  :key="room.unread"
+                  class="room__badge"
+                  :aria-label="`${room.unread} ${room.unread === 1 ? 'não lida' : 'não lidas'}`"
+                >
+                  {{ room.unread > 99 ? '99+' : room.unread }}
+                </span>
+              </Transition>
+            </span>
           </span>
         </button>
       </li>
@@ -138,7 +172,9 @@ function preview(room) {
 .rooms__header {
   display: flex;
   flex-shrink: 0;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
   min-height: 4.25rem;
   padding: calc(0.875rem + env(safe-area-inset-top, 0px)) 1.25rem 0.875rem;
   box-shadow: 0 2px 10px rgba(79, 43, 165, 0.18);
@@ -157,17 +193,57 @@ function preview(room) {
   line-height: 1.2;
 }
 
+.rooms__subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.rooms__tools {
+  flex-shrink: 0;
+  padding: 1rem 1rem 0.375rem;
+}
+
+/* Abas em pílula: "Todas" e "Não lidas". */
+.rooms__tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.rooms__tab {
+  min-height: 2rem;
+  padding: 0 0.875rem;
+  color: var(--mrj-color-text, #533581);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--mrj-color-border-subtle, #dcd0e8);
+  border-radius: var(--mrj-radius-pill, 999px);
+  background-color: #ffffff;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rooms__tab--active {
+  color: #ffffff;
+  border-color: var(--mrj-color-primary, #6e4ab7);
+  background-color: var(--mrj-color-primary, #6e4ab7);
+}
+
 /* Busca em pílula logo abaixo do cabeçalho, com respiro dos lados. */
 .rooms__search {
   position: relative;
-  padding: 1rem 1rem 0.5rem;
 }
 
 .rooms__lupa {
   position: absolute;
   top: 50%;
-  left: 2rem;
-  margin-top: 0.25rem;
+  left: 1rem;
   color: var(--mrj-color-border, #796197);
   font-size: 0.875rem;
   transform: translateY(-50%);
@@ -279,15 +355,17 @@ function preview(room) {
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.875rem 0.875rem 0.875rem 0.75rem;
+  padding: 0.75rem 0.875rem 0.75rem 0.75rem;
   text-align: left;
   border-radius: 1rem;
   background-color: var(--chat-bubble, #ffffff);
   box-shadow: var(--chat-shadow, 0 4px 14px rgba(76, 53, 103, 0.1));
+  -webkit-tap-highlight-color: transparent;
 }
 
-.room:hover {
-  background-color: #ffffff;
+/* Feedback ao tocar: fundo levemente mais escuro. */
+.room:active {
+  background-color: #f1ebf8;
 }
 
 .room--active {
@@ -298,20 +376,60 @@ function preview(room) {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: 0.3125rem;
+  min-width: 0;
+}
+
+/* Linhas 1 (nome + hora) e 3 (prévia + contador). */
+.room__line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   min-width: 0;
 }
 
 .room__name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   color: var(--mrj-color-text, #533581);
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Linha 2: chip com a vaga da conversa. */
+.room__vaga {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.3125rem;
+  max-width: 100%;
+  padding: 0.125rem 0.5rem;
+  color: var(--mrj-color-primary-active, #4f2ba5);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  border-radius: var(--mrj-radius-pill, 999px);
+  background-color: var(--mrj-color-secondary, #eae1f3);
+}
+
+.room__vaga-icon {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+}
+
+.room__vaga-titulo {
+  min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .room__preview {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   color: var(--chat-muted, #666b80);
   font-size: 0.8125rem;
@@ -319,24 +437,18 @@ function preview(room) {
   text-overflow: ellipsis;
 }
 
+.room--unread .room__name {
+  color: #3a1f78;
+  font-weight: 800;
+}
+
 .room--unread .room__preview {
-  color: var(--mrj-color-text, #533581);
+  color: #3a1f78;
   font-weight: 600;
 }
 
-/* Lado direito: hora em cima e, se houver não lidas, o círculo roxo com o número. */
-.room__side {
-  display: flex;
-  flex-shrink: 0;
-  flex-direction: column;
-  align-items: flex-end;
-  align-self: stretch;
-  justify-content: space-between;
-  gap: 0.25rem;
-  padding: 0.125rem 0;
-}
-
 .room__time {
+  flex-shrink: 0;
   color: var(--chat-muted, #666b80);
   font-size: 0.6875rem;
 }
@@ -348,6 +460,7 @@ function preview(room) {
 
 .room__badge {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   min-width: 1.375rem;
@@ -362,7 +475,19 @@ function preview(room) {
 }
 
 .room {
-  transition: background-color 0.15s ease;
+  transition: background-color 0.12s ease;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .rooms__search input {

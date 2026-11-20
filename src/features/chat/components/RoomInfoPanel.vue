@@ -29,7 +29,7 @@ const lastSeen = computed(() => (live.value ? live.value.last_seen : other.value
     </header>
 
     <div class="info__body">
-      <ChatAvatar :name="room.name" :src="room.image" :size="96" :online="online" />
+      <ChatAvatar :name="room.name" :src="room.image" :size="96" colored :online="online" />
       <h4>{{ room.name }}</h4>
       <p :class="{ info__online: online }">{{ online ? 'online' : formatLastSeen(lastSeen) }}</p>
 

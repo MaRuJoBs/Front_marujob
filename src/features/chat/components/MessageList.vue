@@ -1,5 +1,14 @@
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, useTemplateRef, watch } from 'vue'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  useTemplateRef,
+  watch,
+} from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faChevronUp } from '@fortawesome/free-solid-svg-icons'
 import { dayKey, formatDay } from '../lib/format'
@@ -23,6 +32,7 @@ const emit = defineEmits(['load-older', 'reply', 'edit', 'delete'])
 const scroller = useTemplateRef('scroller')
 const nearBottom = ref(true)
 const viewerId = ref(null)
+const actionsKey = ref(null)
 // Mensagens que chegaram com a sala aberta (recebem a animação de entrada).
 const freshIds = reactive(new Set())
 
@@ -137,11 +147,23 @@ function followBottom(duration = 500) {
   requestAnimationFrame(frame)
 }
 
-onMounted(() => scrollToBottom())
+function keepBottomInView() {
+  if (nearBottom.value) scrollToBottom()
+}
+
+let resizeObserver
+
+onMounted(() => {
+  scrollToBottom()
+  resizeObserver = new ResizeObserver(keepBottomInView)
+  resizeObserver.observe(scroller.value)
+})
+
+onUnmounted(() => resizeObserver?.disconnect())
 </script>
 
 <template>
-  <div ref="scroller" class="list" @scroll.passive="onScroll">
+  <div ref="scroller" class="list" @scroll.passive="onScroll" @load.capture="keepBottomInView">
     <p v-if="loading && !messages.length" class="list__state" role="status">
       Carregando mensagens...
     </p>
@@ -173,6 +195,8 @@ onMounted(() => scrollToBottom())
           :status="row.message.author?.id === meId ? statusOf(row.message) : null"
           :show-author="row.showAuthor"
           :fresh="freshIds.has(row.key)"
+          :actions-open="actionsKey === row.key"
+          @toggle-actions="actionsKey = actionsKey === row.key ? null : row.key"
           @reply="emit('reply', $event)"
           @edit="emit('edit', $event)"
           @delete="emit('delete', $event)"
@@ -196,10 +220,45 @@ onMounted(() => scrollToBottom())
   flex: 1;
   min-height: 0;
   padding: 1rem 0.875rem;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Referência de largura das miniaturas de imagem (MessageItem: até 65cqw). */
+  container-type: inline-size;
   /* Protótipo: fundo lilás acinzentado liso. */
   background-color: var(--chat-deep, var(--chat-bg, var(--color-background)));
+}
+
+/* Barra de rolagem fina e discreta, em roxo claro e sem setas (no lugar da cinza do Windows). */
+.list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.list::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background-color: #cbb8e6;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background-color: #a98bd6;
+}
+
+/* Firefox (não tem ::-webkit-scrollbar). */
+@supports not selector(::-webkit-scrollbar) {
+  .list {
+    scrollbar-width: thin;
+    scrollbar-color: #cbb8e6 transparent;
+  }
 }
 
 .list__items {

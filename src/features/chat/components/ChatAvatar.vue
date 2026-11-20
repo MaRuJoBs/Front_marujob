@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { initials } from '../lib/format'
+import { avatarColor } from '../lib/roomList'
 import { mediaUrl } from '../lib/urls'
 
 const {
@@ -8,15 +9,24 @@ const {
   src = null,
   size = 40,
   online = null,
+  colored = false,
 } = defineProps({
   name: { type: String, default: '' },
   src: { type: String, default: null },
   size: { type: Number, default: 40 },
   // null = não mostra indicador; true/false = bolinha online/offline.
   online: { type: Boolean, default: null },
+  // Fundo das iniciais com uma cor da paleta gerada pelo nome (cada pessoa com a sua).
+  colored: { type: Boolean, default: false },
 })
 
-const style = computed(() => ({ '--avatar-size': `${size}px` }))
+const style = computed(() => {
+  if (!colored) return { '--avatar-size': `${size}px` }
+
+  const { background, color } = avatarColor(name)
+
+  return { '--avatar-size': `${size}px`, '--avatar-bg': background, '--avatar-fg': color }
+})
 const url = computed(() => mediaUrl(src))
 </script>
 
@@ -43,11 +53,10 @@ const url = computed(() => mediaUrl(src))
   width: var(--avatar-size);
   height: var(--avatar-size);
   border-radius: 50%;
-  color: color-mix(in srgb, var(--color-primary) 75%, #000000);
-  background-color: color-mix(
-    in srgb,
-    var(--color-primary) 18%,
-    var(--chat-bg, var(--color-background))
+  color: var(--avatar-fg, color-mix(in srgb, var(--color-primary) 75%, #000000));
+  background-color: var(
+    --avatar-bg,
+    color-mix(in srgb, var(--color-primary) 18%, var(--chat-bg, var(--color-background)))
   );
   font-size: calc(var(--avatar-size) * 0.38);
   font-weight: 600;
@@ -68,12 +77,14 @@ const url = computed(() => mediaUrl(src))
   height: 28%;
   min-width: 8px;
   min-height: 8px;
-  border: 2px solid var(--chat-bg, var(--color-background));
+  box-sizing: border-box;
+  border: 2px solid #ffffff;
   border-radius: 50%;
   background-color: #9ca3af;
 }
 
+/* Verde vivo (o --color-success do app é escuro demais para um indicador pequeno). */
 .avatar__dot--online {
-  background-color: var(--color-success);
+  background-color: #22c55e;
 }
 </style>

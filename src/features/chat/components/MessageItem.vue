@@ -1,10 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faCheck,
   faCheckDouble,
   faClock,
+  faEllipsis,
   faPen,
   faReply,
   faTrash,
@@ -20,6 +21,7 @@ const {
   showAuthor = false,
   status = null,
   fresh = false,
+  actionsOpen = false,
 } = defineProps({
   message: { type: Object, required: true },
   own: { type: Boolean, default: false },
@@ -29,9 +31,10 @@ const {
   status: { type: String, default: null },
   // Mensagem recém-chegada nesta sessão: entra com animação (as do histórico aparecem direto).
   fresh: { type: Boolean, default: false },
+  actionsOpen: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['reply', 'edit', 'delete', 'open-image'])
+const emit = defineEmits(['reply', 'edit', 'delete', 'open-image', 'toggle-actions'])
 
 const STATUS_LABEL = {
   sent: 'Enviada',
@@ -41,13 +44,26 @@ const STATUS_LABEL = {
 }
 
 const authorName = computed(() => message.author?.name ?? 'Usuário removido')
-const hasActions = computed(() => !message.is_deleted)
+const hasActions = computed(() => !message.is_deleted && !message.pending)
+const actionsToggle = useTemplateRef('actionsToggle')
 // Foto sem texto nem resposta: a bolha vira só uma moldura fina em volta da imagem.
 const isPhoto = computed(
   () =>
     Boolean(message.file?.is_image) && !message.body && !message.reply_to && !message.is_deleted,
 )
 const canEdit = computed(() => own && !message.is_deleted && !message.file)
+
+function closeActions() {
+  if (!actionsOpen) return
+
+  emit('toggle-actions')
+  actionsToggle.value?.focus()
+}
+
+function runAction(action) {
+  closeActions()
+  emit(action, message)
+}
 
 function replyPreview(reply) {
   if (reply.is_deleted) return 'Mensagem apagada'
@@ -64,6 +80,7 @@ function replyPreview(reply) {
       'message--fresh': fresh,
       'message--pending': status === 'pending',
     }"
+    @keydown.esc.stop="closeActions"
   >
     <div class="message__inner">
       <ChatAvatar
@@ -80,10 +97,9 @@ function replyPreview(reply) {
         </p>
 
         <div class="message__row">
-          <!-- tabindex: no celular (sem hover), tocar no balão mostra as ações (responder/editar/apagar). -->
           <div
             class="message__bubble"
-            tabindex="0"
+            :tabindex="hasActions ? 0 : undefined"
             :class="{
               'message__bubble--deleted': message.is_deleted,
               'message__bubble--photo': isPhoto,
@@ -130,35 +146,55 @@ function replyPreview(reply) {
             </span>
           </div>
 
-          <div v-if="hasActions" class="message__actions">
-            <button
-              type="button"
-              aria-label="Responder"
-              title="Responder"
-              @click="emit('reply', message)"
-            >
-              <FontAwesomeIcon :icon="faReply" :style="{ fontSize: '15px' }" aria-hidden="true" />
-            </button>
-            <button
-              v-if="canEdit"
-              type="button"
-              aria-label="Editar"
-              title="Editar"
-              @click="emit('edit', message)"
-            >
-              <FontAwesomeIcon :icon="faPen" :style="{ fontSize: '15px' }" aria-hidden="true" />
-            </button>
-            <button
-              v-if="own"
-              type="button"
-              aria-label="Apagar"
-              title="Apagar"
-              class="message__danger"
-              @click="emit('delete', message)"
-            >
-              <FontAwesomeIcon :icon="faTrash" :style="{ fontSize: '15px' }" aria-hidden="true" />
-            </button>
-          </div>
+          <button
+            v-if="hasActions"
+            ref="actionsToggle"
+            type="button"
+            class="message__actions-toggle"
+            aria-label="Ações da mensagem"
+            :aria-expanded="actionsOpen"
+            :aria-controls="`message-actions-${message.id}`"
+            @click="emit('toggle-actions')"
+          >
+            <FontAwesomeIcon :icon="faEllipsis" aria-hidden="true" />
+          </button>
+        </div>
+
+        <div
+          v-if="hasActions"
+          :id="`message-actions-${message.id}`"
+          class="message__actions"
+          :class="{ 'message__actions--open': actionsOpen }"
+          role="group"
+          aria-label="Ações da mensagem"
+        >
+          <button
+            type="button"
+            aria-label="Responder"
+            title="Responder"
+            @click="runAction('reply')"
+          >
+            <FontAwesomeIcon :icon="faReply" :style="{ fontSize: '15px' }" aria-hidden="true" />
+          </button>
+          <button
+            v-if="canEdit"
+            type="button"
+            aria-label="Editar"
+            title="Editar"
+            @click="runAction('edit')"
+          >
+            <FontAwesomeIcon :icon="faPen" :style="{ fontSize: '15px' }" aria-hidden="true" />
+          </button>
+          <button
+            v-if="own"
+            type="button"
+            aria-label="Apagar"
+            title="Apagar"
+            class="message__danger"
+            @click="runAction('delete')"
+          >
+            <FontAwesomeIcon :icon="faTrash" :style="{ fontSize: '15px' }" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </div>
@@ -171,6 +207,7 @@ function replyPreview(reply) {
 .message {
   list-style: none;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 1fr;
   max-width: 100%;
 }
@@ -194,6 +231,7 @@ function replyPreview(reply) {
 }
 
 .message__main {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -202,13 +240,16 @@ function replyPreview(reply) {
 
 .message--own .message__main {
   align-items: flex-end;
+  /* Deixa espaço do lado de fora para as três ações (responder/editar/apagar). */
+  max-width: 72%;
 }
 
 .message__row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 .message--own .message__row {
@@ -219,7 +260,8 @@ function replyPreview(reply) {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  min-width: 4.5rem;
+  min-width: min(4.5rem, 100%);
+  max-width: 100%;
   padding: 0.5rem 0.75rem 0.375rem;
   color: var(--mrj-color-text, #533581);
   font-size: 0.75rem;
@@ -278,6 +320,8 @@ function replyPreview(reply) {
   width: fit-content;
   min-width: 0;
   padding: 0.1875rem;
+  /* Cantos da imagem acompanham os do balão (raio do balão menos a moldura). */
+  --attachment-radius: calc(0.75rem - 0.1875rem);
 }
 
 .message__bubble--photo .message__meta {
@@ -315,25 +359,87 @@ function replyPreview(reply) {
   text-overflow: ellipsis;
 }
 
-/* Ações aparecem ao passar o mouse ou ao tocar/focar o balão (não ocupam espaço fora disso). */
+.message__actions-toggle {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--mrj-color-text-secondary, #5c3a8b);
+  transform: translateY(-50%);
+}
+
+.message--own .message__actions-toggle {
+  right: 100%;
+  left: auto;
+}
+
 .message__actions {
   display: none;
   gap: 0.125rem;
 }
 
-.message:hover .message__actions,
-.message:focus-within .message__actions {
+.message__actions--open {
   display: flex;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.message--own .message__actions--open {
+  align-self: flex-end;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .message__actions-toggle {
+    display: none;
+  }
+
+  .message--own .message__main {
+    max-width: min(72%, calc(100% - 5.5rem));
+  }
+
+  .message__actions {
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    padding-left: 0.375rem;
+    transform: translateY(-50%);
+  }
+
+  .message--own .message__actions {
+    right: 100%;
+    left: auto;
+    flex-direction: row-reverse;
+    padding-right: 0.375rem;
+    padding-left: 0;
+  }
+
+  .message:hover .message__actions,
+  .message:focus-within .message__actions {
+    display: flex;
+  }
 }
 
 .message__actions button {
   display: inline-flex;
-  padding: 0.375rem;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  padding: 0;
   color: var(--mrj-color-text, #533581);
   border: none;
   border-radius: 50%;
-  background-color: rgb(255 255 255 / 55%);
+  background-color: rgb(255 255 255 / 70%);
+  box-shadow: 0 1px 4px rgba(76, 53, 103, 0.12);
   cursor: pointer;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .message__actions button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
 }
 
 .message__actions button:hover {

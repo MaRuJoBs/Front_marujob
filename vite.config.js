@@ -23,7 +23,8 @@ export default defineConfig({
   },
   plugins: [
     vue(),
-    vueDevTools(),
+    // O botão flutuante encobre a navegação e o campo de mensagem em telas pequenas.
+    process.env.VITE_VUE_DEVTOOLS === 'true' && vueDevTools(),
 
     VitePWA({
       registerType: 'autoUpdate',

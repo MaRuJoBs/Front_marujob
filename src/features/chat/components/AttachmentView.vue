@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faDownload, faFileLines, faImage } from '@fortawesome/free-solid-svg-icons'
 import { useAttachmentPreview, saveAttachment } from '../composables/useAttachment'
@@ -16,25 +16,6 @@ const { url, failed } = file.is_image
   : { url: ref(null), failed: ref(false) }
 const emit = defineEmits(['open'])
 const saving = ref(false)
-
-// Tamanho máximo da miniatura (px). A caixa é calculada aqui, com proporção exata, porque só com
-// max-width/max-height o navegador deixava a bolha mais larga que a foto (fotos em pé, por ex.).
-const MAX_WIDTH = 288
-const MAX_HEIGHT = 256
-const size = ref(null)
-const imageStyle = computed(() =>
-  size.value ? { width: `${size.value.width}px`, height: `${size.value.height}px` } : null,
-)
-
-function onImageLoad(event) {
-  const { naturalWidth, naturalHeight } = event.target
-  if (!naturalWidth || !naturalHeight) return
-  const scale = Math.min(1, MAX_WIDTH / naturalWidth, MAX_HEIGHT / naturalHeight)
-  size.value = {
-    width: Math.max(1, Math.round(naturalWidth * scale)),
-    height: Math.max(1, Math.round(naturalHeight * scale)),
-  }
-}
 
 async function download() {
   saving.value = true
@@ -57,13 +38,7 @@ async function download() {
         :aria-label="`Abrir imagem ${file.name}`"
         @click="emit('open')"
       >
-        <img
-          class="attachment__image"
-          :src="url"
-          :alt="file.name"
-          :style="imageStyle"
-          @load="onImageLoad"
-        />
+        <img class="attachment__image" :src="url" :alt="file.name" />
       </button>
       <div v-else-if="failed" class="attachment__placeholder">
         <FontAwesomeIcon :icon="faImage" :style="{ fontSize: '20px' }" aria-hidden="true" />
@@ -86,26 +61,31 @@ async function download() {
 </template>
 
 <style scoped>
+.attachment {
+  min-width: 0;
+}
+
 .attachment__image-button {
   display: block;
   width: fit-content;
   max-width: 100%;
   overflow: hidden;
-  border-radius: var(--radius-md);
+  border-radius: var(--attachment-radius, 0.75rem);
 }
 
 .attachment__image {
   display: block;
-  max-width: 100%;
-  min-width: 3rem;
-  object-fit: cover;
+  max-width: min(100%, 65cqw);
+  max-height: 240px;
+  height: auto;
+  border-radius: var(--attachment-radius, 0.75rem);
 }
 
 .attachment__placeholder {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-width: 10rem;
+  overflow-wrap: anywhere;
   padding: 1.5rem 1rem;
   font-size: 0.8125rem;
   border-radius: var(--radius-md);
@@ -125,6 +105,10 @@ async function download() {
 
 .attachment__file:hover:not(:disabled) {
   background-color: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.attachment__file > svg {
+  flex-shrink: 0;
 }
 
 .attachment__meta {

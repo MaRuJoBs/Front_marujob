@@ -100,6 +100,20 @@ export function formatLastSeen(value, now = new Date()) {
   return label.includes(':') ? `visto hoje às ${label}` : `visto ${label.toLowerCase()}`
 }
 
+/** Cabeçalho da conversa: "visto por último às 14:05", "... ontem às 14:05" ou "... em 20/10". */
+export function formatLastSeenFull(value, now = new Date()) {
+  const date = toDate(value)
+
+  if (!date) return ''
+
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000)
+
+  if (days <= 0) return `visto por último às ${formatTime(date)}`
+  if (days === 1) return `visto por último ontem às ${formatTime(date)}`
+
+  return `visto por último em ${date.toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' })}`
+}
+
 /** Prévia curta de uma mensagem (lista de salas e notificações): texto, "Foto" ou nome do arquivo. */
 export function messagePreview(message) {
   if (!message) return ''

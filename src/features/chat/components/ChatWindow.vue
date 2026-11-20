@@ -2,12 +2,13 @@
 import { computed, ref, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faChevronLeft, faEllipsisVertical } from '@fortawesome/free-solid-svg-icons'
+import { conversationStatus, isOnline } from '../lib/roomList'
 import ChatAvatar from './ChatAvatar.vue'
 import ChatVagaCard from './ChatVagaCard.vue'
 import MessageComposer from './MessageComposer.vue'
 import MessageList from './MessageList.vue'
 
-const { room, messages, meId, typing, disabled, maxFileMb } = defineProps({
+const { room, messages, meId, presence, typing, disabled, maxFileMb } = defineProps({
   room: { type: Object, required: true },
   // { items, hasMore, loaded } ou null enquanto não há histórico.
   messages: { type: Object, default: null },
@@ -47,15 +48,11 @@ watch(
   },
 )
 
-// Linha de baixo do cabeçalho (protótipo): a profissão como "@Web-Developer". Enquanto a outra
-// pessoa digita, mostra "digitando". Sem profissão (e sem digitação), a linha não aparece.
-// Online/visto por último continua nos detalhes do contato (botão ⋮).
-const handle = computed(() => {
-  const profissao = (room.other?.profissao ?? '').trim()
-
-  return profissao ? `@${profissao.replace(/\s+/g, '-')}` : ''
-})
-const subtitle = computed(() => (typing.length ? 'digitando' : handle.value))
+// Linha de baixo do cabeçalho: "digitando..." enquanto a outra pessoa digita; senão a profissão
+// ("@Web-Developer"); sem profissão, "online" ou "visto por último às HH:MM".
+const online = computed(() => isOnline(room, presence))
+const status = computed(() => conversationStatus(room, { presence, typing: typing.length > 0 }))
+const subtitle = computed(() => status.value.text)
 
 function startReply(message) {
   editing.value = null
@@ -109,13 +106,23 @@ function onEdit(payload) {
         :name="room.name"
         :src="room.image"
         :size="40"
+        colored
+        :online="online ? true : null"
       />
       <div :key="`title-${room.id}`" class="window__title window__swap">
         <h2>{{ room.name }}</h2>
-        <small v-if="subtitle" :class="{ window__typing: typing.length }" aria-live="polite"
+        <small
+          v-if="subtitle"
+          :class="{
+            window__typing: status.kind === 'typing',
+            window__plain: status.kind === 'online' || status.kind === 'seen',
+          }"
+          aria-live="polite"
           >{{ subtitle
-          }}<span v-if="typing.length" class="dots" aria-hidden="true"><i></i><i></i><i></i></span
-        ></small>
+          }}<span v-if="status.kind === 'typing'" class="dots" aria-hidden="true"
+            ><i></i><i></i><i></i></span
+          ><span v-if="status.kind === 'typing'" class="visually-hidden">...</span></small
+        >
       </div>
       <button
         type="button"
@@ -229,6 +236,21 @@ function onEdit(payload) {
 .window__typing {
   color: #ffffff !important;
   font-weight: 600;
+}
+
+/* "online" e "visto por último": texto normal, sem o itálico do @handle. */
+.window__plain {
+  font-style: normal !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .window__back,
