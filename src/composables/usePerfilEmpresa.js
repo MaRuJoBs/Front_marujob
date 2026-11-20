@@ -1,5 +1,6 @@
 import { ref, watch, onUnmounted } from 'vue'
 import { sessao } from '../services/authSession.js'
+import { useEmpresaLocalizacao } from './useEmpresaLocalizacao.js'
 import {
   camposPerfil,
   validarPerfil,
@@ -19,6 +20,15 @@ export function usePerfilEmpresa() {
   const erro = ref(''),
     sucesso = ref(''),
     erros = ref({})
+  const localizacao = useEmpresaLocalizacao({ form, perfil, editando, salvando })
+  watch(
+    [localizacao.confirmada, localizacao.gpsOcupado],
+    () => {
+      delete erros.value.cidade
+      delete erros.value.uf
+    },
+    { flush: 'sync' },
+  )
   let controller,
     ativa = true
   function liberarPrevia() {
@@ -61,9 +71,11 @@ export function usePerfilEmpresa() {
           ? 'Sua sessão expirou. Entre novamente.'
           : status === 403
             ? 'Este perfil está disponível somente para contas de empresa.'
-            : status === 503
-              ? 'O armazenamento de imagens está indisponível. Tente novamente mais tarde.'
-              : 'Não foi possível conectar ao serviço. Tente novamente.'
+            : status === 404
+              ? 'O perfil empresarial não foi encontrado. Tente carregar novamente.'
+              : status === 503
+                ? 'O armazenamento de imagens está indisponível. Tente novamente mais tarde.'
+                : 'Não foi possível conectar ao serviço. Tente novamente.'
     if (status === 400) {
       const data = e.response.data || {}
       for (const campo of [...camposPerfil, 'profile_image']) {
@@ -78,6 +90,8 @@ export function usePerfilEmpresa() {
     if (!ativa || carregando.value || salvando.value || sessao.tipo !== 'empresa') return
     if (salvar) {
       erros.value = validarPerfil(form.value)
+      const erroLocalizacao = localizacao.validar()
+      if (erroLocalizacao) erros.value.cidade = erroLocalizacao
       if (Object.keys(erros.value).length) return
     }
     const revisao = sessao.revisao
@@ -96,6 +110,16 @@ export function usePerfilEmpresa() {
           )
         : await consultarPerfilEmpresa(config)
       if (!atual()) return
+      if (
+        salvar &&
+        (form.value.cidade !== (perfil.value?.cidade ?? '') ||
+          form.value.uf !== (perfil.value?.uf ?? '')) &&
+        (dados?.cidade !== form.value.cidade || dados?.uf !== form.value.uf)
+      ) {
+        erro.value =
+          'O servidor não confirmou a localização enviada. Sua escolha foi mantida; tente salvar novamente.'
+        return
+      }
       perfil.value = dados
       salvando.value = false
       cancelar()
@@ -135,6 +159,7 @@ export function usePerfilEmpresa() {
     erro,
     sucesso,
     erros,
+    localizacao,
     cancelar,
     selecionarImagem,
     removerImagem,

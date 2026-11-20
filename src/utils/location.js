@@ -1,4 +1,3 @@
-
 const estados = {
   Acre: 'AC',
   Alagoas: 'AL',
@@ -29,27 +28,28 @@ const estados = {
   Tocantins: 'TO',
 }
 
-export function extractAddressLabel(result) {
+export function extractCityState(result) {
   const address = result?.address ?? {}
 
   if (address.country_code?.toLowerCase() !== 'br') {
     return null
   }
 
-  const cidade =
-    address.city ||
-    address.town ||
-    address.village ||
-    address.municipality
+  const cidade = address.city || address.town || address.village || address.municipality
 
   const codigoEstado = address['ISO3166-2-lvl4']
   const siglaCodigo = codigoEstado?.match(/^BR-([A-Z]{2})$/)?.[1]
 
   const uf = siglaCodigo || estados[address.state]
 
-  if (!cidade || !uf) {
+  if (typeof cidade !== 'string' || !cidade.trim() || !Object.values(estados).includes(uf)) {
     return null
   }
 
-  return `${cidade}, ${uf}`
+  return { cidade: cidade.trim(), uf }
+}
+
+export function extractAddressLabel(result) {
+  const local = extractCityState(result)
+  return local ? `${local.cidade}, ${local.uf}` : null
 }
