@@ -1,9 +1,10 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { logout } from '@/services/authService'
-import { faBuilding } from '@fortawesome/free-solid-svg-icons'
+import { faBuilding, faUsers } from '@fortawesome/free-solid-svg-icons'
 
 const router = useRouter()
+const route = useRoute()
 const sair = () => {
   logout()
   router.replace('/')
@@ -17,6 +18,17 @@ const sair = () => {
         <FontAwesomeIcon :icon="['fas', 'house']" />
       </span>
       <span class="label">Início</span>
+    </router-link>
+
+    <router-link
+      to="/empresa/freelancers"
+      class="item"
+      :class="{ 'router-link-active': route.name === 'perfil-publico-freelancer' }"
+    >
+      <span class="icon" aria-hidden="true">
+        <FontAwesomeIcon :icon="faUsers" />
+      </span>
+      <span class="label">Freelancers</span>
     </router-link>
 
     <router-link to="/mensagens" class="item">
@@ -45,11 +57,20 @@ const sair = () => {
 </template>
 
 <style scoped>
+.footer.app-navigation.mrj-ui {
+  bottom: 12px;
+  width: calc(100% - 24px);
+  max-width: calc(26.25rem - 24px);
+  border-bottom: 1px solid var(--mrj-color-border-subtle);
+  border-radius: 22px;
+  box-shadow: 0 8px 30px #4c356724;
+  background: #eee5f7;
+}
 .footer {
   position: fixed;
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
   padding: 7px 10px 5px;
   background: var(--mrj-color-secondary);

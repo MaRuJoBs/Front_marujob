@@ -57,6 +57,8 @@ const paginasComReserva = new Set([
   'configuracoes-empresa',
   'notificacoes-empresa',
   'mensagens',
+  'busca-freelancers',
+  'perfil-publico-freelancer',
 ])
 </script>
 

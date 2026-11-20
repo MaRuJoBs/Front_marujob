@@ -10,6 +10,8 @@ export const camposPerfil = [
   'telefone',
   'habilidades',
   'profile_image',
+  'perfil_publico',
+  'cidade_publica',
 ]
 export const camposProjeto = ['titulo', 'categoria', 'descricao', 'tags', 'link', 'imagem']
 

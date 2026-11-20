@@ -54,6 +54,7 @@
   );
 }
 .app--empresa {
+  background: #f8f6fb;
   /* Área empresarial: aplicativo compacto também no computador. */
   --mrj-shell-width: 26.25rem;
   --mrj-navigation-height: 76px;

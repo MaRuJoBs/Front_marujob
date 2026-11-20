@@ -171,7 +171,7 @@ test('401 encerra a sessão pelo interceptor existente', async () => {
 
 test('rotas empresariais preservam o shell de aplicativo sem layout wide', () => {
   const empresariais = routes.filter((rota) => rota.meta?.tipo === 'empresa')
-  assert.equal(empresariais.length, 7)
+  assert.equal(empresariais.length, 9)
   for (const rota of empresariais) {
     assert.equal(rota.meta.requiresAuth, true, rota.path)
     assert.equal(rota.meta.layout, undefined, rota.path)

@@ -9,6 +9,8 @@ const {
   profissao,
   sobre,
   telefone,
+  perfilPublico,
+  cidadePublica,
 
   localizacao,
   latitude,
@@ -228,6 +230,41 @@ const receberFotoCamera = (arquivo) => {
         </section>
 
         <section class="formulario">
+          <fieldset class="publicacao-perfil">
+            <legend>Visibilidade para empresas</legend>
+            <label class="publicacao-opcao" for="perfil-publico">
+              <input
+                id="perfil-publico"
+                v-model="perfilPublico"
+                type="checkbox"
+                :disabled="salvando || !pronto"
+                aria-describedby="publicacao-ajuda"
+              />
+              Aparecer na lista de freelancers
+            </label>
+            <p id="publicacao-ajuda">
+              Ao salvar com esta opção marcada, empresas poderão ver seu nome, foto, profissão,
+              habilidades, descrição e projetos que você publicar. Desmarque e salve para retirar
+              seu perfil da lista.
+            </p>
+            <p v-if="camposErro.perfil_publico" role="alert">{{ camposErro.perfil_publico }}</p>
+            <div class="campo">
+              <label for="cidade-publica">Cidade pública (opcional)</label>
+              <input
+                id="cidade-publica"
+                v-model="cidadePublica"
+                type="text"
+                maxlength="120"
+                aria-describedby="cidade-publica-ajuda"
+                :aria-invalid="!!camposErro.cidade_publica"
+              />
+              <p id="cidade-publica-ajuda">
+                Informe somente a cidade que deseja divulgar. Seu endereço e GPS não serão
+                publicados.
+              </p>
+              <p v-if="camposErro.cidade_publica" role="alert">{{ camposErro.cidade_publica }}</p>
+            </div>
+          </fieldset>
           <div class="campo">
             <label for="perfil-nome">Nome</label>
             <p v-if="camposErro.name" id="erro-nome" role="alert">{{ camposErro.name }}</p>
@@ -455,6 +492,54 @@ const receberFotoCamera = (arquivo) => {
 
 <style scoped src="../styles/freelancer.css"></style>
 <style scoped>
+.publicacao-perfil {
+  min-width: 0;
+  margin: 0 0 20px;
+  padding: 20px;
+  border: 1px solid #e2d6ef;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #fcfaff, #f3edf9);
+}
+.publicacao-perfil legend {
+  font-weight: 600;
+  padding-inline: 8px;
+  color: #59387c;
+  font-size: 0.875rem;
+}
+.publicacao-opcao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #412c5e;
+}
+.publicacao-perfil .publicacao-opcao input {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  flex: 0 0 22px;
+  accent-color: #6e4ab7;
+}
+.publicacao-perfil p {
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: #756982;
+}
+.publicacao-perfil .campo {
+  margin-top: 20px;
+}
+.publicacao-perfil .campo input {
+  background: white;
+  border-color: #dfd2ec;
+  border-radius: 12px;
+}
+.publicacao-perfil input:focus-visible {
+  outline: 3px solid #76519e;
+  outline-offset: 3px;
+}
 .editar-perfil {
   min-height: 100dvh;
   padding: 24px 20px;
