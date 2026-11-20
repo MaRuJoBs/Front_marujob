@@ -86,6 +86,11 @@ export async function listarNotificacoes({ status = '', pagina = 1, signal } = {
     previous: paginaNotificacoes(data.previous, status, pagina),
   }
 }
+export async function contarNotificacoesNaoLidas({ signal } = {}) {
+  const data = await requisitar('get', 'notificacoes/', { signal, params: { lida: false } })
+  if (!Number.isSafeInteger(data?.count) || data.count < 0) throw new Error('Contagem inválida.')
+  return data.count
+}
 export const consultarNotificacao = async (id, config) =>
   normalizarNotificacao(await requisitar('get', `notificacoes/${validarId(id)}/`, config))
 export async function marcarNotificacaoLida(id, config) {

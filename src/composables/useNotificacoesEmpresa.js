@@ -265,6 +265,7 @@ export function useNotificacoesEmpresa() {
       )
       if (selecionada.value?.id === n.id) selecionada.value = { ...selecionada.value, lida: true }
       feedback.value = 'Notificação marcada como lida.'
+      return true
     } catch (error) {
       if (contaAtual(conta)) erroAcao.value = erroNotificacoes(error)
     } finally {

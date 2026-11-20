@@ -1,5 +1,6 @@
 <script setup>
-const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
+import { faBell } from '@fortawesome/free-solid-svg-icons'
+import IndicadorAvisos from './IndicadorAvisos.vue'
 </script>
 
 <template>
@@ -25,6 +26,12 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
       <p>Mensagens</p>
     </router-link>
 
+    <router-link to="/notificacoes" class="item">
+      <span class="icon" aria-hidden="true"><FontAwesomeIcon :icon="faBell" /></span>
+      <p>Avisos</p>
+      <IndicadorAvisos />
+    </router-link>
+
     <router-link to="/perfil" class="item">
       <span class="icon" aria-hidden="true">
         <FontAwesomeIcon :icon="['fas', 'user']" />
@@ -42,7 +49,7 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
   background: #e9e4f5;
   border-radius: 25px 25px 0 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   justify-content: space-around;
   align-items: center;
   box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
@@ -61,6 +68,7 @@ const API_URL = 'https://marujob.class.fabricadesoftware.ifc.edu.br'
 }
 
 .item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;

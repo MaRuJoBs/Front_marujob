@@ -1,4 +1,5 @@
 <script setup>
+import IndicadorAvisos from './IndicadorAvisos.vue'
 defineProps({ voltar: { type: Boolean, default: false } })
 </script>
 
@@ -21,12 +22,7 @@ defineProps({ voltar: { type: Boolean, default: false } })
       <img src="@/assets/images/logo.png" alt="" />
       <span>MaRuJoB's<small>EMPRESAS</small></span>
     </router-link>
-    <router-link
-      to="/empresa/notificacoes"
-      class="notificacoes"
-      aria-label="Notificações de candidaturas"
-      title="Notificações de candidaturas"
-    >
+    <router-link to="/empresa/notificacoes" class="notificacoes" title="Notificações">
       <svg
         width="22"
         height="22"
@@ -38,11 +34,21 @@ defineProps({ voltar: { type: Boolean, default: false } })
       >
         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
       </svg>
+      <span class="leitor">Notificações</span>
+      <IndicadorAvisos empresa />
     </router-link>
   </header>
 </template>
 
 <style scoped>
+.leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .empresa-header {
   display: flex;
   align-items: center;
@@ -95,6 +101,7 @@ defineProps({ voltar: { type: Boolean, default: false } })
 }
 .notificacoes {
   margin-left: auto;
+  position: relative;
 }
 .notificacoes.router-link-active {
   background: var(--mrj-color-primary);

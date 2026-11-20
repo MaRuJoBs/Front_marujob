@@ -1,16 +1,18 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Footer from './components/Footer.vue'
 import FooterEmpresa from './components/FooterEmpresaComponent.vue'
 import ChatToastHost from './features/chat/components/ChatToastHost.vue'
 import { useChatStore } from './features/chat/stores/chat'
+import { useContadorNotificacoes } from './stores/contadorNotificacoes'
 import { sessao } from './services/authService'
 import './styles/tokens.css'
 import './styles/shell.css'
 
 const route = useRoute()
 const chat = useChatStore()
+const contador = useContadorNotificacoes()
 
 // Conversa aberta (/mensagens?room=<id>) ocupa a tela toda: sem rodapé de navegação.
 const rodapeOculto = computed(
@@ -20,13 +22,25 @@ const rodapeOculto = computed(
 // Chat em tempo real ligado só com usuário logado. Trocar de conta (ou sair) desliga e limpa tudo,
 // para nada de uma conta sobrar na outra.
 watch(
-  () => [sessao.usuario?.id ?? null, sessao.revisao],
+  () => [sessao.usuario?.id ?? null, sessao.revisao, sessao.tipo],
   ([id]) => {
     chat.stop()
+    contador.limpar()
     if (id != null) chat.start()
+    if (id != null && sessao.tipo === 'empresa') contador.atualizar()
   },
   { immediate: true },
 )
+watch(
+  () => route.name,
+  (nome) => {
+    if (nome === 'notificacoes-empresa') contador.atualizar()
+  },
+)
+onUnmounted(() => {
+  chat.stop()
+  contador.limpar()
+})
 const conteudo = ref(null)
 const focarConteudo = () => conteudo.value?.focus()
 watch(
