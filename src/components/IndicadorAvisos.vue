@@ -2,19 +2,32 @@
 import { computed } from 'vue'
 import { useChatStore } from '@/features/chat/stores/chat'
 import { useContadorNotificacoes } from '@/stores/contadorNotificacoes'
+import { useNotificacoesFreelancer } from '@/stores/notificacoesFreelancer'
 
-const props = defineProps({ empresa: Boolean })
+const props = defineProps({ empresa: Boolean, candidaturas: Boolean })
 const chat = useChatStore()
 const contador = useContadorNotificacoes()
-const total = computed(() => chat.unreadTotal + (props.empresa ? (contador.total ?? 0) : 0))
+const freelancer = useNotificacoesFreelancer()
+const total = computed(() =>
+  props.candidaturas
+    ? (freelancer.total ?? 0)
+    : chat.unreadTotal + (props.empresa ? (contador.total ?? 0) : 0),
+)
+const descricao = computed(() =>
+  props.candidaturas
+    ? total.value === 1
+      ? 'notificação de candidatura não lida'
+      : 'notificações de candidaturas não lidas'
+    : total.value === 1
+      ? 'aviso não lido'
+      : 'avisos não lidos',
+)
 </script>
 
 <template>
   <template v-if="total > 0">
     <span class="indicador" aria-hidden="true">{{ total > 99 ? '99+' : total }}</span>
-    <span class="leitor"
-      >, {{ total }} {{ total === 1 ? 'aviso não lido' : 'avisos não lidos' }}</span
-    >
+    <span class="leitor">, {{ total }} {{ descricao }}</span>
   </template>
 </template>
 

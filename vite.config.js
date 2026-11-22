@@ -28,6 +28,9 @@ export default defineConfig({
 
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
 
       devOptions: {
         enabled: false,
@@ -36,9 +39,7 @@ export default defineConfig({
       // O manifesto estático também precisa existir no servidor de desenvolvimento.
       manifest: false,
 
-      workbox: {
-        cleanupOutdatedCaches: true,
-
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
       },
     }),

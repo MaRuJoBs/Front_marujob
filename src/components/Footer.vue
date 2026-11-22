@@ -24,12 +24,13 @@ import IndicadorAvisos from './IndicadorAvisos.vue'
         <FontAwesomeIcon :icon="['fas', 'message']" />
       </span>
       <p>Mensagens</p>
+      <IndicadorAvisos />
     </router-link>
 
     <router-link to="/notificacoes" class="item">
       <span class="icon" aria-hidden="true"><FontAwesomeIcon :icon="faBell" /></span>
       <p>Avisos</p>
-      <IndicadorAvisos />
+      <IndicadorAvisos candidaturas />
     </router-link>
 
     <router-link to="/perfil" class="item">

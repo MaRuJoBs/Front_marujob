@@ -1,6 +1,7 @@
 import api, { renovarAccessToken } from './api.js'
 import { registrarFalhaGoogle } from '../utils/googleDiagnostics.js'
 import { guardarFotoGoogle } from './fotoGoogle.js'
+import { encerrarPush } from '../composables/usePushNotifications.js'
 import {
   sessao,
   salvarTokens,
@@ -49,6 +50,10 @@ export async function restaurarSessao() {
 }
 
 async function iniciarSessao(data, credentialGoogle = null) {
+  const anterior = sessao.revisao
+  const limpeza = encerrarPush()
+  if (limpeza) await limpeza
+  if (sessao.revisao !== anterior) throw new Error('A sessão foi encerrada ou substituída.')
   salvarTokens(data)
   const revisao = sessao.revisao
   try {
@@ -117,6 +122,13 @@ export async function trocarSenha(senhaAtual, novaSenha) {
 }
 
 export function logout() {
-  limparSessao()
-  globalThis.google?.accounts?.id?.disableAutoSelect()
+  const revisao = sessao.revisao
+  const finalizar = () => {
+    if (sessao.revisao !== revisao) return
+    limparSessao()
+    globalThis.google?.accounts?.id?.disableAutoSelect()
+  }
+  const limpeza = encerrarPush()
+  if (limpeza) return limpeza.then(finalizar)
+  finalizar()
 }
