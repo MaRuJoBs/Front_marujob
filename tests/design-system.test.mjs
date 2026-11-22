@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { parse, compileScript } from 'vue/compiler-sfc'
 import { build } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -232,7 +233,7 @@ test('build isolado: os três SFCs e seus estilos compilam pelo Vite sem integra
     components
       .map(
         (name) =>
-          `export { default as ${name} } from ${JSON.stringify(new URL(`../src/components/ui/${name}.vue`, import.meta.url).pathname)}`,
+          `export { default as ${name} } from ${JSON.stringify(fileURLToPath(new URL(`../src/components/ui/${name}.vue`, import.meta.url)).replaceAll('\\', '/'))}`,
       )
       .join('\n'),
   )
@@ -243,7 +244,7 @@ test('build isolado: os três SFCs e seus estilos compilam pelo Vite sem integra
     build: {
       outDir: 'node_modules/.cache/feat48-build',
       emptyOutDir: true,
-      lib: { entry: buildEntry.pathname, formats: ['es'], fileName: 'ui' },
+      lib: { entry: fileURLToPath(buildEntry), formats: ['es'], fileName: 'ui' },
       rollupOptions: { external: ['vue'] },
     },
   })

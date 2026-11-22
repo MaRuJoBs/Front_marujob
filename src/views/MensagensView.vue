@@ -195,9 +195,9 @@ function selectRoom(id) {
   background-color: var(--chat-deep);
 }
 
-/* Lista: o conteúdo rola acima do rodapé de navegação; o lilás continua por trás dele. */
-.mensagens--lista .mensagens__lista {
-  padding-bottom: calc(var(--mrj-navigation-height, 85px) + env(safe-area-inset-bottom, 0px));
+/* A área rolável termina acima da barra, com o fundo da página atrás dela. */
+.mensagens--lista {
+  padding-bottom: calc(var(--mrj-footer-occupied-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .mensagens :deep(button),

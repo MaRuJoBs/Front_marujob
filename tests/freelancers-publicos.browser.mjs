@@ -250,7 +250,12 @@ try {
   await until(
     '!window.perfilProprio.perfil_publico && !document.querySelector("#perfil-publico").disabled',
   )
-  assert.equal(await evaluate('document.querySelectorAll(".footer .item").length'), 4)
+  assert.deepEqual(
+    await evaluate(
+      '[...document.querySelectorAll(".footer a.item")].map(link => link.getAttribute("href"))',
+    ),
+    ['/home', '/freelances', '/mensagens', '/notificacoes', '/perfil'],
+  )
   for (const width of [320, 375, 768, 1440]) {
     await cdp('Emulation.setDeviceMetricsOverride', {
       width,

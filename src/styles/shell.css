@@ -6,6 +6,9 @@
   --mrj-navigation-height: 85px;
   --mrj-freelancer-footer-height: 76px;
   --mrj-freelancer-footer-offset: 12px;
+  --mrj-footer-occupied-height: calc(
+    var(--mrj-freelancer-footer-height) + var(--mrj-freelancer-footer-offset)
+  );
   --mrj-page-reserve: 0px;
   width: 100%;
   max-width: var(--mrj-shell-width);
@@ -60,6 +63,7 @@
   /* Área empresarial: aplicativo compacto também no computador. */
   --mrj-shell-width: 26.25rem;
   --mrj-navigation-height: 76px;
+  --mrj-footer-occupied-height: calc(var(--mrj-navigation-height) + 12px);
 }
 .app--notificacoes {
   max-width: var(--mrj-content-width);
