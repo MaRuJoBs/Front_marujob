@@ -12,8 +12,18 @@ import vue from '@vitejs/plugin-vue'
 const audit = process.env.F49_AUDIT !== '0'
 const snapshot = process.env.F49_REF
 const comparisonOnly = process.env.F49_COMPARE_ONLY === '1'
-const compareHistorical = !process.argv.includes('--sem-baseline-historica')
-const folder = resolve('node_modules/.cache/feat49-browser', audit ? snapshot || 'corrigido' : '.')
+const compareHistorical = comparisonOnly || process.argv.includes('--comparar-baseline-historica')
+const matrizAtual = process.argv.includes('--matriz-atual')
+const portaVite = matrizAtual ? 5207 : 5197
+const portaChrome = matrizAtual ? 19549 : 19449
+const folder = resolve(
+  'node_modules/.cache/feat49-browser',
+  matrizAtual
+    ? process.env.F49_MATRIZ_DIR || 'matriz-atual'
+    : audit
+      ? snapshot || 'corrigido'
+      : '.',
+)
 mkdirSync(folder, { recursive: true })
 const runner = `
 import {createApp,h} from 'vue'
@@ -33,10 +43,23 @@ import '/src/assets/main.css'
 library.add(fas)
 const tipo=new URLSearchParams(location.search).get('tipo') || 'usuario'
 const realPath=new URLSearchParams(location.search).get('path')
-sessao.usuario={id:49,name:'Conta de teste'};sessao.tipo=tipo
-localStorage.setItem('token','teste-local')
+if(tipo==='publico') localStorage.removeItem('token')
+else {
+ sessao.usuario={id:49,name:'Conta de teste'};sessao.tipo=tipo
+ localStorage.setItem('token','teste-local')
+}
 api.defaults.adapter=async config=>({config,status:200,headers:{},data:{count:0,results:[],next:null,previous:null}})
-if(new URLSearchParams(location.search).has('filled')) Object.assign(sessao.usuario,instalarFixtures(api).usuario)
+if(new URLSearchParams(location.search).has('filled')) {
+ const fixture=instalarFixtures(api)
+ if(sessao.usuario) Object.assign(sessao.usuario,fixture.usuario)
+ window.WebSocket=class {
+  static OPEN=1
+  readyState=0
+  constructor(){ queueMicrotask(()=>{this.readyState=1;this.onopen?.()}) }
+  send(){}
+  close(){this.readyState=3}
+ }
+}
 const Page={setup(){return ()=>h('div',[
  h(tipo==='empresa'?EmpresaHeader:Header,{voltar:true}),
  h('main',{style:'padding:16px;min-height:1200px'},[
@@ -96,13 +119,13 @@ const vite = await createServer({
           if (!req.url.startsWith('/?')) return next()
           res.setHeader('Content-Type', 'text/html')
           res.end(
-            '<!doctype html><html lang="pt-BR"><meta name="viewport" content="width=device-width, initial-scale=1"><div id="app"></div><script type="module" src="/__feat49.js"></script></html>',
+            '<!doctype html><html lang="pt-BR"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><div id="app"></div><script type="module" src="/__feat49.js"></script></html>',
           )
         })
       },
     },
   ],
-  server: { host: '127.0.0.1', port: 5197, strictPort: true },
+  server: { host: '127.0.0.1', port: portaVite, strictPort: true },
   appType: 'custom',
 })
 await vite.listen()
@@ -114,7 +137,7 @@ const chrome = spawn(
     '--no-first-run',
     '--no-default-browser-check',
     `--user-data-dir=${resolve(folder, 'profile')}`,
-    '--remote-debugging-port=19449',
+    `--remote-debugging-port=${portaChrome}`,
     'about:blank',
   ],
   { stdio: 'ignore', windowsHide: true },
@@ -151,7 +174,7 @@ try {
   let target
   for (let i = 0; i < 80; i++) {
     try {
-      target = (await (await fetch('http://127.0.0.1:19449/json/list')).json()).find(
+      target = (await (await fetch(`http://127.0.0.1:${portaChrome}/json/list`)).json()).find(
         (x) => x.type === 'page',
       )
     } catch {}
@@ -175,7 +198,151 @@ try {
   }
   await cdp('Page.enable')
   await cdp('Runtime.enable')
-  if (!snapshot && !comparisonOnly)
+  if (matrizAtual) {
+    await cdp('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    })
+    const rotas = {
+      publico: ['/login', '/register', '/registerEmpresa'],
+      usuario: [
+        '/home',
+        '/freelances',
+        '/oportunidade/2',
+        '/favoritos',
+        '/perfil',
+        '/editar-perfil',
+        '/portfolio',
+        '/portfolio/adicionar',
+        '/portfolio/1',
+        '/portfolio/1/editar',
+        '/notificacoes',
+        '/mensagens',
+        '/mensagens?room=42',
+        '/definir-senha',
+        '/trocar-senha',
+      ],
+      empresa: [
+        '/homeEmpresa',
+        '/criar-vaga',
+        '/editar-vaga/2',
+        '/empresa/vagas/2',
+        '/empresa/freelancers',
+        '/empresa/freelancers/7',
+        '/empresa/perfil',
+        '/empresa/configuracoes',
+        '/empresa/notificacoes',
+        '/mensagens',
+        '/mensagens?room=42',
+      ],
+    }
+    const viewports = [320, 360, 375, 390, 420, 430, 768, 1024, 1280, 1440, 1920].map((width) => [
+      width,
+      width === 768 ? 1024 : width === 1024 ? 768 : 900,
+    ])
+    viewports.push([390, 320], [390, 600], [390, 700])
+    const linhas = []
+    for (const [tipo, rotasPorPapel] of Object.entries(rotas)) {
+      const caminhos = rotasPorPapel.filter(
+        (path) => !process.env.F49_PATHS || process.env.F49_PATHS.split(',').includes(path),
+      )
+      if (!caminhos.length) continue
+      await cdp('Page.navigate', {
+        url:
+          `http://127.0.0.1:${portaVite}/?filled=1&tipo=` +
+          tipo +
+          '&path=' +
+          encodeURIComponent(caminhos[0]),
+      })
+      for (let i = 0; i < 200 && !(await evaluate("document.body?.dataset.ready === 'true'")); i++)
+        await wait(100)
+      assert.ok(
+        await evaluate('Boolean(window.testRouter)'),
+        `Harness de rotas não iniciou para ${tipo}: ${errors.join('; ')}`,
+      )
+      for (const [width, height] of viewports) {
+        await cdp('Emulation.setDeviceMetricsOverride', {
+          width,
+          height,
+          deviceScaleFactor: 1,
+          mobile: width < 500,
+        })
+        const inset = width === 390 && height === 700 ? 34 : 0
+        await cdp('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: inset } })
+        for (const path of caminhos) {
+          const info = await evaluate(`(async () => {
+            await testRouter.push(${JSON.stringify(path)})
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+            const shell = document.querySelector('.app')
+            const pagina = document.querySelector('.app-content')
+            const nav = document.querySelector('.app-navigation')
+            const barra = nav?.getBoundingClientRect()
+            const conteudo = pagina.getBoundingClientRect()
+            const root = document.documentElement
+            scrollTo(0, root.scrollHeight)
+            const rooms = pagina.querySelector('.mensagens--lista .rooms')
+            const lista = rooms?.querySelector('.rooms__list')
+            if (lista) {
+              lista.scrollTop = lista.scrollHeight
+              rooms.scrollTop = rooms.scrollHeight
+            }
+            const ultimoItem = lista?.querySelector('.rooms__item:last-child button')?.getBoundingClientRect()
+            const intervaloChat = ultimoItem && {
+              alturaAcao: ultimoItem.height,
+              alturaVisivel: Math.max(0,
+                Math.min(lista.getBoundingClientRect().bottom, rooms.getBoundingClientRect().bottom, barra.top, ultimoItem.bottom) -
+                Math.max(lista.getBoundingClientRect().top, rooms.getBoundingClientRect().top, ultimoItem.top)),
+            }
+            const fora = [...pagina.querySelectorAll('button, a[href], input, textarea, select')].filter(el => {
+              const r = el.getBoundingClientRect()
+              return r.width && r.height && !el.closest('.slide-scroll') &&
+                (r.left < -1 || r.right > root.clientWidth + 1)
+            }).map(el => el.id || el.textContent.trim().slice(0, 60) || el.tagName)
+            const ultimaAcao = [...pagina.querySelectorAll('button, a[href], input, textarea, select')]
+              .filter(el => !el.closest('.slide-scroll') && el.getBoundingClientRect().width && el.getBoundingClientRect().height)
+              .map(el => ({ rotulo: el.id || el.textContent.trim().slice(0, 60) || el.tagName, bottom: el.getBoundingClientRect().bottom }))
+              .sort((a,b) => b.bottom - a.bottom)[0]
+            return { rota: testRouter.currentRoute.value.fullPath, overflow: root.scrollWidth - root.clientWidth,
+              larguraShell: shell.getBoundingClientRect().width, larguraConteudo: conteudo.width,
+              footer: Boolean(barra), alinhado: !barra || (barra.left >= conteudo.left - 1 && barra.right <= conteudo.right + 1),
+              limiteFooter: barra?.top ?? null, alturaViewport: innerHeight, ultimaAcao, intervaloChat, fora }
+          })()`)
+          const resultado = { tipo, path, width, height, inset, ...info }
+          linhas.push(resultado)
+          if ([320, 768, 1920].includes(width) || height === 320 || info.overflow > 1) {
+            const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+            const arquivo = `matriz-${tipo}-${path.replace(/[^a-z0-9]+/gi, '-')}-${width}x${height}.png`
+            writeFileSync(resolve(folder, arquivo), Buffer.from(shot.data, 'base64'))
+          }
+          await evaluate('scrollTo(0, 0)')
+        }
+        console.log('MATRIZ', tipo, width, height, caminhos.length)
+      }
+    }
+    writeFileSync(resolve(folder, 'matriz-atual.json'), JSON.stringify(linhas, null, 2))
+    assert.deepEqual(errors, [])
+    const semFooter = new Set([
+      '/criar-vaga',
+      '/editar-vaga/2',
+      '/definir-senha',
+      '/trocar-senha',
+      '/mensagens?room=42',
+    ])
+    const problemas = linhas.filter(
+      (item) =>
+        item.rota !== item.path ||
+        item.overflow > 1 ||
+        !item.alinhado ||
+        item.fora.length ||
+        item.larguraConteudo > 421 ||
+        item.footer !== (item.tipo !== 'publico' && !semFooter.has(item.path)) ||
+        (item.path === '/mensagens'
+          ? !item.intervaloChat ||
+            item.intervaloChat.alturaVisivel < item.intervaloChat.alturaAcao - 1
+          : item.ultimaAcao?.bottom > (item.limiteFooter ?? item.alturaViewport) + 1),
+    )
+    assert.deepEqual(problemas, [], 'Ações fora da área útil ou footer incompatível com a rota')
+  }
+  if (!matrizAtual && !snapshot && !comparisonOnly)
     for (const tipo of ['usuario', 'empresa'])
       for (const width of [360, 390, 768, 1024, 1440]) {
         await cdp('Emulation.setDeviceMetricsOverride', {
@@ -261,7 +428,7 @@ try {
         console.log('PASS', tipo, width)
       }
   assert.deepEqual(errors, [])
-  if (!snapshot && !comparisonOnly)
+  if (!matrizAtual && !snapshot && !comparisonOnly)
     for (const [tipo, path] of [
       ['usuario', '/home'],
       ['usuario', '/freelances'],
@@ -299,7 +466,7 @@ try {
       }
     }
   assert.deepEqual(errors, [])
-  if (audit && !comparisonOnly) {
+  if (!matrizAtual && audit && !comparisonOnly) {
     for (const [tipo, path] of [
       ['usuario', '/home'],
       ['usuario', '/freelances'],
@@ -456,7 +623,7 @@ try {
       }
   }
   assert.deepEqual(errors, [])
-  if (audit && !comparisonOnly)
+  if (!matrizAtual && audit && !comparisonOnly)
     for (const height of [600, 1200]) {
       await cdp('Emulation.setDeviceMetricsOverride', {
         width: 390,
@@ -483,7 +650,7 @@ try {
       }
       results.push({ path: '/home', width: 390, viewportHeight: height, headerHeight })
     }
-  if (!snapshot && audit && !comparisonOnly) {
+  if (!matrizAtual && !snapshot && audit && !comparisonOnly) {
     await cdp('Emulation.setDeviceMetricsOverride', {
       width: 390,
       height: 320,
@@ -504,7 +671,7 @@ try {
     )
     results.push({ path: '/favoritos', width: 390, viewportHeight: 320, paddingBottom: 5 })
   }
-  if (!snapshot && compareHistorical)
+  if (!matrizAtual && !snapshot && compareHistorical)
     for (const [page, width] of [
       ['home', 390],
       ['home', 420],
@@ -557,7 +724,7 @@ try {
             ),
         )
       : []
-  if (!comparisonOnly)
+  if (!matrizAtual && !comparisonOnly)
     writeFileSync(resultsFile, JSON.stringify([...previous, ...results], null, 2))
 } finally {
   if (ws?.readyState === WebSocket.OPEN) {

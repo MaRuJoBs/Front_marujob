@@ -55,17 +55,55 @@ export function instalarFixtures(api) {
   }))
   localStorage.setItem('marujobs:favoritos:usuario:49', '[1,2,3]')
   const pagina = (results) => ({ count: results.length, results, next: null, previous: null })
+  const pessoa = {
+    id: 7,
+    nome: 'Marina Costa de Albuquerque',
+    profissao: 'Desenvolvimento frontend e acessibilidade',
+    cidade: 'Blumenau',
+    habilidades: usuario.habilidades,
+    foto_perfil: imagem,
+    descricao: usuario.sobre,
+    portfolio: projetos,
+  }
+  const sala = {
+    id: 42,
+    name: 'Conversa com título longo para conferir quebra em telas pequenas',
+    other: { id: 7, name: pessoa.nome },
+    unread: 2,
+    last_message_at: '2026-11-22T12:00:00Z',
+    last_message: { id: 1, body: 'Mensagem de teste', author: { id: 7 } },
+  }
   api.defaults.adapter = async (config) => {
-    if (config.method !== 'get') throw Error('Escrita de API proibida no teste visual')
     const path = config.url.split('?')[0]
     let data
+    if (path === 'chat/rooms/42/read/' && config.method === 'post')
+      return { config, status: 204, headers: {} }
+    if (config.method !== 'get') throw Error('Escrita de API proibida no teste visual')
     if (path === 'usuarios/me/' || path === 'empresas/me/') data = usuario
     else if (path === 'freelances/') data = pagina(jobs)
     else if (/^freelances\/\d+\/$/.test(path))
       data = jobs.find((x) => x.id === Number(path.split('/')[1]))
     else if (path === 'portfolios/') data = pagina(projetos)
     else if (/^portfolios\/\d+\/$/.test(path)) data = projetos[0]
-    else if (path === 'candidaturas/' || path === 'notificacoes/') data = pagina([])
+    else if (path === 'freelancers/') data = pagina([pessoa])
+    else if (path === 'freelancers/7/') data = pessoa
+    else if (path === 'chat/rooms/') data = pagina([sala])
+    else if (path === 'chat/rooms/42/') data = sala
+    else if (path === 'chat/rooms/42/messages/') data = { results: [], next_before: null }
+    else if (path === 'notificacoes-freelancer/') {
+      data = pagina([
+        {
+          id: 15,
+          candidatura: 2,
+          oportunidade: 2,
+          evento: 'candidatura_aprovada',
+          titulo: 'Candidatura aprovada!',
+          mensagem: jobs[1].titulo,
+          lida: false,
+          criado_em: '2026-11-22T12:00:00Z',
+        },
+      ])
+    } else if (path === 'candidaturas/' || path === 'notificacoes/') data = pagina([])
     else throw Error('Endpoint sem fixture: ' + config.url)
     return { config, status: 200, headers: {}, data }
   }

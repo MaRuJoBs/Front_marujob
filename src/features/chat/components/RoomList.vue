@@ -350,6 +350,18 @@ const emptyFilter = computed(() =>
   overscroll-behavior: contain;
 }
 
+@media (max-height: 26rem) {
+  .rooms {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .rooms__list {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+}
+
 .room {
   display: flex;
   align-items: center;
