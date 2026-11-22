@@ -155,6 +155,7 @@ const paginasComReserva = new Set([
     :class="{
       'app--navigation': !rodapeOculto && sessao.usuario,
       'app--empresa': sessao.tipo === 'empresa',
+      'app--notificacoes mrj-ui': $route.name === 'notificacoes-freelancer',
       'app--page-reserve': paginasComReserva.has($route.name),
       'app--favorites': $route.name === 'favoritos',
       'app--wide': $route.meta.layout === 'wide',

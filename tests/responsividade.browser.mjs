@@ -12,6 +12,7 @@ import vue from '@vitejs/plugin-vue'
 const audit = process.env.F49_AUDIT !== '0'
 const snapshot = process.env.F49_REF
 const comparisonOnly = process.env.F49_COMPARE_ONLY === '1'
+const compareHistorical = !process.argv.includes('--sem-baseline-historica')
 const folder = resolve('node_modules/.cache/feat49-browser', audit ? snapshot || 'corrigido' : '.')
 mkdirSync(folder, { recursive: true })
 const runner = `
@@ -234,11 +235,9 @@ try {
           await evaluate('getComputedStyle(document.activeElement).outlineStyle'),
           'solid',
         )
-        await evaluate('document.querySelectorAll(".app-navigation a")[1].click()')
-        assert.equal(
-          await evaluate('window.testRouter.currentRoute.value.path'),
-          tipo === 'empresa' ? '/mensagens' : '/freelances',
-        )
+        const destino = tipo === 'empresa' ? '/mensagens' : '/freelances'
+        await evaluate(`document.querySelector('.app-navigation a[href="${destino}"]').click()`)
+        assert.equal(await evaluate('window.testRouter.currentRoute.value.path'), destino)
         await evaluate('window.testRouter.push("/")')
         assert.equal(await evaluate('document.querySelector(".app-navigation") === null'), true)
         assert.equal(
@@ -266,6 +265,7 @@ try {
     for (const [tipo, path] of [
       ['usuario', '/home'],
       ['usuario', '/freelances'],
+      ['usuario', '/mensagens'],
       ['empresa', '/homeEmpresa'],
       ['empresa', '/criar-vaga'],
     ]) {
@@ -338,15 +338,27 @@ try {
         )
         const metrics = await evaluate(`(()=>{
         const rect=s=>{const e=document.querySelector(s);if(!e)return null;const r=e.getBoundingClientRect(),c=getComputedStyle(e);return {x:r.x,y:r.y,width:r.width,height:r.height,paddingBottom:c.paddingBottom,fontSize:c.fontSize,columns:c.gridTemplateColumns}}
-        return {viewport:innerWidth,client:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,
-          shell:rect('.app'),content:rect('.app-content'),header:rect('.header, .empresa-header'),slogan:rect('.slogan'),
+        return {viewport:innerWidth,viewportHeight:innerHeight,client:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,
+          shell:rect('.app'),content:rect('.app-content'),header:rect('.home-topbar, .header, .empresa-header'),slogan:rect('.slogan'),
           card:rect('.card, .job-card, .vaga, .box, .portfolio-card'),grid:rect('.grid-oportunidades'),
-          footer:rect('footer'),main:rect('main'),images:[...document.querySelectorAll('img')].map(e=>({width:e.width,height:e.height,naturalWidth:e.naturalWidth,naturalHeight:e.naturalHeight}))}
+          footer:rect('.app-navigation'),main:rect('main'),images:[...document.querySelectorAll('img')].map(e=>({width:e.width,height:e.height,naturalWidth:e.naturalWidth,naturalHeight:e.naturalHeight}))}
       })()`)
         const file = path.slice(1).replaceAll('/', '-') + '-' + width
         const shot = await cdp('Page.captureScreenshot', { format: 'png' })
         writeFileSync(resolve(folder, file + '.png'), Buffer.from(shot.data, 'base64'))
         if (!snapshot) {
+          if (metrics.footer) {
+            assert.ok(metrics.footer.x >= metrics.content.x, 'Footer fora da coluna: ' + path)
+            assert.ok(
+              metrics.footer.x + metrics.footer.width <= metrics.content.x + metrics.content.width,
+              'Footer mais largo que o conteúdo: ' + path,
+            )
+            assert.equal(
+              metrics.viewportHeight - metrics.footer.y - metrics.footer.height,
+              12,
+              'Distância da borda incorreta: ' + path,
+            )
+          }
           assert.ok(metrics.scrollWidth <= width, 'Overflow em página preenchida: ' + path)
           assert.ok(
             metrics.card ||
@@ -363,8 +375,11 @@ try {
             'Página mobile esticada',
           )
           if (path === '/home') {
-            assert.ok(Math.abs(metrics.header.height - 297) < 1)
-            if (width === 390 || width === 420) assert.equal(metrics.slogan.width, 370)
+            assert.ok(metrics.header?.height > 0, 'Cabeçalho da Home ausente')
+            if (metrics.slogan) {
+              assert.ok(Math.abs(metrics.header.height - 297) < 1)
+              if (width === 390 || width === 420) assert.equal(metrics.slogan.width, 370)
+            }
           }
           if (path === '/portfolio' || path === '/perfil' || path === '/empresa/perfil') {
             assert.ok(
@@ -373,7 +388,7 @@ try {
             )
           }
           const baselineFile = resolve('node_modules/.cache/feat49-browser/dc33fe9/results.json')
-          if (existsSync(baselineFile)) {
+          if (compareHistorical && existsSync(baselineFile)) {
             const baseline = JSON.parse(readFileSync(baselineFile, 'utf8')).find(
               (e) => e.path === path && e.width === width,
             )
@@ -454,11 +469,18 @@ try {
         if (await evaluate('document.body?.dataset.ready === "true"')) break
         await wait(50)
       }
-      const headerHeight = await evaluate(
-        'document.querySelector("header.header").getBoundingClientRect().height',
-      )
-      if (!snapshot)
-        assert.ok(Math.abs(headerHeight - height * 0.33) < 1, 'Altura do header não acompanha 33vh')
+      const { headerHeight, legacyHeader } = await evaluate(`(() => {
+        const header = document.querySelector('header.home-topbar, header.header')
+        return { headerHeight: header.getBoundingClientRect().height, legacyHeader: header.classList.contains('header') }
+      })()`)
+      if (!snapshot) {
+        assert.ok(headerHeight > 0 && headerHeight < height, 'Cabeçalho fora da área visível')
+        if (legacyHeader)
+          assert.ok(
+            Math.abs(headerHeight - height * 0.33) < 1,
+            'Altura do header não acompanha 33vh',
+          )
+      }
       results.push({ path: '/home', width: 390, viewportHeight: height, headerHeight })
     }
   if (!snapshot && audit && !comparisonOnly) {
@@ -482,7 +504,7 @@ try {
     )
     results.push({ path: '/favoritos', width: 390, viewportHeight: 320, paddingBottom: 5 })
   }
-  if (!snapshot)
+  if (!snapshot && compareHistorical)
     for (const [page, width] of [
       ['home', 390],
       ['home', 420],

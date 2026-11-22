@@ -4,6 +4,8 @@
   --mrj-shell-width: 75rem;
   --mrj-content-width: 26.25rem;
   --mrj-navigation-height: 85px;
+  --mrj-freelancer-footer-height: 76px;
+  --mrj-freelancer-footer-offset: 12px;
   --mrj-page-reserve: 0px;
   width: 100%;
   max-width: var(--mrj-shell-width);
@@ -58,6 +60,13 @@
   /* Área empresarial: aplicativo compacto também no computador. */
   --mrj-shell-width: 26.25rem;
   --mrj-navigation-height: 76px;
+}
+.app--notificacoes {
+  max-width: var(--mrj-content-width);
+  background: var(--mrj-color-secondary);
+  --mrj-navigation-height: calc(
+    var(--mrj-freelancer-footer-height) + var(--mrj-freelancer-footer-offset)
+  );
 }
 .app--page-reserve {
   --mrj-page-reserve: 100px;

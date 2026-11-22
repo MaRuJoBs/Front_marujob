@@ -146,7 +146,7 @@ const vite = await createServer({
         s.middlewares.use('/__feat44', (req, res) => {
           res.setHeader('Content-Type', 'text/html;charset=utf-8')
           res.end(
-            '<!doctype html><html lang="pt-BR"><meta name="viewport" content="width=device-width,initial-scale=1"><body><div id="app"></div><script type="module" src="/__runner44.js"></script></body></html>',
+            '<!doctype html><html lang="pt-BR"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><body><div id="app"></div><script type="module" src="/__runner44.js"></script></body></html>',
           )
         })
       },
@@ -246,7 +246,9 @@ try {
   }
   await cdp('Page.enable')
   let total = 0
-  for (const largura of process.argv.includes('--somente-pwa') ? [] : [320, 375, 390, 430, 1280])
+  for (const largura of process.argv.includes('--somente-pwa')
+    ? []
+    : [320, 375, 390, 430, 768, 1280])
     for (const scenario of ['lista', 'vazio', 'erro', 'conflito', 'sessao', 'freelancer']) {
       await cdp('Emulation.setDeviceMetricsOverride', {
         width: largura,
@@ -346,10 +348,52 @@ try {
           2,
         )
         await foto('freelancer-' + largura)
+        const inset = largura === 390 ? 34 : 0
+        if (inset) await cdp('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: inset } })
+        const geometriaRodape = `(() => {
+          const shell = document.querySelector('.app')
+          const nav = document.querySelector('.app-navigation')
+          const painel = document.querySelector('.central-freelancer')
+          const area = shell.getBoundingClientRect()
+          const barra = nav.getBoundingClientRect()
+          return {
+            fundoContinuo: getComputedStyle(shell).backgroundColor === getComputedStyle(painel).backgroundColor,
+            reserva: parseFloat(getComputedStyle(shell).paddingBottom),
+            altura: barra.height,
+            distancia: innerHeight - barra.bottom,
+            contido: barra.left >= area.left && barra.right <= area.right &&
+              Math.abs((barra.left + barra.right) - (area.left + area.right)) < 1,
+          }
+        })()`
+        assert.deepEqual(await avaliar(geometriaRodape), {
+          fundoContinuo: true,
+          reserva: 88 + inset,
+          altura: 76 + inset,
+          distancia: 12,
+          contido: true,
+        })
+        await avaliar(`(() => {
+          const historico = document.querySelector('.historico')
+          historico.style.minHeight = innerHeight + 'px'
+          window.scrollTo(0, document.documentElement.scrollHeight)
+        })()`)
+        assert.ok(
+          await avaliar(`(() => {
+          const fim = document.querySelector('.central-freelancer').getBoundingClientRect().bottom
+          const topo = document.querySelector('.app-navigation').getBoundingClientRect().top
+          return scrollY > 0 && fim <= topo + 1
+        })()`),
+          'O fim da central fica acima da barra após rolar',
+        )
+        await avaliar(
+          "document.querySelector('.historico').style.minHeight = ''; window.scrollTo(0, 0)",
+        )
+        if (inset) await cdp('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: 0 } })
         await avaliar(
           "document.querySelector('.conversa').focus();document.querySelector('.conversa').click()",
         )
         await aguardar("window.teste.router.currentRoute.value.query.room==='42'")
+        assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 0)
         await aguardar(
           "window.teste.requests.some(r=>r.method==='post'&&r.url==='chat/rooms/42/read/')",
         )
@@ -510,7 +554,7 @@ try {
       console.log('PASSOU', scenario, largura)
       total++
     }
-  if (total) console.log(total + '/30 cenários de navegador aprovados; artefatos: ' + pasta)
+  if (total) console.log(total + '/36 cenários de navegador aprovados; artefatos: ' + pasta)
 
   if (process.argv.includes('--pwa')) {
     producao = await preview({
