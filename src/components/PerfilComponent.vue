@@ -8,8 +8,8 @@ import PerfilAvatar from './PerfilAvatar.vue'
 const router = useRouter()
 const { usuario: user, projetos: portfolio, carregando, erro, carregar } = usePerfilPortfolio()
 const email = computed(() => user.value?.email || '')
-const logout = () => {
-  encerrarSessao()
+const logout = async () => {
+  await encerrarSessao()
   router.replace('/')
 }
 onMounted(carregar)

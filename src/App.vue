@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Footer from './components/Footer.vue'
 import FooterEmpresa from './components/FooterEmpresaComponent.vue'
@@ -7,12 +7,79 @@ import ChatToastHost from './features/chat/components/ChatToastHost.vue'
 import { useChatStore } from './features/chat/stores/chat'
 import { useContadorNotificacoes } from './stores/contadorNotificacoes'
 import { sessao } from './services/authService'
+import { useNotificacoesFreelancer } from './stores/notificacoesFreelancer'
+import {
+  cancelarSincronizacaoPush,
+  limparPushSemSessao,
+  sincronizarPush,
+} from './composables/usePushNotifications'
+import { obterAccessToken, obterRefreshToken } from './services/authSession'
+import { EVENTO_PUSH, RENOVAR_PUSH } from './pushEvents'
 import './styles/tokens.css'
 import './styles/shell.css'
 
 const route = useRoute()
 const chat = useChatStore()
 const contador = useContadorNotificacoes()
+const notificacoes = useNotificacoesFreelancer()
+const centralFreelancer = 'notificacoes-freelancer'
+
+function atualizarFreelancer() {
+  if (sessao.tipo !== 'usuario') return
+  notificacoes.atualizarContagem()
+  if (route.name === centralFreelancer) notificacoes.carregar()
+}
+
+function aoRetomar() {
+  if (document.visibilityState !== 'visible') return
+  atualizarFreelancer()
+  sincronizarPush({ verificar: true })
+}
+
+function aoReceberPush({ data }) {
+  if (data?.type === EVENTO_PUSH) atualizarFreelancer()
+  if (data?.type === RENOVAR_PUSH) sincronizarPush({ renovar: true })
+}
+
+watch(
+  () => [sessao.revisao, sessao.tipo, sessao.usuario?.id],
+  () => {
+    notificacoes.limpar()
+    cancelarSincronizacaoPush()
+  },
+  { flush: 'sync' },
+)
+
+watch(
+  () => [sessao.revisao, sessao.tipo, sessao.usuario?.id, route.name],
+  ([, tipo, id], anterior) => {
+    if (
+      (anterior?.[1] === 'usuario' || route.name === 'login') &&
+      !obterAccessToken() &&
+      !obterRefreshToken()
+    ) {
+      limparPushSemSessao()
+    }
+    if (tipo !== 'usuario' || id == null) return
+    if (
+      !anterior ||
+      anterior[0] !== sessao.revisao ||
+      anterior[2] !== id ||
+      route.name === centralFreelancer
+    ) {
+      atualizarFreelancer()
+      sincronizarPush()
+    }
+  },
+  { immediate: true },
+)
+
+onMounted(() => {
+  window.addEventListener('focus', aoRetomar)
+  window.addEventListener('online', aoRetomar)
+  document.addEventListener('visibilitychange', aoRetomar)
+  navigator.serviceWorker?.addEventListener('message', aoReceberPush)
+})
 
 // Conversa aberta (/mensagens?room=<id>) ocupa a tela toda: sem rodapé de navegação.
 const rodapeOculto = computed(
@@ -40,6 +107,12 @@ watch(
 onUnmounted(() => {
   chat.stop()
   contador.limpar()
+  notificacoes.limpar()
+  cancelarSincronizacaoPush()
+  window.removeEventListener('focus', aoRetomar)
+  window.removeEventListener('online', aoRetomar)
+  document.removeEventListener('visibilitychange', aoRetomar)
+  navigator.serviceWorker?.removeEventListener('message', aoReceberPush)
 })
 const conteudo = ref(null)
 const focarConteudo = () => conteudo.value?.focus()
@@ -82,6 +155,7 @@ const paginasComReserva = new Set([
     :class="{
       'app--navigation': !rodapeOculto && sessao.usuario,
       'app--empresa': sessao.tipo === 'empresa',
+      'app--notificacoes mrj-ui': $route.name === 'notificacoes-freelancer',
       'app--page-reserve': paginasComReserva.has($route.name),
       'app--favorites': $route.name === 'favoritos',
       'app--wide': $route.meta.layout === 'wide',

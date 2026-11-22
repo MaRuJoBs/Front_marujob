@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { listarOportunidades } from '@/services/freelanceService'
 import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
 import FavoritoButton from '@/components/FavoritoButton.vue'
+import NotificationPrompt from '@/components/NotificationPrompt.vue'
 import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
 
 const { erroFavorito } = useFavoritosLocais()
@@ -122,6 +123,7 @@ const atualizarSlide = () => {
         <i class="fa-regular fa-heart" aria-hidden="true"></i><span>Favoritos</span>
       </router-link>
     </header>
+    <NotificationPrompt />
     <section class="home-hero" aria-labelledby="home-titulo">
       <h1 id="home-titulo">
         <span class="hero-linha">Seu próximo projeto</span>

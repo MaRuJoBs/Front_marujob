@@ -24,12 +24,13 @@ import IndicadorAvisos from './IndicadorAvisos.vue'
         <FontAwesomeIcon :icon="['fas', 'message']" />
       </span>
       <p>Mensagens</p>
+      <IndicadorAvisos />
     </router-link>
 
     <router-link to="/notificacoes" class="item">
       <span class="icon" aria-hidden="true"><FontAwesomeIcon :icon="faBell" /></span>
       <p>Avisos</p>
-      <IndicadorAvisos />
+      <IndicadorAvisos candidaturas />
     </router-link>
 
     <router-link to="/perfil" class="item">
@@ -56,10 +57,10 @@ import IndicadorAvisos from './IndicadorAvisos.vue'
   z-index: 999;
 }
 .footer.app-navigation.mrj-ui {
-  bottom: 12px;
+  bottom: var(--mrj-freelancer-footer-offset, 12px);
   width: calc(100% - 24px);
   max-width: calc(26.25rem - 24px);
-  height: calc(76px + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--mrj-freelancer-footer-height, 76px) + env(safe-area-inset-bottom, 0px));
   padding: 7px 10px env(safe-area-inset-bottom, 0px);
   border: 1px solid var(--mrj-color-border-subtle);
   border-radius: 22px;

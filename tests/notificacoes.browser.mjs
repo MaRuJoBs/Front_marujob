@@ -1,5 +1,5 @@
 ﻿// Teste local de UI com Axios simulado; nenhum contato real é aberto.
-import { createServer } from 'vite'
+import { createServer, preview } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
@@ -10,6 +10,7 @@ const chrome = process.env.CHROME_BIN || 'C:/Program Files/Google/Chrome/Applica
 assert.ok(existsSync(chrome), 'Configure CHROME_BIN.')
 const pasta = resolve('node_modules/.cache/feat44-browser')
 mkdirSync(pasta, { recursive: true })
+const execucao = Date.now()
 const roteiro = `
 import {createApp,h,nextTick} from 'vue'
 import {createRouter,createMemoryHistory} from 'vue-router'
@@ -29,6 +30,23 @@ library.add(fas);api.defaults.baseURL='/api/'
 const scenario=new URLSearchParams(location.search).get('scenario')||'lista'
 const profissional={id:7,name:'Profissional de teste com nome extenso',profissao:'Especialista em desenvolvimento e design',habilidades:['Vue.js','API','Acessibilidade'],profile_image:'/__imagem44',email:'email-privado@teste.invalid',telefone:'telefone-privado',latitude:-26.12345,groups:['administrativo']}
 const freelancer=scenario==='freelancer'
+const publicKey=btoa(String.fromCharCode(4,...new Uint8Array(64))).replace(/=+$/,'')
+if(freelancer){
+ let subscription=null
+ Object.defineProperty(window,'Notification',{value:{permission:'granted'},configurable:true})
+ Object.defineProperty(navigator.serviceWorker,'ready',{value:Promise.resolve({pushManager:{
+  getSubscription:async()=>subscription,
+  subscribe:async options=>subscription={
+   options, expirationTime:null,
+   toJSON:()=>({endpoint:'https://example.invalid/push',expirationTime:null,keys:{p256dh:'test',auth:'test'}})
+  }
+ }})})
+}
+const fixtureKey='historico-'+new URLSearchParams(location.search).get('largura')
+let historico=JSON.parse(sessionStorage.getItem(fixtureKey)||'null')??[
+ {id:101,evento:'candidatura_aprovada',titulo:'Candidatura aprovada!',mensagem:"Sua candidatura para a oportunidade 'Design' foi aprovada.",oportunidade:45,lida:false,criado_em:'2026-11-21T20:15:00Z'},
+ {id:102,evento:'candidatura_recusada',titulo:'Candidatura recusada',mensagem:"Sua candidatura para 'Ilustração' não foi selecionada.",oportunidade:null,lida:false,criado_em:'2026-11-20T20:15:00Z'}
+]
 let sala={id:42,name:'Conversa de teste com nome muito longo para a tela',other:{id:7},unread:2,last_message_at:'2026-11-03T13:00:00Z',last_message:{id:91,body:'Mensagem de teste',author:{id:7}}}
 let resolverSalas
 const esperaSalas = new Promise(resolve => { resolverSalas = resolve })
@@ -60,6 +78,19 @@ api.defaults.adapter=async config=>{
   const p=config.params.page||1,per=4,count=filtered.length
   const params=config.params.status?'&status='+config.params.status:''
   data={count,results:filtered.slice((p-1)*per,p*per),next:p*per<count?'?page='+(p+1)+params:null,previous:p>1?'?page='+(p-1)+params:null}
+ } else if(config.url==='push/vapid-public-key/') {
+  data={publicKey}
+ } else if(config.url==='push/subscriptions/') {
+  status=204
+ } else if(config.url==='notificacoes-freelancer/') {
+  const filtered=config.params.lida===false?historico.filter(n=>!n.lida):historico
+  const p=config.params.page||1
+  data={count:filtered.length,results:filtered.slice(p-1,p),next:p<filtered.length?'?page='+(p+1):null,previous:p>1?'?page='+(p-1):null}
+ } else if(config.url.startsWith('notificacoes-freelancer/')) {
+  const id=Number(config.url.split('/')[1])
+  historico=historico.map(n=>!id||n.id===id?{...n,lida:true}:n)
+  sessionStorage.setItem(fixtureKey,JSON.stringify(historico))
+  data=id?historico.find(n=>n.id===id):{atualizadas:1}
  } else if(config.url==='chat/rooms/') {
   if(freelancer) await esperaSalas
   data={results:scenario==='lista'||freelancer?[sala]:[],next:null}
@@ -115,7 +146,7 @@ const vite = await createServer({
         s.middlewares.use('/__feat44', (req, res) => {
           res.setHeader('Content-Type', 'text/html;charset=utf-8')
           res.end(
-            '<!doctype html><html lang="pt-BR"><meta name="viewport" content="width=device-width,initial-scale=1"><body><div id="app"></div><script type="module" src="/__runner44.js"></script></body></html>',
+            '<!doctype html><html lang="pt-BR"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><body><div id="app"></div><script type="module" src="/__runner44.js"></script></body></html>',
           )
         })
       },
@@ -141,12 +172,26 @@ const proc = spawn(
 )
 let ws,
   id = 0
+let producao
 const pendentes = new Map()
-async function cdp(method, params = {}) {
+async function cdp(method, params = {}, sessionId) {
   const n = ++id
   return new Promise((resolve, reject) => {
-    pendentes.set(n, { resolve, reject })
-    ws.send(JSON.stringify({ id: n, method, params }))
+    const timer = setTimeout(() => {
+      pendentes.delete(n)
+      reject(Error('Timeout CDP: ' + method + ' ' + (params.expression ?? '')))
+    }, 8000)
+    pendentes.set(n, {
+      resolve: (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      reject: (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    })
+    ws.send(JSON.stringify({ id: n, method, params, sessionId }))
   })
 }
 async function avaliar(expression) {
@@ -201,7 +246,9 @@ try {
   }
   await cdp('Page.enable')
   let total = 0
-  for (const largura of [320, 375, 390, 430, 1280])
+  for (const largura of process.argv.includes('--somente-pwa')
+    ? []
+    : [320, 375, 390, 430, 768, 1280])
     for (const scenario of ['lista', 'vazio', 'erro', 'conflito', 'sessao', 'freelancer']) {
       await cdp('Emulation.setDeviceMetricsOverride', {
         width: largura,
@@ -209,11 +256,65 @@ try {
         deviceScaleFactor: 1,
         mobile: largura < 500,
       })
-      await cdp('Page.navigate', { url: 'http://127.0.0.1:5194/__feat44?scenario=' + scenario })
+      await cdp('Page.navigate', {
+        url:
+          'http://127.0.0.1:5194/__feat44?scenario=' +
+          scenario +
+          '&largura=' +
+          largura +
+          '-' +
+          execucao,
+      })
       await aguardar("document.body.dataset.pronto==='sim'")
       await semOverflow()
       assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 1)
       if (scenario === 'freelancer') {
+        await aguardar(
+          "document.querySelector('.historico h3')?.textContent==='Candidatura aprovada!'",
+        )
+        assert.equal(
+          await avaliar("document.querySelector('.historico time').dateTime"),
+          '2026-11-21T20:15:00Z',
+        )
+        assert.equal(
+          await avaliar("document.querySelector('.historico li a').getAttribute('href')"),
+          '/oportunidade/45',
+        )
+        await aguardar(
+          'document.querySelector(\'nav a[href="/notificacoes"] .indicador\')?.textContent==="2"',
+        )
+        await clicarTexto('.historico li button', 'Marcar como lida')
+        await aguardar(
+          'document.querySelector(\'nav a[href="/notificacoes"] .indicador\')?.textContent==="1"',
+        )
+        assert.equal(
+          await avaliar("document.querySelector('.historico li').classList.contains('nao-lida')"),
+          false,
+        )
+        await clicarTexto('.historico nav button', 'Próxima')
+        await aguardar(
+          "document.querySelector('.historico h3')?.textContent==='Candidatura recusada'",
+        )
+        assert.equal(await avaliar("document.querySelector('.historico li a')"), null)
+        await clicarTexto('.historico button', 'Marcar todas como lidas')
+        await aguardar(
+          "document.querySelector('.historico [role=status]')?.textContent.includes('0 não lidas')",
+        )
+        await cdp('Page.reload')
+        await aguardar(
+          "document.body.dataset.pronto==='sim' && document.querySelector('.historico h3')?.textContent==='Candidatura aprovada!'",
+        )
+        assert.equal(
+          await avaliar("document.querySelector('.historico li').classList.contains('nao-lida')"),
+          false,
+        )
+        await avaliar(
+          "navigator.serviceWorker.dispatchEvent(new MessageEvent('message',{data:{type:'notificacao-candidatura'}}))",
+        )
+        await aguardar(
+          "window.teste.requests.filter(r=>r.url==='notificacoes-freelancer/'&&r.params.page===1).length===2",
+        )
+        assert.equal(await avaliar("document.querySelectorAll('.historico li').length"), 1)
         assert.ok(
           await avaliar(
             "document.querySelector('.avisos-chat [role=status]').textContent.includes('Carregando')",
@@ -225,7 +326,7 @@ try {
         )
         assert.equal(
           await avaliar(
-            'document.querySelector(\'nav a[href="/notificacoes"] .indicador\')?.textContent',
+            'document.querySelector(\'nav a[href="/mensagens"] .indicador\')?.textContent',
           ),
           '2',
         )
@@ -234,11 +335,65 @@ try {
           "document.querySelector('.avisos-chat [role=status]').textContent.includes('3 mensagens')",
         )
         assert.equal(await avaliar("document.querySelectorAll('.conversa').length"), 1)
+        await aguardar(
+          "window.teste.requests.filter(r=>r.url==='push/subscriptions/' && r.method==='post').length===1",
+        )
+        for (let i = 0; i < 3; i++) {
+          await avaliar(
+            "window.dispatchEvent(new Event('focus')); document.dispatchEvent(new Event('visibilitychange'))",
+          )
+        }
+        assert.equal(
+          await avaliar("window.teste.requests.filter(r=>r.url.startsWith('push/')).length"),
+          2,
+        )
         await foto('freelancer-' + largura)
+        const inset = largura === 390 ? 34 : 0
+        if (inset) await cdp('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: inset } })
+        const geometriaRodape = `(() => {
+          const shell = document.querySelector('.app')
+          const nav = document.querySelector('.app-navigation')
+          const painel = document.querySelector('.central-freelancer')
+          const area = shell.getBoundingClientRect()
+          const barra = nav.getBoundingClientRect()
+          return {
+            fundoContinuo: getComputedStyle(shell).backgroundColor === getComputedStyle(painel).backgroundColor,
+            reserva: parseFloat(getComputedStyle(shell).paddingBottom),
+            altura: barra.height,
+            distancia: innerHeight - barra.bottom,
+            contido: barra.left >= area.left && barra.right <= area.right &&
+              Math.abs((barra.left + barra.right) - (area.left + area.right)) < 1,
+          }
+        })()`
+        assert.deepEqual(await avaliar(geometriaRodape), {
+          fundoContinuo: true,
+          reserva: 88 + inset,
+          altura: 76 + inset,
+          distancia: 12,
+          contido: true,
+        })
+        await avaliar(`(() => {
+          const historico = document.querySelector('.historico')
+          historico.style.minHeight = innerHeight + 'px'
+          window.scrollTo(0, document.documentElement.scrollHeight)
+        })()`)
+        assert.ok(
+          await avaliar(`(() => {
+          const fim = document.querySelector('.central-freelancer').getBoundingClientRect().bottom
+          const topo = document.querySelector('.app-navigation').getBoundingClientRect().top
+          return scrollY > 0 && fim <= topo + 1
+        })()`),
+          'O fim da central fica acima da barra após rolar',
+        )
+        await avaliar(
+          "document.querySelector('.historico').style.minHeight = ''; window.scrollTo(0, 0)",
+        )
+        if (inset) await cdp('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: 0 } })
         await avaliar(
           "document.querySelector('.conversa').focus();document.querySelector('.conversa').click()",
         )
         await aguardar("window.teste.router.currentRoute.value.query.room==='42'")
+        assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 0)
         await aguardar(
           "window.teste.requests.some(r=>r.method==='post'&&r.url==='chat/rooms/42/read/')",
         )
@@ -399,9 +554,113 @@ try {
       console.log('PASSOU', scenario, largura)
       total++
     }
-  console.log(total + '/30 cenários de navegador aprovados; artefatos: ' + pasta)
+  if (total) console.log(total + '/36 cenários de navegador aprovados; artefatos: ' + pasta)
+
+  if (process.argv.includes('--pwa')) {
+    producao = await preview({
+      configFile: false,
+      preview: { host: '127.0.0.1', port: 5195, strictPort: true },
+    })
+    const origem = 'http://127.0.0.1:5195'
+    let registrationId
+    const navegacoes = []
+    const origHandler = ws.onmessage
+    ws.onmessage = (event) => {
+      origHandler(event)
+      const { method, params } = JSON.parse(event.data)
+      if (method === 'ServiceWorker.workerRegistrationUpdated') {
+        for (const registro of params.registrations) {
+          if (registro.scopeURL === origem + '/' && !registro.isDeleted)
+            registrationId = registro.registrationId
+        }
+      }
+      if (method === 'Page.frameNavigated' && !params.frame.parentId)
+        navegacoes.push(params.frame.url)
+    }
+    await cdp('ServiceWorker.enable')
+    await cdp('Browser.grantPermissions', { origin: origem, permissions: ['notifications'] })
+    await cdp('Page.navigate', { url: origem })
+    await aguardar("navigator.serviceWorker.controller?.scriptURL.endsWith('/sw.js')")
+    console.log('Service Worker de produção está ativo')
+    assert.ok(registrationId)
+    for (const decisao of [
+      { event: 'candidatura_aprovada', title: 'Candidatura aprovada!', id: 123 },
+      { event: 'candidatura_recusada', title: 'Candidatura recusada', id: 124 },
+    ]) {
+      await avaliar(`void (window.eventoPushTeste = new Promise(resolve => navigator.serviceWorker.addEventListener(
+        'message', ({data}) => resolve(data.type), { once: true })))`)
+      await cdp('ServiceWorker.deliverPushMessage', {
+        origin: origem,
+        registrationId,
+        data: JSON.stringify({
+          event: decisao.event,
+          title: decisao.title,
+          body: 'Resultado da candidatura',
+          notification_id: decisao.id,
+          url: 'https://example.invalid/',
+        }),
+      })
+      await aguardar(`navigator.serviceWorker.ready.then(r => r.getNotifications({tag:'candidatura-${decisao.id}'}))
+        .then(ns => ns.some(n => n.title === ${JSON.stringify(decisao.title)}))`)
+      assert.equal(await avaliar('window.eventoPushTeste'), 'notificacao-candidatura')
+    }
+    const { targetInfos } = await cdp('Target.getTargets')
+    const worker = targetInfos.find(
+      ({ type, url }) => type === 'service_worker' && url === origem + '/sw.js',
+    )
+    assert.ok(worker, 'Service Worker da versão de produção encontrado')
+    const { sessionId } = await cdp('Target.attachToTarget', {
+      targetId: worker.targetId,
+      flatten: true,
+    })
+    const clique = await cdp(
+      'Runtime.evaluate',
+      {
+        expression: `(async () => {
+        const [notification] = await self.registration.getNotifications({tag:'candidatura-123'})
+        self.dispatchEvent(new NotificationEvent('notificationclick', { notification }))
+      })()`,
+        awaitPromise: true,
+      },
+      sessionId,
+    )
+    assert.equal(clique.exceptionDetails, undefined)
+    await aguardar(
+      'location.origin === ' +
+        JSON.stringify(origem) +
+        " && Boolean(document.querySelector('#app form'))",
+    )
+    for (let i = 0; i < 80 && !navegacoes.includes(origem + '/notificacoes'); i++) await esperar(50)
+    assert.ok(
+      navegacoes.includes(origem + '/notificacoes'),
+      'Clique navega para a central na mesma origem',
+    )
+    assert.ok(navegacoes.every((url) => !url.startsWith('https://example.invalid')))
+
+    await cdp('Network.enable')
+    await cdp('Network.emulateNetworkConditions', {
+      offline: true,
+      latency: 0,
+      downloadThroughput: 0,
+      uploadThroughput: 0,
+    })
+    // Subrecursos privados precisam atravessar a rede, mesmo com a shell em cache.
+    assert.equal(
+      await avaliar("fetch('/api/notificacoes-freelancer/').then(() => false, () => true)"),
+      true,
+    )
+    await cdp('Page.navigate', { url: origem + '/notificacoes' })
+    await aguardar("Boolean(document.querySelector('#app form'))")
+    await avaliar(
+      'navigator.serviceWorker.ready.then(r => r.getNotifications()).then(ns => ns.forEach(n => n.close()))',
+    )
+    console.log(
+      'PASSOU PWA de produção: instalação, dois eventos push, clique interno, mensagem para a SPA e navegação offline',
+    )
+  }
 } finally {
   ws?.close()
   proc.kill()
   await vite.close()
+  if (producao) await new Promise((fim) => producao.httpServer.close(fim))
 }
