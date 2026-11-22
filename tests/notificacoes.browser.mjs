@@ -30,6 +30,18 @@ library.add(fas);api.defaults.baseURL='/api/'
 const scenario=new URLSearchParams(location.search).get('scenario')||'lista'
 const profissional={id:7,name:'Profissional de teste com nome extenso',profissao:'Especialista em desenvolvimento e design',habilidades:['Vue.js','API','Acessibilidade'],profile_image:'/__imagem44',email:'email-privado@teste.invalid',telefone:'telefone-privado',latitude:-26.12345,groups:['administrativo']}
 const freelancer=scenario==='freelancer'
+const publicKey=btoa(String.fromCharCode(4,...new Uint8Array(64))).replace(/=+$/,'')
+if(freelancer){
+ let subscription=null
+ Object.defineProperty(window,'Notification',{value:{permission:'granted'},configurable:true})
+ Object.defineProperty(navigator.serviceWorker,'ready',{value:Promise.resolve({pushManager:{
+  getSubscription:async()=>subscription,
+  subscribe:async options=>subscription={
+   options, expirationTime:null,
+   toJSON:()=>({endpoint:'https://example.invalid/push',expirationTime:null,keys:{p256dh:'test',auth:'test'}})
+  }
+ }})})
+}
 const fixtureKey='historico-'+new URLSearchParams(location.search).get('largura')
 let historico=JSON.parse(sessionStorage.getItem(fixtureKey)||'null')??[
  {id:101,evento:'candidatura_aprovada',titulo:'Candidatura aprovada!',mensagem:"Sua candidatura para a oportunidade 'Design' foi aprovada.",oportunidade:45,lida:false,criado_em:'2026-11-21T20:15:00Z'},
@@ -66,6 +78,10 @@ api.defaults.adapter=async config=>{
   const p=config.params.page||1,per=4,count=filtered.length
   const params=config.params.status?'&status='+config.params.status:''
   data={count,results:filtered.slice((p-1)*per,p*per),next:p*per<count?'?page='+(p+1)+params:null,previous:p>1?'?page='+(p-1)+params:null}
+ } else if(config.url==='push/vapid-public-key/') {
+  data={publicKey}
+ } else if(config.url==='push/subscriptions/') {
+  status=204
  } else if(config.url==='notificacoes-freelancer/') {
   const filtered=config.params.lida===false?historico.filter(n=>!n.lida):historico
   const p=config.params.page||1
@@ -317,6 +333,18 @@ try {
           "document.querySelector('.avisos-chat [role=status]').textContent.includes('3 mensagens')",
         )
         assert.equal(await avaliar("document.querySelectorAll('.conversa').length"), 1)
+        await aguardar(
+          "window.teste.requests.filter(r=>r.url==='push/subscriptions/' && r.method==='post').length===1",
+        )
+        for (let i = 0; i < 3; i++) {
+          await avaliar(
+            "window.dispatchEvent(new Event('focus')); document.dispatchEvent(new Event('visibilitychange'))",
+          )
+        }
+        assert.equal(
+          await avaliar("window.teste.requests.filter(r=>r.url.startsWith('push/')).length"),
+          2,
+        )
         await foto('freelancer-' + largura)
         await avaliar(
           "document.querySelector('.conversa').focus();document.querySelector('.conversa').click()",

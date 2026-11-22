@@ -76,6 +76,7 @@ watch(
 
 onMounted(() => {
   window.addEventListener('focus', aoRetomar)
+  window.addEventListener('online', aoRetomar)
   document.addEventListener('visibilitychange', aoRetomar)
   navigator.serviceWorker?.addEventListener('message', aoReceberPush)
 })
@@ -109,6 +110,7 @@ onUnmounted(() => {
   notificacoes.limpar()
   cancelarSincronizacaoPush()
   window.removeEventListener('focus', aoRetomar)
+  window.removeEventListener('online', aoRetomar)
   document.removeEventListener('visibilitychange', aoRetomar)
   navigator.serviceWorker?.removeEventListener('message', aoReceberPush)
 })

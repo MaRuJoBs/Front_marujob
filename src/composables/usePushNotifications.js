@@ -13,7 +13,25 @@ let fila = Promise.resolve()
 let operacao
 let encerrando
 let subscriptionSincronizada
-let aguardarAte = 0
+const intervaloVapid = 60 * 60 * 1000
+const intervaloFalha = 60 * 1000
+let esperaRede
+
+function assinatura(subscription) {
+  const { endpoint, expirationTime, keys } = subscription.toJSON()
+  return JSON.stringify([endpoint, expirationTime, keys?.p256dh, keys?.auth])
+}
+
+function proximaTentativa(error) {
+  const retryAfter = error.response?.headers?.['retry-after']
+  const agora = Date.now()
+  if (error.response?.status === 429 && retryAfter) {
+    const segundos = Number(retryAfter)
+    const limite = Number.isFinite(segundos) ? agora + segundos * 1000 : Date.parse(retryAfter)
+    if (limite > agora) return limite
+  }
+  return agora + intervaloFalha
+}
 
 export function pushSuportado() {
   return Boolean(
@@ -99,7 +117,7 @@ export function sincronizarPush({ voluntario = false, renovar = false, verificar
   if (operacao?.revisao === conta.revisao && !operacao.controller.signal.aborted)
     return operacao.promise
   if (!renovar && !voluntario && !verificar && subscriptionSincronizada) return
-  if (Date.now() < aguardarAte) return
+  if (esperaRede?.revisao === conta.revisao && Date.now() < esperaRede.ate) return
 
   const controller = new AbortController()
   const { signal } = controller
@@ -123,6 +141,7 @@ export function sincronizarPush({ voluntario = false, renovar = false, verificar
   pedido.promise = executar(async () => {
     let subscription
     let nova = false
+    let confirmada = subscriptionSincronizada
     const interrompida = new Promise((resolve) =>
       signal.addEventListener('abort', () => resolve(null), { once: true }),
     )
@@ -135,14 +154,14 @@ export function sincronizarPush({ voluntario = false, renovar = false, verificar
       const registro = await registroAtivo(signal)
       subscription = await registro.pushManager.getSubscription()
       if (!vigente()) return
-      if (
-        !renovar &&
-        !voluntario &&
-        subscription?.endpoint === subscriptionSincronizada?.endpoint &&
+      const valida =
         subscription &&
         (subscription.expirationTime == null || subscription.expirationTime > Date.now())
-      )
-        return
+      if (!valida || assinatura(subscription) !== confirmada?.assinatura) {
+        confirmada = subscriptionSincronizada = null
+      }
+      // Foco e visibilidade conferem o navegador. Só revalidamos VAPID periodicamente.
+      if (confirmada && Date.now() < confirmada.verificarVapidAte) return
       const chave = decodificarVapid(await obterChaveVapid(config))
       if (!vigente()) return
       if (subscription) {
@@ -153,13 +172,18 @@ export function sincronizarPush({ voluntario = false, renovar = false, verificar
           !mesmaChave ||
           (subscription.expirationTime != null && subscription.expirationTime <= Date.now())
         ) {
-          await removerSubscription(subscription.endpoint, config).catch(() => {})
+          await removerSubscription(subscription.endpoint, config)
           if (!vigente()) return
+          confirmada = subscriptionSincronizada = null
           await subscription.unsubscribe()
           subscription = null
         }
       }
       if (!vigente()) return
+      if (confirmada) {
+        confirmada.verificarVapidAte = Date.now() + intervaloVapid
+        return
+      }
       if (!subscription) {
         subscription = await registro.pushManager.subscribe({
           userVisibleOnly: true,
@@ -175,25 +199,21 @@ export function sincronizarPush({ voluntario = false, renovar = false, verificar
       await registrarSubscription(subscription, config)
       if (!vigente()) return
       preferencia(conta.id, 'desativado', '0')
-      subscriptionSincronizada = { endpoint: subscription.endpoint }
+      subscriptionSincronizada = {
+        assinatura: assinatura(subscription),
+        verificarVapidAte: Date.now() + intervaloVapid,
+      }
+      esperaRede = null
       estado.value = 'ativo'
     } catch (error) {
       if (nova && encerrando?.revisao !== conta.revisao)
         await subscription.unsubscribe().catch(() => {})
       if (!vigente()) return
-      const status = error.response?.status
-      if (status === 429) {
-        const retryAfter = error.response.headers?.['retry-after']
-        const segundos = Number(retryAfter)
-        aguardarAte = !retryAfter
-          ? Date.now() + 60000
-          : Number.isFinite(segundos)
-            ? Date.now() + segundos * 1000
-            : Date.parse(retryAfter) || Date.now() + 60000
-      }
+      esperaRede = { revisao: conta.revisao, ate: proximaTentativa(error) }
+      if (confirmada) return
       estado.value = 'erro'
       mensagem.value =
-        status === 429
+        error.response?.status === 429
           ? 'Aguarde um pouco antes de tentar ativar novamente.'
           : 'Não foi possível ativar os avisos neste dispositivo. Tente novamente mais tarde.'
     } finally {

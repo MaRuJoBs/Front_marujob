@@ -62,7 +62,7 @@ beforeEach(() => {
       async subscribe(options) {
         criadas++
         assert.equal(options.userVisibleOnly, true)
-        assert.deepEqual(options.applicationServerKey, decodificarVapid(chave))
+        assert.equal(options.applicationServerKey.length, 65)
         subscription = {
           endpoint,
           options,
@@ -225,6 +225,138 @@ test('logout remove o endpoint com JWT anterior e cancela localmente mesmo offli
   assert.equal(removidas, 1)
   assert.equal(sessao.usuario, null)
   assert.equal(localStorage.getItem('token'), null)
+})
+
+test('foco, visibilidade e renovação sem mudança não recadastram a inscrição', async (t) => {
+  t.mock.method(Date, 'now', () => agora)
+  let agora = 1000
+  autenticar()
+  Notification.permission = 'granted'
+  await sincronizarPush()
+  for (let i = 0; i < 10; i++) {
+    await Promise.all([sincronizarPush({ verificar: true }), sincronizarPush({ renovar: true })])
+  }
+  assert.deepEqual(
+    chamadas.map((c) => c.method),
+    ['get', 'post'],
+  )
+  agora += 60 * 60 * 1000
+  await sincronizarPush({ verificar: true })
+  assert.deepEqual(
+    chamadas.map((c) => c.method),
+    ['get', 'post', 'get'],
+  )
+  const anterior = subscription
+  subscription = {
+    ...anterior,
+    toJSON: () => ({ ...subscriptionJson, keys: { ...subscriptionJson.keys, auth: 'renovada' } }),
+  }
+  await sincronizarPush({ renovar: true })
+  assert.equal(chamadas.filter((c) => c.method === 'post').length, 2)
+  assert.equal(JSON.parse(chamadas.at(-1).data).keys.auth, 'renovada')
+  assert.equal(usePushNotifications().estado.value, 'ativo')
+})
+
+test('429 em inscrição ativa preserva o estado e respeita Retry-After', async (t) => {
+  let agora = 1000
+  t.mock.method(Date, 'now', () => agora)
+  autenticar()
+  Notification.permission = 'granted'
+  await sincronizarPush()
+  const online = transporte
+  transporte = () => {
+    throw Object.assign(new Error('Limite'), {
+      response: { status: 429, headers: { 'retry-after': '10' } },
+    })
+  }
+  agora += 60 * 60 * 1000
+  await sincronizarPush({ verificar: true })
+  assert.equal(usePushNotifications().estado.value, 'ativo')
+  assert.equal(usePushNotifications().mensagem.value, '')
+  agora += 9999
+  await sincronizarPush({ verificar: true })
+  assert.equal(chamadas.length, 3)
+  agora++
+  transporte = online
+  await sincronizarPush({ verificar: true })
+  assert.deepEqual(
+    chamadas.map((c) => c.method),
+    ['get', 'post', 'get', 'get'],
+  )
+  assert.equal(removidas, 0)
+})
+
+test('429 no primeiro cadastro permite recuperação e não bloqueia a próxima conta', async (t) => {
+  let agora = 1000
+  t.mock.method(Date, 'now', () => agora)
+  autenticar()
+  Notification.permission = 'granted'
+  const online = transporte
+  transporte = (config) => {
+    if (config.method === 'post') {
+      throw Object.assign(new Error('Limite'), {
+        response: { status: 429, headers: { 'retry-after': '10' } },
+      })
+    }
+    return online(config)
+  }
+  await sincronizarPush()
+  assert.equal(usePushNotifications().estado.value, 'erro')
+  await sincronizarPush({ verificar: true })
+  assert.equal(chamadas.length, 2)
+  agora += 10000
+  transporte = online
+  await sincronizarPush({ verificar: true })
+  assert.equal(usePushNotifications().estado.value, 'ativo')
+  await logout()
+  autenticar(2)
+  await sincronizarPush()
+  assert.equal(chamadas.at(-1).headers.Authorization, 'Bearer token-2')
+  assert.equal(chamadas.find((c) => c.method === 'delete').headers.Authorization, 'Bearer token-1')
+})
+
+test('revalidação detecta rotação VAPID e troca a inscrição uma vez', async (t) => {
+  let agora = 1000
+  t.mock.method(Date, 'now', () => agora)
+  autenticar()
+  Notification.permission = 'granted'
+  await sincronizarPush()
+  const novaChave = Buffer.concat([Buffer.of(4), Buffer.alloc(64, 1)]).toString('base64url')
+  transporte = ({ method }) => (method === 'get' ? { publicKey: novaChave } : null)
+  agora += 60 * 60 * 1000
+  await sincronizarPush({ verificar: true })
+  assert.deepEqual(subscription.options.applicationServerKey, decodificarVapid(novaChave))
+  assert.equal(criadas, 2)
+  assert.equal(removidas, 1)
+  await sincronizarPush({ verificar: true })
+  assert.deepEqual(
+    chamadas.map((c) => c.method),
+    ['get', 'post', 'get', 'delete', 'post'],
+  )
+})
+
+test('logout cancela POST pendente e desvincula com o JWT anterior', async () => {
+  autenticar()
+  Notification.permission = 'granted'
+  const online = transporte
+  const enviou = Promise.withResolvers()
+  transporte = (config) => {
+    if (config.method !== 'post') return online(config)
+    enviou.resolve()
+    return new Promise((_, reject) => {
+      config.signal.addEventListener('abort', () => reject(new Error('Cancelado')), { once: true })
+    })
+  }
+  const pedido = sincronizarPush()
+  await enviou.promise
+  await Promise.all([logout(), pedido])
+  assert.deepEqual(
+    chamadas.map((c) => c.method),
+    ['get', 'post', 'delete'],
+  )
+  assert.equal(chamadas.at(-1).headers.Authorization, 'Bearer token-1')
+  assert.equal(removidas, 1)
+  assert.equal(sessao.usuario, null)
 })
 
 test('logout interrompe uma permissão do navegador ainda sem resposta', async () => {
