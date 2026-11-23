@@ -103,12 +103,12 @@ const getImageUrl = (path) => {
 }
 
 const atualizarSlide = () => {
-  if (!slideContainer.value) return
+  const primeiro = slideContainer.value?.firstElementChild
+  const segundo = primeiro?.nextElementSibling
+  if (!segundo) return
 
-  const largura = slideContainer.value.clientWidth
-  if (!largura) return
-
-  slideAtual.value = Math.round(slideContainer.value.scrollLeft / largura)
+  const passo = segundo.offsetLeft - primeiro.offsetLeft
+  if (passo > 0) slideAtual.value = Math.round(slideContainer.value.scrollLeft / passo)
 }
 </script>
 
@@ -163,7 +163,7 @@ const atualizarSlide = () => {
     <p v-else-if="!jobs.length" class="estado-jobs vazio-jobs" role="status">
       Nenhuma oportunidade disponível no momento.
     </p>
-    <section v-revelar class="principais">
+    <section v-if="slides.length" v-revelar class="principais">
       <h2>Oportunidades em destaque</h2>
 
       <div class="subtitulo">
@@ -412,6 +412,7 @@ const atualizarSlide = () => {
   margin-bottom: 18px;
 }
 .slide-scroll {
+  position: relative;
   display: flex;
   overflow-x: auto;
   gap: 16px;
@@ -422,7 +423,7 @@ const atualizarSlide = () => {
 }
 .slide {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 100%;
   width: 100%;
@@ -465,6 +466,10 @@ const atualizarSlide = () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.imagem:has(.selo) > i {
+  align-self: start;
+  margin-top: var(--mrj-space-2);
 }
 .selo {
   position: absolute;
@@ -559,7 +564,7 @@ const atualizarSlide = () => {
 }
 .grid-oportunidades {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
   gap: 16px;
 }
 .mini-card {
@@ -650,7 +655,7 @@ const atualizarSlide = () => {
   margin-top: 8px;
 }
 .mini-card .botao-detalhes {
-  margin-top: auto;
+  margin-top: 0;
 }
 .btn-mais {
   margin: 24px auto 0;

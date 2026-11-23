@@ -85,6 +85,7 @@ export const configurarGoogle = async (buttonElement, callback, ativo = () => tr
     estado.clientId = clientId
   }
 
+  const container = buttonElement.parentElement
   sdk.renderButton(buttonElement, {
     type: 'standard',
     theme: 'outline',
@@ -92,7 +93,7 @@ export const configurarGoogle = async (buttonElement, callback, ativo = () => tr
     text: 'signin_with',
     locale: 'pt-BR',
     shape: 'rect',
-    width: 300,
+    width: Math.min(300, container?.clientWidth || 300),
   })
   return true
 }

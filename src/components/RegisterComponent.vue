@@ -62,7 +62,7 @@ const {
 
     <p class="subtitle">Junte-se à nossa plataforma e mostre seu trabalho para o mundo.</p>
 
-    <form class="form" @submit.prevent="criarConta" :aria-busy="ocupado">
+    <form class="form mrj-ui" @submit.prevent="criarConta" :aria-busy="ocupado">
       <div class="card">
         <label :for="`${campoId}-name`">Nome completo (obrigatório)</label>
 
@@ -324,6 +324,7 @@ h1 {
 }
 
 .form {
+  color: var(--mrj-color-text);
   background: #e8dcf3;
   border-radius: 20px;
   padding: 25px;
