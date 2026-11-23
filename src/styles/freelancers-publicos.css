@@ -400,3 +400,17 @@ a:focus-visible {
   overflow: hidden;
   clip-path: inset(50%);
 }
+/* F61 · Desktop: diretório em grid de cards; reserva da barra inferior removida. */
+@media (min-width: 64rem) {
+  .diretorio {
+    min-height: auto;
+    padding: 32px 40px 56px;
+    background: transparent;
+  }
+  .seletor-categoria {
+    max-width: 24rem;
+  }
+  .lista-profissionais {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  }
+}

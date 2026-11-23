@@ -412,4 +412,13 @@ fieldset.formulario {
 .toast-sucesso a {
   color: var(--mrj-color-success);
 }
+/* F61 · Desktop (layout wide): largura de leitura/formulário centralizada. */
+@media (min-width: 64rem) {
+  .portfolio-add {
+    max-width: 48rem;
+    min-height: auto;
+    margin-inline: auto;
+    padding: 32px 40px 56px;
+  }
+}
 </style>

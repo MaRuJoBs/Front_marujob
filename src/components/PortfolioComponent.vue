@@ -333,4 +333,11 @@ onMounted(carregar)
   padding: 4px 8px;
   font-size: 0.75rem;
 }
+/* F61 · Desktop (layout wide): grid de projetos com minmax(16rem) em várias colunas. */
+@media (min-width: 64rem) {
+  .portfolio {
+    min-height: auto;
+    padding: 24px 40px 56px;
+  }
+}
 </style>

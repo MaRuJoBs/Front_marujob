@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, nextTick, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import ConfirmarExclusaoVaga from '@/components/ConfirmarExclusaoVaga.vue'
 import fundoEmpresa from '@/assets/images/fundoempresa.png'
 import { sessao } from '@/services/authService'
@@ -7,6 +8,7 @@ import { storeToRefs } from 'pinia'
 import { useVagasStore } from '@/stores/vagas'
 import { useGerenciamentoVagas } from '@/stores/gerenciamentoVagas'
 import { formatarTempo, formatarPagamento } from '@/utils/vagaForm'
+import { ANCORA_VAGAS_EMPRESA } from '@/components/navegacaoDesktop'
 
 const vagasStore = useVagasStore()
 const { confirmacao } = storeToRefs(vagasStore)
@@ -35,6 +37,25 @@ watch(
     busca.value = ''
     categoria.value = ''
     if (sessao.tipo === 'empresa') gerenciamento.carregar()
+  },
+  { immediate: true },
+)
+
+// F61: "Gerenciar vagas" (navegação desktop) abre /homeEmpresa#vagas-empresa. Depois de carregar,
+// leva à lista de vagas (ou ao painel de vagas, quando ainda não há nenhuma) e move o foco.
+const route = useRoute()
+watch(
+  () => [route.hash, carregando.value],
+  async ([hash, ocupado], anterior) => {
+    if (ocupado) return
+    await nextTick()
+    if (hash === ANCORA_VAGAS_EMPRESA) {
+      const secao =
+        document.getElementById(ANCORA_VAGAS_EMPRESA.slice(1)) ??
+        document.querySelector('.ultima-publicada')
+      secao?.scrollIntoView({ block: 'start' })
+      secao?.querySelector('h2')?.focus({ preventScroll: true })
+    } else if (anterior?.[0] === ANCORA_VAGAS_EMPRESA) window.scrollTo({ top: 0 })
   },
   { immediate: true },
 )
@@ -138,11 +159,12 @@ onMounted(() => {
       </div>
     </section>
     <section
+      id="vagas-empresa"
       class="section painel-vagas gerenciamento-vagas"
       v-if="!carregando && !erro && vagas.length"
     >
       <div class="section-title">
-        <h2>Vagas da empresa</h2>
+        <h2 tabindex="-1">Vagas da empresa</h2>
         <span class="quantidade-vagas">{{ vagas.length }}</span>
       </div>
       <div class="filtros-vagas">
@@ -609,6 +631,68 @@ button:disabled {
   .price {
     padding-inline: 4px;
     font-size: 12px;
+  }
+}
+/* F61 · Desktop: painel. Boas-vindas e última vaga lado a lado; gerenciamento em largura total,
+   filtros em linha e vagas em grid minmax(). Sem dados novos: só o que a página já mostra. */
+@media (min-width: 64rem) {
+  .home {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-content: start;
+    gap: 24px;
+    min-height: auto;
+    padding: 32px 40px 56px;
+    background: transparent;
+  }
+  .home > :not(.welcome, .ultima-publicada) {
+    grid-column: 1 / -1;
+  }
+  .confirmacao-publicacao {
+    margin: 0;
+  }
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 32px;
+    border: 1px solid var(--mrj-color-border-subtle);
+    border-radius: var(--mrj-radius-lg);
+  }
+  .welcome h1 {
+    font-size: clamp(1.5rem, 1rem + 1vw, 2rem);
+  }
+  .new-job {
+    align-self: flex-start;
+    margin-top: 20px;
+    padding-inline: 20px;
+  }
+  .painel-vagas {
+    margin: 0;
+    padding: 20px;
+  }
+  .filtros-vagas {
+    grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
+    column-gap: 16px;
+    margin-bottom: 16px;
+  }
+  .filtros-vagas > label[for] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .busca-vagas {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .categoria-vagas {
+    display: grid;
+    grid-column: 2;
+    grid-row: 1 / 3;
+    gap: 8px;
+  }
+  .lista-vagas {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 12px;
   }
 }
 </style>

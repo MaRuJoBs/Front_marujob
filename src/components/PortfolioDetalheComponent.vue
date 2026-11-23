@@ -263,4 +263,13 @@ const {
   display: grid;
   place-items: center;
 }
+/* F61 · Desktop (layout wide): largura de leitura/formulário centralizada. */
+@media (min-width: 64rem) {
+  .portfolio-detalhe {
+    max-width: 48rem;
+    min-height: auto;
+    margin-inline: auto;
+    padding: 32px 40px 56px;
+  }
+}
 </style>

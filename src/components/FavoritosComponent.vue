@@ -246,4 +246,16 @@ watch(
 .bloco-vaga > .estado {
   margin: 16px;
 }
+/* F61 · Tablet e desktop (layout wide): o grid minmax(19rem) passa a ter colunas. */
+@media (min-width: 48rem) {
+  .body {
+    padding-inline: 32px;
+  }
+}
+@media (min-width: 64rem) {
+  .body {
+    min-height: auto;
+    padding: 32px 40px 56px;
+  }
+}
 </style>

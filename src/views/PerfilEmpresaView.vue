@@ -611,4 +611,20 @@ main > .erro {
     font-size: 18px;
   }
 }
+/* F61 · Desktop: seções do perfil em duas colunas, largura de leitura controlada. */
+@media (min-width: 64rem) {
+  .perfil-empresa {
+    min-height: auto;
+    background: transparent;
+  }
+  main {
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 32px 40px 56px;
+  }
+  .secoes-perfil {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+  }
+}
 </style>

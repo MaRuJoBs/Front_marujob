@@ -50,3 +50,17 @@
     --mrj-motion-duration: 0ms;
   }
 }
+
+/* F61 · Layout desktop. Escopo no shell (.app), sem publicar em :root.
+   Breakpoints mobile-first (custom properties não funcionam em @media; usar estes valores):
+   até 47.99rem (767px) mobile inalterado · 48rem (768px) tablet · 64rem (1024px) desktop,
+   sidebar recolhida · 80rem (1280px) sidebar expandida · 90rem (1440px) desktop amplo. */
+.app {
+  --mrj-layout-sidebar-compact: 4.5rem;
+  --mrj-layout-sidebar-expanded: 15rem;
+  --mrj-layout-sidebar: var(--mrj-layout-sidebar-compact);
+  --mrj-layout-content-max: 72rem;
+  --mrj-layout-content-max-wide: 80rem;
+  --mrj-layout-gutter: 2rem;
+  --mrj-layout-page-background: #f7f8fc;
+}

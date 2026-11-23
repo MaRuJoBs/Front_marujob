@@ -784,6 +784,61 @@ const atualizarSlide = () => {
     }
   }
 }
+/* F61 · Tablet (≥ 48rem, layout wide): destaques lado a lado e título com teto fixo.
+   Abaixo de 48rem nada muda. */
+@media (min-width: 48rem) {
+  .home {
+    padding-inline: 32px;
+  }
+  .home-hero h1 {
+    font-size: clamp(2.375rem, 4.5cqw, 3rem);
+    max-width: 18ch;
+  }
+  .slide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* F61 · Desktop (≥ 64rem): a sidebar assume a marca e o atalho de Favoritos; o título cresce
+   pouco e tem teto (a F59 escalava com a largura do container até 68px). */
+@media (min-width: 64rem) {
+  .home {
+    min-height: auto;
+    padding: 8px 40px 56px;
+  }
+  .home-topbar {
+    display: none;
+  }
+  .home-hero {
+    padding: 40px 0 36px;
+  }
+  .home-hero h1 {
+    font-size: clamp(2.5rem, 1.6rem + 1.4vw, 3.25rem);
+    max-width: 20ch;
+  }
+  .hero-descricao {
+    max-width: 52ch;
+    font-size: 1rem;
+  }
+  .grid-oportunidades {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+  /* Rolagem, scroll snap e indicadores continuam; só a barra nativa sai. */
+  .slide-scroll {
+    scrollbar-width: none;
+  }
+  .slide-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+/* ≥ 80rem: cada slide (2 cards) ocupa 2/3 da largura, então 3 cards ficam visíveis com a mesma
+   largura do grid de 3 colunas. O passo do indicador é medido entre slides e segue correto. */
+@media (min-width: 80rem) {
+  .slide {
+    width: calc((200% - 16px) / 3);
+    min-width: calc((200% - 16px) / 3);
+  }
+}
 @keyframes home-revelar {
   from {
     opacity: 0;

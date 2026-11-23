@@ -485,4 +485,25 @@ button {
   max-width: 100%;
   overflow-wrap: anywhere;
 }
+/* F61 · Desktop: candidaturas em grid de cards, filtros com largura do rótulo. */
+@media (min-width: 64rem) {
+  .notificacoes-empresa {
+    max-width: 72rem;
+    min-height: auto;
+    margin-inline: auto;
+    padding: 32px 40px 56px;
+    background: transparent;
+  }
+  h1 {
+    font-size: clamp(1.5rem, 1rem + 1vw, 2rem);
+  }
+  .filtros button {
+    flex: 0 1 auto;
+    padding-inline: 20px;
+  }
+  .lista {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+  }
+}
 </style>

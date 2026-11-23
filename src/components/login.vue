@@ -372,4 +372,40 @@ button:disabled {
   display: flex;
   justify-content: center;
 }
+/* F61 · Desktop: apresentação (marca e título) à esquerda e formulário em cartão à direita,
+   centralizados com largura máxima. Campos, Google e autenticação não mudam. */
+@media (min-width: 64rem) {
+  .paginaLogin {
+    display: grid;
+    place-items: center;
+    padding: 48px;
+  }
+  .content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 26rem);
+    align-items: center;
+    column-gap: 64px;
+    width: min(100%, 60rem);
+    padding: 0;
+  }
+  .header,
+  .info {
+    grid-column: 1;
+    justify-content: flex-start;
+  }
+  .header {
+    align-self: end;
+  }
+  .info {
+    align-self: start;
+  }
+  .form-card {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    padding: 32px;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 12px 40px #4c35671a;
+  }
+}
 </style>

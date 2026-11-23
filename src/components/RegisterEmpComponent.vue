@@ -448,4 +448,29 @@ h1 {
 .box input::placeholder {
   color: #555;
 }
+/* F61 · Desktop: apresentação à esquerda e formulário à direita, centralizados. Campos,
+   validações, Google e envio não mudam. */
+@media (min-width: 64rem) {
+  .container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(24rem, 30rem);
+    align-content: start;
+    column-gap: 64px;
+    padding: 56px max(48px, calc((100% - 66rem) / 2));
+  }
+  .container > * {
+    grid-column: 1;
+  }
+  .container > .form {
+    grid-column: 2;
+    grid-row: 1 / span 8;
+  }
+  .top {
+    justify-content: flex-start;
+    gap: 32px;
+  }
+  h1 {
+    margin-top: 32px;
+  }
+}
 </style>

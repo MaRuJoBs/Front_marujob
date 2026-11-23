@@ -124,4 +124,11 @@ a:focus-visible {
     height: 36px;
   }
 }
+/* F61 · Desktop: a sidebar já tem a marca, o Painel (voltar ao início) e Notificações com
+   indicador; o cabeçalho mobile da empresa sai para não duplicar a navegação. */
+@media (min-width: 64rem) {
+  .empresa-header {
+    display: none;
+  }
+}
 </style>

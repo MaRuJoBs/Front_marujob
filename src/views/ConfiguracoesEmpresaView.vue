@@ -62,4 +62,14 @@ a:focus-visible {
   outline: 3px solid var(--mrj-color-focus);
   outline-offset: 3px;
 }
+/* F61 · Desktop: reserva da barra inferior removida; largura de leitura mantida. */
+@media (min-width: 64rem) {
+  .configuracoes-empresa {
+    min-height: auto;
+    background: transparent;
+  }
+  main {
+    padding: 32px 40px 56px;
+  }
+}
 </style>

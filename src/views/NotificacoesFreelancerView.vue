@@ -179,4 +179,19 @@ time {
 .central-freelancer :deep(button) {
   font-family: inherit;
 }
+/* F61 · Desktop: largura de leitura e histórico em grid de cards. */
+@media (min-width: 64rem) {
+  .central-freelancer {
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 32px 40px 56px;
+    background: transparent;
+  }
+  h1 {
+    font-size: clamp(1.5rem, 1rem + 1vw, 2rem);
+  }
+  ul {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  }
+}
 </style>

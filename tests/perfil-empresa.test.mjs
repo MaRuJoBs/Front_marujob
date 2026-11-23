@@ -143,7 +143,8 @@ test('erros 400, 403, 503 e rede preservam formulário e permitem nova tentativa
 })
 test('guard restringe rota a empresa e redireciona visitante', async () => {
   const rota = routes.find((r) => r.path === '/empresa/perfil')
-  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa' })
+  // F61: layout desktop opt-in; a proteção por tipo de conta continua a mesma.
+  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa', layout: 'wide' })
   sessao.tipo = 'usuario'
   assert.equal((await protegerRota({ ...rota, query: {} })).path, '/home')
   limparSessao()
@@ -169,14 +170,30 @@ test('401 encerra a sessão pelo interceptor existente', async () => {
   }
 })
 
-test('rotas empresariais preservam o shell de aplicativo sem layout wide', () => {
+// F51 definiu a área empresarial como aplicativo compacto. A F61 mantém isso abaixo de 1024px e
+// libera a largura desktop só com a navegação lateral (≥ 64rem). O opt-in `layout: 'wide'` não
+// amplia a empresa no mobile/tablet porque `.app--empresa` fixa o shell em 26.25rem fora do bloco
+// desktop; a medida real em 390/768px fica com tests/responsividade.browser.mjs.
+test('rotas empresariais: shell compacto abaixo de 1024px e layout amplo só no desktop', async () => {
   const empresariais = routes.filter((rota) => rota.meta?.tipo === 'empresa')
   assert.equal(empresariais.length, 9)
   for (const rota of empresariais) {
     assert.equal(rota.meta.requiresAuth, true, rota.path)
-    assert.equal(rota.meta.layout, undefined, rota.path)
+    assert.equal(rota.meta.layout, 'wide', rota.path)
   }
   for (const path of ['/criar-vaga', '/editar-vaga/:id']) {
     assert.equal(routes.find((rota) => rota.path === path).meta.hideFooter, true)
   }
+  const { readFile } = await import('node:fs/promises')
+  const shell = (await readFile(new URL('../src/styles/shell.css', import.meta.url), 'utf8'))
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+  const desktop = shell.indexOf('@media (min-width: 64rem)')
+  assert.ok(desktop > 0, 'bloco desktop do shell')
+  const empresa = shell.match(/\.app--empresa\s*\{[^}]*\}/)
+  assert.ok(empresa && shell.indexOf(empresa[0]) < desktop, 'regra compacta fora do bloco desktop')
+  assert.match(empresa[0], /--mrj-shell-width:\s*26\.25rem/)
+  // A largura desktop do conteúdo e a sidebar só existem dentro de media queries ≥ 64rem.
+  const antesDoDesktop = shell.slice(0, desktop)
+  assert.doesNotMatch(antesDoDesktop, /--mrj-layout-content-max/)
+  assert.doesNotMatch(antesDoDesktop, /app--desktop-nav/)
 })
