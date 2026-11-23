@@ -27,7 +27,8 @@ export default defineConfig({
     process.env.VITE_VUE_DEVTOOLS === 'true' && vueDevTools(),
 
     VitePWA({
-      registerType: 'autoUpdate',
+      // O navegador baixa a atualização e aguarda o encerramento das abas antigas.
+      registerType: 'prompt',
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
@@ -40,7 +41,13 @@ export default defineConfig({
       manifest: false,
 
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
+        globPatterns: [
+          'index.html',
+          'manifest.webmanifest',
+          'registerSW.js',
+          'icons/icon-{192,512}.png',
+          'assets/**/*.{js,css,ico,png,svg,woff2}',
+        ],
       },
     }),
   ],
