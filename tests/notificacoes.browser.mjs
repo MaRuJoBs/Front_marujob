@@ -1,8 +1,8 @@
-﻿// Teste local de UI com Axios simulado; nenhum contato real é aberto.
+// Teste local de UI com Axios simulado; nenhum contato real é aberto.
 import { createServer, preview } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import assert from 'node:assert/strict'
 import { setTimeout as esperar } from 'node:timers/promises'
@@ -11,6 +11,7 @@ assert.ok(existsSync(chrome), 'Configure CHROME_BIN.')
 const pasta = resolve('node_modules/.cache/feat44-browser')
 mkdirSync(pasta, { recursive: true })
 const execucao = Date.now()
+const perfilChrome = resolve(pasta, 'chrome-profile-' + execucao)
 const roteiro = `
 import {createApp,h,nextTick} from 'vue'
 import {createRouter,createMemoryHistory} from 'vue-router'
@@ -164,8 +165,8 @@ const proc = spawn(
     '--disable-gpu',
     '--no-first-run',
     '--no-default-browser-check',
-    `--user-data-dir=${pasta}/chrome-profile`,
-    '--remote-debugging-port=19444',
+    `--user-data-dir=${perfilChrome}`,
+    '--remote-debugging-port=0',
     'about:blank',
   ],
   { windowsHide: true, stdio: 'ignore' },
@@ -173,14 +174,15 @@ const proc = spawn(
 let ws,
   id = 0
 let producao
+let navegadorPwa
 const pendentes = new Map()
-async function cdp(method, params = {}, sessionId) {
+async function cdp(method, params = {}, sessionId, conexao = ws) {
   const n = ++id
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pendentes.delete(n)
-      reject(Error('Timeout CDP: ' + method + ' ' + (params.expression ?? '')))
-    }, 8000)
+      reject(Error('Timeout CDP: ' + method + ' ' + (params.expression ?? params.url ?? '')))
+    }, 15000)
     pendentes.set(n, {
       resolve: (value) => {
         clearTimeout(timer)
@@ -191,17 +193,22 @@ async function cdp(method, params = {}, sessionId) {
         reject(error)
       },
     })
-    ws.send(JSON.stringify({ id: n, method, params, sessionId }))
+    conexao.send(JSON.stringify({ id: n, method, params, sessionId }))
   })
 }
-async function avaliar(expression) {
-  const r = await cdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
+async function avaliar(expression, sessionId, conexao = ws) {
+  const r = await cdp(
+    'Runtime.evaluate',
+    { expression, returnByValue: true, awaitPromise: true },
+    sessionId,
+    conexao,
+  )
   if (r.exceptionDetails) throw Error(JSON.stringify(r.exceptionDetails))
   return r.result.value
 }
-async function aguardar(expression) {
-  for (let i = 0; i < 100; i++) {
-    if (await avaliar(expression)) return
+async function aguardar(expression, tentativas = 100, sessionId, conexao = ws) {
+  for (let i = 0; i < tentativas; i++) {
+    if (await avaliar(expression, sessionId, conexao)) return
     await esperar(40)
   }
   throw Error('Timeout: ' + expression)
@@ -221,9 +228,13 @@ const semOverflow = async () =>
   )
 try {
   let target
-  for (let i = 0; i < 80; i++) {
+  let portaChrome
+  for (let i = 0; i < 160; i++) {
     try {
-      target = (await (await fetch('http://127.0.0.1:19444/json/list')).json()).find(
+      portaChrome = readFileSync(resolve(perfilChrome, 'DevToolsActivePort'), 'utf8').split(
+        /\r?\n/,
+      )[0]
+      target = (await (await fetch(`http://127.0.0.1:${portaChrome}/json/list`)).json()).find(
         (t) => t.type === 'page',
       )
       if (target) break
@@ -265,7 +276,7 @@ try {
           '-' +
           execucao,
       })
-      await aguardar("document.body.dataset.pronto==='sim'")
+      await aguardar("document.body?.dataset.pronto==='sim'")
       await semOverflow()
       assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 1)
       if (scenario === 'freelancer') {
@@ -302,7 +313,7 @@ try {
         )
         await cdp('Page.reload')
         await aguardar(
-          "document.body.dataset.pronto==='sim' && document.querySelector('.historico h3')?.textContent==='Candidatura aprovada!'",
+          "document.body?.dataset.pronto==='sim' && document.querySelector('.historico h3')?.textContent==='Candidatura aprovada!'",
         )
         assert.equal(
           await avaliar("document.querySelector('.historico li').classList.contains('nao-lida')"),
@@ -557,12 +568,71 @@ try {
   if (total) console.log(total + '/36 cenários de navegador aprovados; artefatos: ' + pasta)
 
   if (process.argv.includes('--pwa')) {
+    const index = readFileSync('dist/index.html', 'utf8')
+    const workerOriginal = readFileSync('dist/sw.js', 'utf8')
+    assert.ok(!workerOriginal.includes('__WB_MANIFEST'))
+    const workerAtualizado = workerOriginal.replace(
+      /"revision":"[^"]+","url":"index\.html"/,
+      '"revision":"f55-v2","url":"index.html"',
+    )
+    assert.notEqual(workerAtualizado, workerOriginal, 'O build contém uma revisão para a shell')
+    let versao = 1
+    let falharPrecache = false
+    let downloadsFalhos = 0
+    let downloadsComSucesso = 0
     producao = await preview({
       configFile: false,
       preview: { host: '127.0.0.1', port: 5195, strictPort: true },
+      plugins: [
+        {
+          name: 'f55-fixtures-pwa',
+          configurePreviewServer(server) {
+            server.middlewares.use((req, res, next) => {
+              const url = new URL(req.url, 'http://localhost')
+              if (url.pathname === '/sw.js' && versao > 1) {
+                res.setHeader('Content-Type', 'application/javascript')
+                res.setHeader('Cache-Control', 'no-store')
+                res.end(workerAtualizado)
+                return
+              }
+              if (versao > 1 && ['/', '/index.html'].includes(url.pathname)) {
+                if (url.pathname === '/index.html' && falharPrecache) {
+                  downloadsFalhos++
+                  res.statusCode = 503
+                  res.end()
+                  return
+                }
+                res.setHeader('Content-Type', 'text/html')
+                res.end(index.replace('</head>', '<meta name="f55-build" content="2"></head>'))
+                return
+              }
+              if (url.pathname === '/index.html') downloadsComSucesso++
+              if (/^\/(api|media|ws)(?:\/|$)/.test(url.pathname)) {
+                res.setHeader('Content-Type', 'application/json')
+                res.setHeader('Cache-Control', 'no-store')
+                res.end(JSON.stringify({ versao }))
+                return
+              }
+              next()
+            })
+          },
+        },
+      ],
     })
     const origem = 'http://127.0.0.1:5195'
+    for (const [path, mime] of [
+      ['/sw.js', /javascript/],
+      ['/manifest.webmanifest', /application\/manifest\+json/],
+      ['/icons/icon-192.png', /image\/png/],
+      ['/icons/icon-512.png', /image\/png/],
+      ['/notificacoes', /text\/html/],
+    ]) {
+      const resposta = await fetch(origem + path)
+      assert.equal(resposta.status, 200, path)
+      assert.match(resposta.headers.get('content-type'), mime, path)
+    }
     let registrationId
+    const versoesWorker = new Map()
     const navegacoes = []
     const origHandler = ws.onmessage
     ws.onmessage = (event) => {
@@ -574,15 +644,108 @@ try {
             registrationId = registro.registrationId
         }
       }
+      if (method === 'ServiceWorker.workerVersionUpdated') {
+        for (const item of params.versions) versoesWorker.set(item.versionId, item)
+      }
       if (method === 'Page.frameNavigated' && !params.frame.parentId)
         navegacoes.push(params.frame.url)
     }
     await cdp('ServiceWorker.enable')
+    await cdp('Network.enable')
+    // Recursos externos não fazem parte do precache nem da medição local.
+    await cdp('Network.setBlockedURLs', {
+      urls: [
+        'https://fonts.googleapis.com/*',
+        'https://fonts.gstatic.com/*',
+        'https://cdnjs.cloudflare.com/*',
+        'https://cdn.jsdelivr.net/*',
+        'https://accounts.google.com/*',
+      ],
+    })
+    await cdp('Performance.enable')
+    await cdp('Page.addScriptToEvaluateOnNewDocument', {
+      source: `
+      window.f55Vitals = { lcp: null, cls: 0 }
+      new PerformanceObserver(list => {
+        window.f55Vitals.lcp = list.getEntries().at(-1)?.startTime ?? null
+      }).observe({type:'largest-contentful-paint', buffered:true})
+      new PerformanceObserver(list => {
+        window.f55Vitals.cls += list.getEntries().reduce((sum, entry) => sum + (entry.hadRecentInput ? 0 : entry.value), 0)
+      }).observe({type:'layout-shift', buffered:true})
+    `,
+    })
     await cdp('Browser.grantPermissions', { origin: origem, permissions: ['notifications'] })
     await cdp('Page.navigate', { url: origem })
-    await aguardar("navigator.serviceWorker.controller?.scriptURL.endsWith('/sw.js')")
+    await aguardar("navigator.serviceWorker.controller?.scriptURL.endsWith('/sw.js')", 250)
     console.log('Service Worker de produção está ativo')
     assert.ok(registrationId)
+    assert.deepEqual(
+      await avaliar('navigator.serviceWorker.getRegistrations().then(rs => rs.map(r => r.scope))'),
+      [origem + '/'],
+    )
+    const { installabilityErrors } = await cdp('Page.getInstallabilityErrors')
+    assert.deepEqual(installabilityErrors, [], 'O Chromium reconhece o manifesto como instalável')
+    const { data: jsonManifesto } = await cdp('Page.getAppManifest')
+    const manifesto = JSON.parse(jsonManifesto)
+    assert.equal(manifesto.scope, '/')
+    assert.equal(manifesto.start_url, '/')
+    assert.equal(manifesto.display, 'standalone')
+    assert.ok(manifesto.name && manifesto.short_name && manifesto.description)
+    assert.equal(
+      await avaliar("document.querySelector('meta[name=theme-color]').content"),
+      manifesto.theme_color,
+    )
+    for (const icone of manifesto.icons) {
+      assert.match(icone.purpose, /\bmaskable\b/)
+      const medida = await avaliar(`(async () => {
+        const img = new Image()
+        img.src = ${JSON.stringify(icone.src)}
+        await img.decode()
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const context = canvas.getContext('2d')
+        context.drawImage(img, 0, 0)
+        const {data} = context.getImageData(0, 0, canvas.width, canvas.height)
+        let radius = 0, opaque = true
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const i = (y * canvas.width + x) * 4
+            opaque &&= data[i+3] === 255
+            const diferenca = Math.abs(data[i]-data[0])+Math.abs(data[i+1]-data[1])+Math.abs(data[i+2]-data[2])
+            if (diferenca > 35) radius = Math.max(radius, Math.hypot(x + .5 - canvas.width/2, y + .5 - canvas.height/2))
+          }
+        }
+        return { sizes: canvas.width+'x'+canvas.height, radius, limite: .4*canvas.width, opaque }
+      })()`)
+      assert.equal(medida.sizes, icone.sizes)
+      assert.ok(medida.opaque && medida.radius > 0 && medida.radius <= medida.limite)
+      console.log('Ícone maskable', medida)
+    }
+    const { metrics } = await cdp('Performance.getMetrics')
+    console.log(
+      'Métricas locais da página inicial',
+      await avaliar('window.f55Vitals'),
+      metrics.filter(({ name }) =>
+        ['TaskDuration', 'ScriptDuration', 'LayoutDuration'].includes(name),
+      ),
+    )
+    await avaliar(
+      'navigator.serviceWorker.ready.then(r => r.getNotifications()).then(ns => ns.forEach(n => n.close()))',
+    )
+    for (const data of [
+      '{',
+      '{"event":{"toString":false},"notification_id":34,"title":"Inválida","body":"Inválida"}',
+      '{"event":"evento_desconhecido","notification_id":34,"title":"Inválida","body":"Inválida"}',
+      '{"event":"candidatura_aprovada","notification_id":{},"title":"Inválida","body":"Inválida"}',
+    ])
+      await cdp('ServiceWorker.deliverPushMessage', { origin: origem, registrationId, data })
+    assert.equal(
+      await avaliar(
+        'navigator.serviceWorker.ready.then(r => r.getNotifications()).then(ns => ns.length)',
+      ),
+      0,
+    )
     for (const decisao of [
       { event: 'candidatura_aprovada', title: 'Candidatura aprovada!', id: 123 },
       { event: 'candidatura_recusada', title: 'Candidatura recusada', id: 124 },
@@ -601,7 +764,8 @@ try {
         }),
       })
       await aguardar(`navigator.serviceWorker.ready.then(r => r.getNotifications({tag:'candidatura-${decisao.id}'}))
-        .then(ns => ns.some(n => n.title === ${JSON.stringify(decisao.title)}))`)
+        .then(ns => ns.some(n => n.title === ${JSON.stringify(decisao.title)} &&
+          n.body === 'Resultado da candidatura' && new URL(n.icon, location.origin).pathname === '/icons/icon-192.png'))`)
       assert.equal(await avaliar('window.eventoPushTeste'), 'notificacao-candidatura')
     }
     const { targetInfos } = await cdp('Target.getTargets')
@@ -613,6 +777,17 @@ try {
       targetId: worker.targetId,
       flatten: true,
     })
+    await avaliar(`void (window.renovarF55 = new Promise(resolve => navigator.serviceWorker.addEventListener(
+      'message', ({ data }) => resolve(data.type), { once: true })))`)
+    const renovacao = await cdp(
+      'Runtime.evaluate',
+      {
+        expression: "self.dispatchEvent(new ExtendableEvent('pushsubscriptionchange'))",
+      },
+      sessionId,
+    )
+    assert.equal(renovacao.exceptionDetails, undefined)
+    assert.equal(await avaliar('window.renovarF55'), 'renovar-push')
     const clique = await cdp(
       'Runtime.evaluate',
       {
@@ -638,6 +813,33 @@ try {
     assert.ok(navegacoes.every((url) => !url.startsWith('https://example.invalid')))
 
     await cdp('Network.enable')
+    await cdp('Network.setCacheDisabled', { cacheDisabled: true })
+    assert.deepEqual(
+      await avaliar(`Promise.all(
+      ['/api/notificacoes-freelancer/', '/media/privado.png', '/ws/chat/'].map(path =>
+        fetch(path, { headers: { Authorization: 'Bearer teste-local-f55' } }).then(r => r.json()))
+    )`),
+      [{ versao: 1 }, { versao: 1 }, { versao: 1 }],
+    )
+    const entradas = await avaliar(`(async () => {
+      const nomes = await caches.keys()
+      return (await Promise.all(nomes.map(async nome => (await (await caches.open(nome)).keys()).map(req => req.url)))).flat()
+    })()`)
+    assert.ok(entradas.length > 0)
+    const shellAntiga = entradas.find((entrada) => new URL(entrada).pathname === '/index.html')
+    assert.ok(shellAntiga)
+    assert.ok(
+      entradas.every((entrada) => {
+        const url = new URL(entrada)
+        return (
+          url.origin === origem &&
+          /^(?:\/(?:assets|icons)\/|\/(?:index\.html|manifest\.webmanifest|registerSW\.js)$)/.test(
+            url.pathname,
+          )
+        )
+      }),
+      'Cache Storage contém somente recursos de build e ícones públicos',
+    )
     await cdp('Network.emulateNetworkConditions', {
       offline: true,
       latency: 0,
@@ -649,6 +851,21 @@ try {
       await avaliar("fetch('/api/notificacoes-freelancer/').then(() => false, () => true)"),
       true,
     )
+    for (const path of [
+      '/api?auditoria=f55',
+      '/media?auditoria=f55',
+      '/ws?auditoria=f55',
+      '/assets/ausente.js',
+    ]) {
+      const navegacao = await cdp('Page.navigate', { url: origem + path })
+      assert.match(
+        navegacao.errorText,
+        /ERR_INTERNET_DISCONNECTED/,
+        'A SPA não responde por ' + path,
+      )
+      await cdp('Page.navigate', { url: origem + '/notificacoes' })
+      await aguardar("Boolean(document.querySelector('#app form'))")
+    }
     await cdp('Page.navigate', { url: origem + '/notificacoes' })
     await aguardar("Boolean(document.querySelector('#app form'))")
     await avaliar(
@@ -657,8 +874,134 @@ try {
     console.log(
       'PASSOU PWA de produção: instalação, dois eventos push, clique interno, mensagem para a SPA e navegação offline',
     )
+    await cdp('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: 0,
+      downloadThroughput: -1,
+      uploadThroughput: -1,
+    })
+    assert.deepEqual(await avaliar("fetch('/api/notificacoes-freelancer/').then(r => r.json())"), {
+      versao: 1,
+    })
+    await avaliar(`(() => {
+      const campo = document.querySelector('#app input')
+      campo.value = 'rascunho-f55'
+      window.workerF55 = navigator.serviceWorker.controller
+      localStorage.setItem('f55-sessao-teste','sessao-preservada')
+    })()`)
+    const { webSocketDebuggerUrl } = await (
+      await fetch(`http://127.0.0.1:${portaChrome}/json/version`)
+    ).json()
+    navegadorPwa = new WebSocket(webSocketDebuggerUrl)
+    navegadorPwa.onmessage = ws.onmessage
+    await new Promise((resolve, reject) => {
+      navegadorPwa.onopen = resolve
+      navegadorPwa.onerror = reject
+    })
+    const browserCDP = (metodo, parametros, sessao) => cdp(metodo, parametros, sessao, navegadorPwa)
+    const { targetInfo: primeiraAba } = await cdp('Target.getTargetInfo')
+    const { targetId: segundaAba } = await browserCDP('Target.createTarget', {
+      url: origem,
+      background: true,
+    })
+    const { sessionId: segundaSessao } = await browserCDP('Target.attachToTarget', {
+      targetId: segundaAba,
+      flatten: true,
+    })
+    await aguardar('Boolean(navigator.serviceWorker?.controller)', 150, segundaSessao, navegadorPwa)
+
+    falharPrecache = true
+    versao = 2
+    await avaliar('navigator.serviceWorker.ready.then(r => r.update()).catch(() => {})')
+    for (let i = 0; i < 80 && !downloadsFalhos; i++) await esperar(50)
+    assert.ok(downloadsFalhos > 0, 'Falha do asset da atualização foi simulada')
+    await aguardar('navigator.serviceWorker.ready.then(r => !r.installing && !r.waiting)')
+    assert.equal(await avaliar('navigator.serviceWorker.controller === window.workerF55'), true)
+    assert.equal(await avaliar("document.querySelector('#app input').value"), 'rascunho-f55')
+    console.log('Atualização interrompida manteve o worker anterior e o campo preenchido')
+
+    falharPrecache = false
+    await avaliar('navigator.serviceWorker.ready.then(r => r.update())')
+    await aguardar('navigator.serviceWorker.ready.then(r => Boolean(r.waiting))')
+    const candidata = [...versoesWorker.values()].find(
+      (item) => item.registrationId === registrationId && item.status === 'installed',
+    )
+    assert.ok(candidata, 'CDP observou o worker em espera')
+    assert.ok(downloadsComSucesso > 0, 'O worker em espera baixou a shell da nova versão')
+    assert.equal(await avaliar("document.querySelector('#app input').value"), 'rascunho-f55')
+    assert.equal(await avaliar('navigator.serviceWorker.controller === window.workerF55'), true)
+    console.log('Nova versão aguarda com duas abas abertas')
+    await browserCDP('Target.closeTarget', { targetId: primeiraAba.targetId })
+    assert.equal(
+      await avaliar(
+        'navigator.serviceWorker.ready.then(r => Boolean(r.waiting))',
+        segundaSessao,
+        navegadorPwa,
+      ),
+      true,
+      'A segunda aba ainda mantém o worker anterior',
+    )
+    const { targetId: novaAba } = await browserCDP('Target.createTarget', { url: 'about:blank' })
+    const { sessionId: novaSessao } = await browserCDP('Target.attachToTarget', {
+      targetId: novaAba,
+      flatten: true,
+    })
+    await browserCDP('ServiceWorker.enable', {}, novaSessao)
+    await browserCDP('Target.closeTarget', { targetId: segundaAba })
+    for (let i = 0; i < 150 && versoesWorker.get(candidata.versionId)?.status !== 'activated'; i++)
+      await esperar(80)
+    assert.equal(
+      versoesWorker.get(candidata.versionId)?.status,
+      'activated',
+      'O worker em espera deve ativar quando os últimos clientes fecharem',
+    )
+    await browserCDP('Network.enable', {}, novaSessao)
+    await browserCDP('Network.setCacheDisabled', { cacheDisabled: true }, novaSessao)
+    await browserCDP('Page.navigate', { url: origem }, novaSessao)
+    await aguardar(
+      `navigator.serviceWorker.controller && caches.match(${JSON.stringify(shellAntiga)}).then(r => !r)`,
+      250,
+      novaSessao,
+      navegadorPwa,
+    )
+    await browserCDP(
+      'Network.emulateNetworkConditions',
+      {
+        offline: true,
+        latency: 0,
+        downloadThroughput: 0,
+        uploadThroughput: 0,
+      },
+      novaSessao,
+    )
+    await browserCDP('Page.navigate', { url: origem + '/notificacoes' }, novaSessao)
+    await aguardar(
+      "document.querySelector('meta[name=f55-build]')?.content === '2'",
+      250,
+      novaSessao,
+      navegadorPwa,
+    )
+    await browserCDP(
+      'Network.emulateNetworkConditions',
+      {
+        offline: false,
+        latency: 0,
+        downloadThroughput: -1,
+        uploadThroughput: -1,
+      },
+      novaSessao,
+    )
+    assert.equal(
+      await avaliar("localStorage.getItem('f55-sessao-teste')", novaSessao, navegadorPwa),
+      'sessao-preservada',
+    )
+    await avaliar("localStorage.removeItem('f55-sessao-teste')", novaSessao, navegadorPwa)
+    console.log(
+      'PASSOU atualização: precache interrompido, espera em duas abas e ativação após fechar a versão anterior',
+    )
   }
 } finally {
+  navegadorPwa?.close()
   ws?.close()
   proc.kill()
   await vite.close()

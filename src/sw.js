@@ -12,14 +12,14 @@ import {
   RENOVAR_PUSH,
 } from './pushEvents.js'
 
-self.skipWaiting()
 clientsClaim()
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
-const caminhoPrivado = /^\/(?:api|media|ws)(?:\/|$)/
+const caminhoPrivado = /^\/(?:api|media|ws)(?:[/?]|$)/
+const caminhoEstatico = /^\/(?:assets|icons|manifest\.webmanifest|(?:registerSW|sw)\.js)(?:[/?]|$)/
 registerRoute(
   new NavigationRoute(createHandlerBoundToURL('index.html'), {
-    denylist: [caminhoPrivado],
+    denylist: [caminhoPrivado, caminhoEstatico],
   }),
 )
 
@@ -35,8 +35,17 @@ self.addEventListener('push', (event) => {
   } catch {
     return
   }
-  if (!payload || !Object.hasOwn(EVENTOS_CANDIDATURA, payload.event)) return
-  if (typeof payload.title !== 'string' || typeof payload.body !== 'string') return
+  if (
+    typeof payload?.event !== 'string' ||
+    !Object.hasOwn(EVENTOS_CANDIDATURA, payload.event) ||
+    !Number.isSafeInteger(payload.notification_id) ||
+    payload.notification_id < 1 ||
+    typeof payload.title !== 'string' ||
+    !payload.title.trim() ||
+    typeof payload.body !== 'string' ||
+    !payload.body.trim()
+  )
+    return
   event.waitUntil(
     Promise.all([
       self.registration.showNotification(payload.title, {
@@ -61,7 +70,11 @@ self.addEventListener('notificationclick', (event) => {
       const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       const mesmaOrigem = janelas.filter((janela) => {
         const url = new URL(janela.url)
-        return url.origin === destino.origin && !caminhoPrivado.test(url.pathname)
+        return (
+          url.origin === destino.origin &&
+          !caminhoPrivado.test(url.pathname) &&
+          !caminhoEstatico.test(url.pathname)
+        )
       })
       const janela = mesmaOrigem.find((item) => item.url === destino.href) ?? mesmaOrigem[0]
       if (janela) {
