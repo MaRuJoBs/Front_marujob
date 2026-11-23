@@ -431,14 +431,6 @@ const atualizarSlide = () => {
   scroll-snap-align: start;
   align-content: start;
 }
-@media (min-width: 48rem) {
-  .home {
-    padding-inline: var(--mrj-space-8);
-  }
-  .slide {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 .card {
   display: flex;
   gap: 8px;

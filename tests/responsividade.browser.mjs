@@ -14,8 +14,8 @@ const snapshot = process.env.F49_REF
 const comparisonOnly = process.env.F49_COMPARE_ONLY === '1'
 const compareHistorical = comparisonOnly || process.argv.includes('--comparar-baseline-historica')
 const matrizAtual = process.argv.includes('--matriz-atual')
-const larguraEsperada = (path, width, client) =>
-  Math.min(client, path === '/home' && width >= 768 ? 1200 : 420)
+const larguraEsperada = (client) => Math.min(client, 420)
+const colunaCentralizada = (left, width, client) => Math.abs(left - (client - width) / 2) <= 1
 const portaVite = matrizAtual ? 5207 : 5197
 const portaChrome = matrizAtual ? 19549 : 19449
 const folder = resolve(
@@ -308,8 +308,11 @@ try {
               .filter(el => !el.closest('.slide-scroll') && el.getBoundingClientRect().width && el.getBoundingClientRect().height)
               .map(el => ({ rotulo: el.id || el.textContent.trim().slice(0, 60) || el.tagName, bottom: el.getBoundingClientRect().bottom }))
               .sort((a,b) => b.bottom - a.bottom)[0]
+            const tituloHome = pagina.querySelector('.home-hero h1')
             return { rota: testRouter.currentRoute.value.fullPath, overflow: root.scrollWidth - root.clientWidth,
               larguraUtil: root.clientWidth,
+              esquerdaConteudo: conteudo.left,
+              tamanhoTitulo: tituloHome && parseFloat(getComputedStyle(tituloHome).fontSize),
               seloSobreIcone,
               larguraShell: shell.getBoundingClientRect().width, larguraConteudo: conteudo.width,
               colunasDestaques: pagina.querySelector('.slide') &&
@@ -351,10 +354,12 @@ try {
         !item.alinhado ||
         item.fora.length ||
         item.seloSobreIcone ||
-        Math.abs(item.larguraConteudo - larguraEsperada(item.path, item.width, item.larguraUtil)) > 1 ||
+        Math.abs(item.larguraConteudo - larguraEsperada(item.larguraUtil)) > 1 ||
         (item.path === '/home' &&
-          (item.colunasDestaques !== (item.width >= 768 ? 2 : 1) ||
-            item.colunasOportunidades !== (item.width >= 1024 ? 3 : item.width >= 768 ? 2 : 1))) ||
+          (!colunaCentralizada(item.esquerdaConteudo, item.larguraConteudo, item.larguraUtil) ||
+            item.tamanhoTitulo !== 38 ||
+            item.colunasDestaques !== 1 ||
+            item.colunasOportunidades !== 1)) ||
         item.footer !== (item.tipo !== 'publico' && !semFooter.has(item.path)) ||
         (item.path === '/mensagens'
           ? !item.intervaloChat ||
@@ -503,7 +508,9 @@ try {
     ].filter(
       ([, path]) => !process.env.F49_PATHS || process.env.F49_PATHS.split(',').includes(path),
     ))
-      for (const width of [320, 360, 390, 420, 768, 1024, 1440]) {
+      for (const width of path === '/home'
+        ? [320, 360, 375, 390, 420, 430, 768, 1024, 1440, 1920]
+        : [320, 360, 390, 420, 768, 1024, 1440]) {
         await cdp('Emulation.setDeviceMetricsOverride', {
           width,
           height: 900,
@@ -556,11 +563,27 @@ try {
             'Conteúdo preenchido ausente: ' + path,
           )
           assert.ok(
-            Math.abs(metrics.content.width - larguraEsperada(path, width, metrics.client)) <= 1,
+            Math.abs(metrics.content.width - larguraEsperada(metrics.client)) <= 1,
             `Largura inesperada para ${path} a ${width}px`,
           )
           if (path === '/home') {
             assert.ok(metrics.header?.height > 0, 'Cabeçalho da Home ausente')
+            assert.ok(
+              colunaCentralizada(metrics.content.x, metrics.content.width, metrics.client),
+              `Home fora do centro a ${width}px`,
+            )
+            const avancouCarrossel = await evaluate(`(async () => {
+              const carrossel = document.querySelector('.slide-scroll')
+              const pontos = document.querySelectorAll('.pontos-rolagem span')
+              if (!carrossel?.children[1] || !pontos[0]?.classList.contains('active')) return false
+              const passo = carrossel.children[1].offsetLeft - carrossel.children[0].offsetLeft
+              carrossel.scrollTo({ left: passo, behavior: 'instant' })
+              for (let i = 0; i < 30 && !pontos[1]?.classList.contains('active'); i++) {
+                await new Promise(requestAnimationFrame)
+              }
+              return pontos[1]?.classList.contains('active') === true
+            })()`)
+            assert.ok(avancouCarrossel, `Indicador do carrossel não avançou a ${width}px`)
             if (metrics.slogan) {
               assert.ok(Math.abs(metrics.header.height - 297) < 1)
               if (width === 390 || width === 420) assert.equal(metrics.slogan.width, 370)
