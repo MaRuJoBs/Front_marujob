@@ -46,7 +46,7 @@ export const routes = [
     path: '/home',
     name: 'home',
     component: () => import('../views/HomeView.vue'),
-    meta: { requiresAuth: true, tipo: 'usuario' },
+    meta: { requiresAuth: true, tipo: 'usuario', layout: 'wide' },
   },
   {
     path: '/homeEmpresa',

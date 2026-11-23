@@ -91,6 +91,12 @@ import IndicadorAvisos from './IndicadorAvisos.vue'
   font-weight: var(--mrj-font-weight-regular);
 }
 
+/* A barra flutuante mantém a coluna compacta nas páginas amplas. */
+.app--wide .footer.app-navigation .item {
+  flex-direction: column;
+  gap: 2px;
+}
+
 .icon {
   display: grid;
   place-items: center;

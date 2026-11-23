@@ -73,7 +73,7 @@ const login = async () => {
         </div>
       </div>
 
-      <form class="form-card" @submit.prevent="login" :aria-busy="ocupado">
+      <form class="form-card mrj-ui" @submit.prevent="login" :aria-busy="ocupado">
         <div class="field">
           <label :for="`${campoId}-email`">E-mail (obrigatório)</label>
 
@@ -269,6 +269,7 @@ button:disabled {
 }
 
 .form-card {
+  color: var(--mrj-color-text);
   background: rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 8px;

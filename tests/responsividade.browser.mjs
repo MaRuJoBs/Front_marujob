@@ -14,6 +14,8 @@ const snapshot = process.env.F49_REF
 const comparisonOnly = process.env.F49_COMPARE_ONLY === '1'
 const compareHistorical = comparisonOnly || process.argv.includes('--comparar-baseline-historica')
 const matrizAtual = process.argv.includes('--matriz-atual')
+const larguraEsperada = (path, width, client) =>
+  Math.min(client, path === '/home' && width >= 768 ? 1200 : 420)
 const portaVite = matrizAtual ? 5207 : 5197
 const portaChrome = matrizAtual ? 19549 : 19449
 const folder = resolve(
@@ -40,6 +42,7 @@ import {routes as realRoutes} from '/src/router/routes.js'
 import api from '/src/services/api.js'
 import {instalarFixtures} from '/tests/fixtures/responsividade.js'
 import '/src/assets/main.css'
+import '@fortawesome/fontawesome-free/css/all.min.css'
 library.add(fas)
 const tipo=new URLSearchParams(location.search).get('tipo') || 'usuario'
 const realPath=new URLSearchParams(location.search).get('path')
@@ -278,6 +281,10 @@ try {
             const barra = nav?.getBoundingClientRect()
             const conteudo = pagina.getBoundingClientRect()
             const root = document.documentElement
+            const iconeDestaque = pagina.querySelector('.imagem > i:has(+ .selo)')
+            const seloSobreIcone = iconeDestaque &&
+              iconeDestaque.getBoundingClientRect().bottom >
+                iconeDestaque.nextElementSibling.getBoundingClientRect().top
             scrollTo(0, root.scrollHeight)
             const rooms = pagina.querySelector('.mensagens--lista .rooms')
             const lista = rooms?.querySelector('.rooms__list')
@@ -302,7 +309,13 @@ try {
               .map(el => ({ rotulo: el.id || el.textContent.trim().slice(0, 60) || el.tagName, bottom: el.getBoundingClientRect().bottom }))
               .sort((a,b) => b.bottom - a.bottom)[0]
             return { rota: testRouter.currentRoute.value.fullPath, overflow: root.scrollWidth - root.clientWidth,
+              larguraUtil: root.clientWidth,
+              seloSobreIcone,
               larguraShell: shell.getBoundingClientRect().width, larguraConteudo: conteudo.width,
+              colunasDestaques: pagina.querySelector('.slide') &&
+                getComputedStyle(pagina.querySelector('.slide')).gridTemplateColumns.split(' ').length,
+              colunasOportunidades: pagina.querySelector('.grid-oportunidades') &&
+                getComputedStyle(pagina.querySelector('.grid-oportunidades')).gridTemplateColumns.split(' ').length,
               footer: Boolean(barra), alinhado: !barra || (barra.left >= conteudo.left - 1 && barra.right <= conteudo.right + 1),
               limiteFooter: barra?.top ?? null, alturaViewport: innerHeight, ultimaAcao, intervaloChat, fora }
           })()`)
@@ -314,6 +327,10 @@ try {
             writeFileSync(resolve(folder, arquivo), Buffer.from(shot.data, 'base64'))
           }
           await evaluate('scrollTo(0, 0)')
+          if (path === '/home' && [320, 768, 1920].includes(width)) {
+            const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+            writeFileSync(resolve(folder, `home-topo-${width}.png`), Buffer.from(shot.data, 'base64'))
+          }
         }
         console.log('MATRIZ', tipo, width, height, caminhos.length)
       }
@@ -333,7 +350,11 @@ try {
         item.overflow > 1 ||
         !item.alinhado ||
         item.fora.length ||
-        item.larguraConteudo > 421 ||
+        item.seloSobreIcone ||
+        Math.abs(item.larguraConteudo - larguraEsperada(item.path, item.width, item.larguraUtil)) > 1 ||
+        (item.path === '/home' &&
+          (item.colunasDestaques !== (item.width >= 768 ? 2 : 1) ||
+            item.colunasOportunidades !== (item.width >= 1024 ? 3 : item.width >= 768 ? 2 : 1))) ||
         item.footer !== (item.tipo !== 'publico' && !semFooter.has(item.path)) ||
         (item.path === '/mensagens'
           ? !item.intervaloChat ||
@@ -534,12 +555,9 @@ try {
               path === '/empresa/perfil',
             'Conteúdo preenchido ausente: ' + path,
           )
-          assert.equal(
-            await evaluate(
-              'document.querySelector(".app-content").getBoundingClientRect().width <= 420',
-            ),
-            true,
-            'Página mobile esticada',
+          assert.ok(
+            Math.abs(metrics.content.width - larguraEsperada(path, width, metrics.client)) <= 1,
+            `Largura inesperada para ${path} a ${width}px`,
           )
           if (path === '/home') {
             assert.ok(metrics.header?.height > 0, 'Cabeçalho da Home ausente')
