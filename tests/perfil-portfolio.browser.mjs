@@ -2,7 +2,7 @@
 import { createServer } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
-import { mkdirSync, mkdtempSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import assert from 'node:assert/strict'
 import { setTimeout as esperar } from 'node:timers/promises'
@@ -41,7 +41,11 @@ api.defaults.adapter=async config=>{
  if(config.url==='usuarios/me/') data=user
  else if(config.method==='delete'){deletes++;data='';status=204}
  else if(config.url.includes('/1/'))data=projeto
- else data={count:2,next:config.url.includes('page=2')?null:'?page=2',results:[{...projeto,id:config.url.includes('page=2')?2:1}]}
+ else {
+  const segundaPagina=config.url.includes('page=2')
+  const item=segundaPagina?{...projeto,id:2,titulo:'Projeto publicado',categoria:'Web',publico:true}:projeto
+  data={count:2,next:segundaPagina?null:'?page=2',results:[item]}
+ }
  return {config,status,data,headers:{},statusText:''}
 }
 const router=createRouter({history:createMemoryHistory(),routes})
@@ -92,7 +96,12 @@ const vite = await createServer({
     },
   ],
   resolve: { alias: { '@': resolve('src') } },
-  server: { host: '127.0.0.1', port: 5290, strictPort: true },
+  server: {
+    host: '127.0.0.1',
+    port: 5290,
+    strictPort: true,
+    fs: { allow: [resolve('.'), realpathSync('node_modules')] },
+  },
   appType: 'custom',
 })
 await vite.listen()
@@ -198,6 +207,38 @@ try {
         route + ' overflow ' + largura + ' ' + medidas.scroll,
       )
       assert.ok(!medidas.texto.includes('falta alterar'))
+      if (route === '/portfolio' || route === '/portfolio/1')
+        assert.match(medidas.texto, /Privado/)
+      if (route === '/portfolio') {
+        assert.match(medidas.texto, /Público/)
+        if (largura === 375) {
+          assert.deepEqual(await avaliar(`(async () => {
+            const busca = document.querySelector('#pesquisa-projeto')
+            busca.value = 'Projeto publicado'
+            busca.dispatchEvent(new Event('input', { bubbles: true }))
+            await Promise.resolve()
+            return [...document.querySelectorAll('.grid .card small')].map(el => el.textContent)
+          })()`), ['Público'])
+          assert.deepEqual(await avaliar(`(async () => {
+            const busca = document.querySelector('#pesquisa-projeto')
+            busca.value = ''
+            busca.dispatchEvent(new Event('input', { bubbles: true }))
+            document.querySelector('[aria-label="Filtrar projetos"]').click()
+            await Promise.resolve()
+            document.querySelector('input[value="Categoria cadastrada"]').click()
+            document.querySelector('.botao-aplicar').click()
+            await Promise.resolve()
+            return [...document.querySelectorAll('.grid .card small')].map(el => el.textContent)
+          })()`), ['Privado'])
+        }
+      }
+      if (route === '/portfolio/adicionar' || route === '/portfolio/1/editar') {
+        assert.equal(
+          await avaliar("document.querySelector('#projeto-publico').labels[0].textContent"),
+          'Exibir no meu perfil público',
+        )
+        assert.equal(await avaliar("document.querySelector('#projeto-publico').checked"), false)
+      }
       assert.equal(await avaliar("Boolean(document.querySelector('.app-navigation')?.getClientRects().length)"), largura < 1024)
       assert.equal(await avaliar("Boolean(document.querySelector('.desktop-nav')?.getClientRects().length)"), largura >= 1024)
       if (route === '/editar-perfil' && largura < 500) {
@@ -221,6 +262,7 @@ try {
         await avaliar('scrollTo(0,0)')
       }
       if (route === '/portfolio/1') {
+        assert.ok(await avaliar("Boolean(document.querySelector('button.editar'))"))
         await avaliar("document.querySelector('button.excluir').click()")
         assert.equal(await avaliar("document.querySelector('dialog').open"), true)
         assert.equal(await avaliar('document.activeElement.textContent.trim()'), 'Cancelar')
@@ -233,6 +275,15 @@ try {
         }
         await avaliar("document.querySelector('dialog button').click()")
         assert.equal(await avaliar('window.teste.deletes'), 0)
+        if (largura === 375) {
+          assert.equal(await avaliar(`new Promise(resolve => {
+            const remover = window.teste.router.afterEach(to => {
+              remover()
+              resolve(to.path)
+            })
+            document.querySelector('button.editar').click()
+          })`), '/portfolio/1/editar')
+        }
       }
       if (route === '/portfolio/adicionar' && largura === 375) {
         const { root } = await cdp('DOM.getDocument')

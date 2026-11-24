@@ -29,15 +29,18 @@ export function perfilPublico(data, detalhe = false) {
   }
   if (detalhe) {
     perfil.descricao = texto(data.descricao)
-    perfil.portfolio = (Array.isArray(data.portfolio) ? data.portfolio : []).map((projeto) => ({
-      id: projeto.id,
-      titulo: texto(projeto.titulo),
-      categoria: texto(projeto.categoria),
-      descricao: texto(projeto.descricao),
-      tags: lista(projeto.tags),
-      imagem: resolverImagem(projeto.imagem),
-      link: linkPublico(projeto.link),
-    }))
+    // O endpoint público pode omitir a flag dos projetos que já filtrou.
+    perfil.portfolio = (Array.isArray(data.portfolio) ? data.portfolio : [])
+      .filter((projeto) => projeto && (!Object.hasOwn(projeto, 'publico') || projeto.publico === true))
+      .map((projeto) => ({
+        id: projeto.id,
+        titulo: texto(projeto.titulo),
+        categoria: texto(projeto.categoria),
+        descricao: texto(projeto.descricao),
+        tags: lista(projeto.tags),
+        imagem: resolverImagem(projeto.imagem),
+        link: linkPublico(projeto.link),
+      }))
   }
   return perfil
 }
