@@ -27,9 +27,17 @@ const {
 </script>
 
 <template>
-  <main class="container">
-    <div class="top">
-      <router-link to="/" class="btn-voltar" aria-label="Voltar ao login">←</router-link>
+  <main class="cadastro cadastro-empresa mrj-ui">
+    <header class="cadastro-apresentacao">
+      <div class="cadastro-topo">
+        <router-link to="/" class="btn-voltar" aria-label="Voltar ao login">
+          <FontAwesomeIcon aria-hidden="true" :icon="['fas', 'arrow-left']" />
+        </router-link>
+        <div class="cadastro-marca">
+          <img src="@/assets/images/logo.png" alt="" width="34" height="34" />
+          <span>MaRuJoB’s</span>
+        </div>
+      </div>
 
       <div class="div-foto">
         <button
@@ -40,9 +48,7 @@ const {
           @click="arquivoIMP.click()"
         >
           <img v-if="preview" :src="preview" class="preview-img" alt="Prévia da foto de cadastro" />
-          <span v-else class="placeholder" aria-hidden="true">
-            <span>👤</span>
-          </span>
+          <FontAwesomeIcon v-else aria-hidden="true" :icon="['fas', 'building']" />
         </button>
         <input
           aria-label="Foto de cadastro (opcional)"
@@ -56,11 +62,9 @@ const {
 
         <p>Adicione a logo da sua empresa</p>
       </div>
-    </div>
-
-    <h1>Criar conta da Empresa</h1>
-
-    <p class="subtitle">Junte-se à nossa plataforma e impulsione sua empresa.</p>
+      <h1>Criar conta da Empresa</h1>
+      <p class="subtitle">Junte-se à nossa plataforma e impulsione sua empresa.</p>
+    </header>
 
     <form class="form mrj-ui" @submit.prevent="criarConta" :aria-busy="ocupado">
       <div class="card">
@@ -141,7 +145,7 @@ const {
         </div>
       </div>
 
-      <div class="senha" :id="`${campoId}-ajuda`">
+      <div class="box-senha" :id="`${campoId}-ajuda`">
         <p class="title">
           <FontAwesomeIcon aria-hidden="true" :icon="['fas', 'shield-halved']" class="icon" />
           Sua senha deve conter:
@@ -155,7 +159,7 @@ const {
       <button v-if="!contaCriada" class="criarConta" type="submit" :disabled="ocupado">
         {{ loading ? 'Criando conta...' : 'Criar conta' }}
       </button>
-      <div v-if="erros.length" :id="`${campoId}-erro`" class="box-erro" role="alert">
+      <div v-if="erros.length" :id="`${campoId}-erro`" class="error-box" role="alert">
         <p v-for="(erro, index) in erros" :key="index">• {{ erro }}</p>
       </div>
 
@@ -195,282 +199,4 @@ const {
   </main>
 </template>
 
-<style scoped>
-.google-fallback {
-  width: 300px;
-  max-width: 100%;
-  min-height: 40px;
-  border: 1px solid #dadce0;
-  border-radius: 4px;
-  background: white;
-  color: #5f6368;
-  font-size: 14px;
-}
-button:disabled {
-  opacity: 0.7;
-  cursor: wait;
-}
-.google-login {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
-}
-
-.ou {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 20px 0;
-}
-
-.ou span {
-  flex: 1;
-  height: 1px;
-  background: #c5b9d5;
-}
-
-.ou p {
-  margin: 0;
-  color: #777;
-  font-size: 13px;
-}
-.box-erro {
-  margin-top: 15px;
-  background: #ffe6e6;
-  border: 1px solid #ff4d4d;
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.box-erro p {
-  color: #b30000;
-  font-size: 13px;
-  margin: 4px 0;
-}
-.preview-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 20px;
-}
-.container {
-  min-height: 100vh;
-  background: #f4f4f4;
-  padding: 30px;
-  padding-bottom: 120px;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-.top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.btn-voltar {
-  display: grid;
-  place-items: center;
-  text-decoration: none;
-  width: 45px;
-  height: 45px;
-  border: none;
-  border-radius: 50%;
-  background: #d8c6ff;
-  color: #5b38b0;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.div-foto {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  margin-bottom: 30px;
-}
-
-.photo-box {
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  width: 120px;
-  height: 120px;
-  border-radius: 20px;
-
-  background: #ece5f7;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
-}
-
-.photo-box span {
-  font-size: 45px;
-  color: #6d4dc2;
-}
-
-.div-foto p {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #666;
-}
-
-h1 {
-  color: #2e1a74;
-  font-weight: bold;
-}
-
-.subtitle {
-  color: #3c2398c0;
-  margin-bottom: 20px;
-  max-width: 260px;
-}
-
-.form {
-  color: var(--mrj-color-text);
-  background: #e8dcf3;
-  border-radius: 20px;
-  padding: 25px;
-}
-
-.card {
-  margin-bottom: 20px;
-}
-
-.card label {
-  display: block;
-  margin-bottom: 8px;
-
-  color: #2e1a74;
-  font-weight: 600;
-}
-
-.card input {
-  width: 100%;
-  height: 42px;
-  border: none;
-  border-radius: 8px;
-  background: #d6d6d6;
-  padding: 0 12px;
-}
-
-.senha {
-  background: #d9d1e7;
-  border-radius: 12px;
-  padding: 15px;
-  margin-top: 15px;
-}
-
-.senha p {
-  color: #2e1a74;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.infos {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #666;
-}
-
-.criarConta {
-  width: 100%;
-  height: 50px;
-  margin-top: 30px;
-  border: none;
-  border-radius: 12px;
-  background: #6f50c5;
-  color: white;
-  font-size: 18px;
-  font-weight: 600;
-
-  cursor: pointer;
-}
-
-.login {
-  text-align: center;
-  margin-top: 20px;
-  color: #777;
-}
-
-.login a {
-  color: #2e1a74;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-.title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #2e1a74;
-  font-weight: 600;
-
-  margin-bottom: 10px;
-}
-
-.title .icon {
-  color: #6d4dc2;
-  font-size: 16px;
-}
-
-.box {
-  border: 1px solid #796197;
-  display: flex;
-  align-items: center;
-  background: #d6d6d6;
-  border-radius: 10px;
-  padding: 0 12px;
-  height: 45px;
-  gap: 10px;
-}
-
-.box .icon {
-  color: #6d4dc2;
-  font-size: 18px;
-
-  min-width: 20px;
-}
-
-.box input {
-  min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  width: 100%;
-
-  font-size: 16px;
-  color: #333;
-}
-
-.box input::placeholder {
-  color: #555;
-}
-/* F61 · Desktop: apresentação à esquerda e formulário à direita, centralizados. Campos,
-   validações, Google e envio não mudam. */
-@media (min-width: 64rem) {
-  .container {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(24rem, 30rem);
-    align-content: start;
-    column-gap: 64px;
-    padding: 56px max(48px, calc((100% - 66rem) / 2));
-  }
-  .container > * {
-    grid-column: 1;
-  }
-  .container > .form {
-    grid-column: 2;
-    grid-row: 1 / span 8;
-  }
-  .top {
-    justify-content: flex-start;
-    gap: 32px;
-  }
-  h1 {
-    margin-top: 32px;
-  }
-}
-</style>
+<style scoped src="../styles/cadastro.css"></style>
