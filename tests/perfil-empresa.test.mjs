@@ -176,7 +176,7 @@ test('401 encerra a sessão pelo interceptor existente', async () => {
 // desktop; a medida real em 390/768px fica com tests/responsividade.browser.mjs.
 test('rotas empresariais: shell compacto abaixo de 1024px e layout amplo só no desktop', async () => {
   const empresariais = routes.filter((rota) => rota.meta?.tipo === 'empresa')
-  assert.equal(empresariais.length, 9)
+  assert.equal(empresariais.length, 10)
   for (const rota of empresariais) {
     assert.equal(rota.meta.requiresAuth, true, rota.path)
     assert.equal(rota.meta.layout, 'wide', rota.path)

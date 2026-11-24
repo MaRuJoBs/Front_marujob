@@ -121,7 +121,7 @@ test('mensagens para 400, 401, 403, 404, servidor e rede', () => {
 })
 test('rotas integradas exigem autenticação e tipo empresa', async () => {
   const { routes } = await vite.ssrLoadModule('/src/router/routes.js')
-  for (const name of ['busca-freelancers', 'perfil-publico-freelancer']) {
+  for (const name of ['busca-freelancers', 'perfil-publico-freelancer', 'projeto-publico-freelancer']) {
     const route = routes.find((item) => item.name === name)
     assert.equal(route.meta.requiresAuth, true)
     assert.equal(route.meta.tipo, 'empresa')

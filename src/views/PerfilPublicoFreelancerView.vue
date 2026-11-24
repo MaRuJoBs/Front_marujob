@@ -1,47 +1,14 @@
 <script setup>
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { obterFreelancer, erroFreelancers } from '../services/freelancersPublicosService.js'
-import { sessao } from '../services/authSession.js'
+import { usePerfilPublicoFreelancer } from '../composables/usePerfilPublicoFreelancer.js'
+
 const route = useRoute()
 const router = useRouter()
-const perfil = ref(null)
-const carregando = ref(false)
-const erro = ref('')
+const { perfil, carregando, erro, carregar } = usePerfilPublicoFreelancer()
 const fotoFalhou = ref(false)
-let controller
-let revisao = 0
-async function carregar() {
-  controller?.abort()
-  controller = new AbortController()
-  const atual = ++revisao
-  perfil.value = null
+watch(perfil, () => {
   fotoFalhou.value = false
-  erro.value = ''
-  carregando.value = true
-  try {
-    const resultado = await obterFreelancer(route.params.id, controller.signal)
-    if (atual === revisao) perfil.value = resultado
-  } catch (error) {
-    if (atual === revisao && error.code !== 'ERR_CANCELED') erro.value = erroFreelancers(error)
-  } finally {
-    if (atual === revisao) carregando.value = false
-  }
-}
-watch(() => route.params.id, carregar, { immediate: true })
-watch(
-  () => sessao.revisao,
-  () => {
-    controller?.abort()
-    revisao++
-    perfil.value = null
-    carregando.value = false
-    erro.value = 'A sessão foi alterada. Entre novamente.'
-  },
-)
-onBeforeUnmount(() => {
-  revisao++
-  controller?.abort()
 })
 </script>
 <template>
@@ -86,25 +53,41 @@ onBeforeUnmount(() => {
           <article
             v-for="(projeto, index) in perfil.portfolio"
             :key="projeto.id ?? index"
-            class="profissional projeto"
+            class="profissional projeto projeto-card"
           >
-            <img
-              v-if="projeto.imagem"
-              :src="projeto.imagem"
-              alt=""
-              loading="lazy"
-              referrerpolicy="no-referrer"
-              @error="$event.target.hidden = true"
-            />
-            <h3>{{ projeto.titulo || 'Projeto sem título' }}</h3>
-            <p v-if="projeto.categoria">{{ projeto.categoria }}</p>
-            <p v-if="projeto.descricao" class="descricao">{{ projeto.descricao }}</p>
-            <ul class="habilidades">
-              <li v-for="tag in projeto.tags" :key="tag">{{ tag }}</li>
-            </ul>
-            <a v-if="projeto.link" :href="projeto.link" target="_blank" rel="noopener noreferrer"
-              >Abrir projeto (nova aba)</a
+            <RouterLink
+              class="projeto-card-link"
+              :to="{
+                name: 'projeto-publico-freelancer',
+                params: { id: perfil.id, projetoId: projeto.id },
+                query: route.query,
+              }"
+              :aria-labelledby="`projeto-titulo-${index}`"
             >
+              <img
+                v-if="projeto.imagem"
+                :src="projeto.imagem"
+                alt=""
+                loading="lazy"
+                referrerpolicy="no-referrer"
+                @error="$event.target.hidden = true"
+              />
+              <h3 :id="`projeto-titulo-${index}`">{{ projeto.titulo || 'Projeto sem título' }}</h3>
+              <p v-if="projeto.categoria">{{ projeto.categoria }}</p>
+              <p v-if="projeto.descricao" class="descricao">{{ projeto.descricao }}</p>
+              <ul class="habilidades">
+                <li v-for="tag in projeto.tags" :key="tag">{{ tag }}</li>
+              </ul>
+            </RouterLink>
+            <a
+              v-if="projeto.link"
+              class="projeto-card-externo"
+              :href="projeto.link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir projeto (nova aba)
+            </a>
           </article>
         </div>
       </section>

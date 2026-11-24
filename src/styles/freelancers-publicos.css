@@ -281,6 +281,63 @@
   height: 180px;
   border-radius: 12px;
 }
+.projeto-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+}
+.projeto-card:has(.projeto-card-link:hover),
+.projeto-card:focus-within {
+  border-color: #76519e;
+  box-shadow: 0 8px 24px #50336e1f;
+}
+.projeto-card-link {
+  display: block;
+  flex: 1;
+  padding: 20px;
+  border-radius: inherit;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.projeto-card-link h3 {
+  color: #59387c;
+  text-decoration: underline;
+}
+.projeto-card-link img[hidden],
+.projeto-detalhe img[hidden] {
+  display: none;
+}
+.projeto-card-externo {
+  align-self: flex-start;
+  display: inline-block;
+  margin: 0 20px 20px;
+}
+.voltar-perfil {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 18px;
+  padding: 8px 16px;
+  border: 1px solid #76519e;
+  border-radius: 12px;
+  background: white;
+  color: #59387c;
+}
+.voltar-perfil:hover {
+  background: #f1ebf8;
+}
+.projeto-detalhe img {
+  width: 100%;
+  height: auto;
+  max-height: 32rem;
+  border-radius: 12px;
+  object-fit: contain;
+}
+.projeto-detalhe section {
+  margin-top: 24px;
+}
 .habilidades {
   display: flex;
   flex-wrap: wrap;
