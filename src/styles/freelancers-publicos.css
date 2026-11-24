@@ -329,16 +329,45 @@
 .voltar-perfil:hover {
   background: #f1ebf8;
 }
-.projeto-detalhe img {
-  width: 100%;
-  height: auto;
-  max-height: 32rem;
-  border-radius: 12px;
-  object-fit: contain;
+.projeto-detalhe-conteudo {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+.projeto-detalhe-midia {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: clamp(12px, 2vw, 22px);
+  border: 1px solid #e4ddeb;
+  border-radius: 16px;
   background: #f8f6fb;
 }
-.projeto-detalhe section {
+.projeto-detalhe-midia img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(64dvh, 40rem);
+  border-radius: 10px;
+  object-fit: contain;
+}
+.projeto-detalhe-informacoes {
+  min-width: 0;
+}
+.projeto-detalhe-informacoes section + section {
   margin-top: 24px;
+}
+.projeto-detalhe-informacoes > a {
+  display: inline-block;
+  margin-top: 24px;
+}
+@media (min-width: 48rem) {
+  .projeto-detalhe-conteudo.tem-imagem {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: clamp(20px, 3vw, 40px);
+  }
 }
 .habilidades {
   display: flex;
