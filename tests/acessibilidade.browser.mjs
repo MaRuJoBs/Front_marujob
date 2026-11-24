@@ -286,6 +286,71 @@ try {
   )
   record('Login: loading, bloqueio de duplicidade, erro 503 e dados preservados')
 
+  const campoSenha = 'document.querySelector(".input-senha input")'
+  const alternarSenha = 'document.querySelector(".alternar-senha")'
+  async function verificarSenha(visivel, preenchida = true) {
+    assert.deepEqual(
+      await evaluate(`(()=>{const campo=${campoSenha},botao=${alternarSenha};return [
+        campo.type, botao.getAttribute('aria-label'), botao.getAttribute('aria-pressed'),
+        botao.querySelector('svg').dataset.icon,
+        campo.value === ${preenchida ? 'window.senhaFixture' : "''"}
+      ]})()`),
+      visivel ? ['text', 'Ocultar senha', 'true', 'eye', true]
+        : ['password', 'Mostrar senha', 'false', 'eye-slash', true],
+    )
+  }
+  for (const width of [320, 1440]) {
+    await open('/', width)
+    await verificarSenha(false, false)
+    assert.ok(await evaluate(`(()=>{const campo=${campoSenha},botao=${alternarSenha};
+      const texto=campo.getBoundingClientRect(),alvo=botao.getBoundingClientRect();
+      return texto.right<=alvo.left && alvo.width>=44 && alvo.height>=44
+    })()`))
+    const ponto = await evaluate(`(()=>{
+      window.senhaFixture='senha-de-teste';
+      const email=document.querySelector('input[type=email]'),campo=${campoSenha};
+      email.value='teste@example.test';email.dispatchEvent(new Event('input',{bubbles:true}));
+      campo.focus();campo.value=window.senhaFixture;campo.dispatchEvent(new Event('input',{bubbles:true}));
+      const alvo=${alternarSenha}.getBoundingClientRect();
+      return {x:alvo.left+alvo.width/2,y:alvo.top+alvo.height/2}
+    })()`)
+    if (width === 1440) {
+      assert.match(
+        await evaluate('getComputedStyle(document.querySelector(".ilustracao-mao")).animationName'),
+        /^digitar-login(?:-|$)/,
+      )
+      assert.match(
+        await evaluate('getComputedStyle(document.querySelector(".ilustracao-login")).animationName'),
+        /^apresentar-login(?:-|$)/,
+      )
+    }
+    await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...ponto })
+    await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...ponto })
+    await verificarSenha(true)
+    assert.ok(await evaluate(`document.activeElement === ${campoSenha}`))
+    await evaluate(`${campoSenha}.setSelectionRange(window.senhaFixture.length, window.senhaFixture.length)`)
+    await cdp('Input.insertText', { text: '!' })
+    await evaluate("window.senhaFixture += '!'")
+    await verificarSenha(true)
+    if (width === 1440) {
+      assert.notEqual(await evaluate('getComputedStyle(document.querySelector(".ilustracao-olhar")).transform'), 'none')
+    }
+    await key('Tab')
+    assert.ok(await evaluate(`document.activeElement === ${alternarSenha} && document.activeElement.matches(':focus-visible')`))
+    await key('Enter')
+    await verificarSenha(false)
+    await key(' ')
+    await verificarSenha(true)
+    await key(' ')
+    await verificarSenha(false)
+    assert.equal(await evaluate('mutations.length'), 0)
+    await key('Enter')
+    await verificarSenha(true)
+    await evaluate(`(async()=>{await testRouter.push('/register');await testRouter.push('/')})()`)
+    await verificarSenha(false, false)
+  }
+  record('Senha no login: ícones, valor preservado, foco, teclado, animações e remontagem')
+
   await open('/portfolio')
   await evaluate('document.querySelector(".botao-filtro").focus()')
   await key('Enter')

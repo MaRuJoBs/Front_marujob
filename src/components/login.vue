@@ -1,6 +1,8 @@
 <script setup>
 import { useId, ref, computed, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import { login as fazerLogin, paginaInicial } from '@/services/authService'
 import { useGoogleAuth } from '@/composables/useGoogleAuth'
 import { mensagensErro, emailValido } from '@/utils/authErrors'
@@ -10,6 +12,7 @@ const router = useRouter()
 const route = useRoute()
 const email = ref('')
 const senha = ref('')
+const senhaVisivel = ref(false)
 const digitando = ref(false)
 let fimDigitacao
 
@@ -164,7 +167,7 @@ const login = async () => {
         <div class="field">
           <label :for="`${campoId}-senha`">Senha (obrigatório)</label>
 
-          <div class="input">
+          <div class="input input-senha">
             <i aria-hidden="true" class="mdi mdi-lock-outline"></i>
 
             <input
@@ -173,12 +176,26 @@ const login = async () => {
               :aria-invalid="!!error && !senha"
               v-model="senha"
               @input="animarDigitacao"
-              type="password"
+              :type="senhaVisivel ? 'text' : 'password'"
               autocomplete="current-password"
+              autocapitalize="none"
+              :spellcheck="false"
               required
               :disabled="ocupado"
               placeholder="Digite sua senha..."
             />
+            <button
+              class="alternar-senha"
+              type="button"
+              :aria-label="senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'"
+              :aria-pressed="senhaVisivel"
+              :aria-controls="`${campoId}-senha`"
+              :disabled="ocupado"
+              @mousedown.prevent
+              @click="senhaVisivel = !senhaVisivel"
+            >
+              <FontAwesomeIcon :icon="senhaVisivel ? faEye : faEyeSlash" aria-hidden="true" />
+            </button>
           </div>
         </div>
         <p v-if="error" class="error-message" :id="`${campoId}-erro`" role="alert">
@@ -393,6 +410,36 @@ button:disabled {
   color: #555;
 }
 
+.input-senha {
+  padding-right: 2px;
+}
+
+.input-senha input::-ms-reveal {
+  display: none;
+}
+
+.alternar-senha {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #673fd7;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.alternar-senha:hover:enabled {
+  background: #673fd71a;
+}
+
+.alternar-senha:focus-visible {
+  outline: 3px solid #673fd7;
+  outline-offset: -3px;
+}
+
 .forgot {
   text-align: right;
   font-size: 11px;
@@ -561,10 +608,10 @@ button:disabled {
   .content:has(input[type="email"]:focus) .ilustracao-olhar {
     transform: translateX(2px);
   }
-  .content:has(input[type="password"]:focus) .ilustracao-cabeca {
+  .content:has(.input-senha:focus-within) .ilustracao-cabeca {
     transform: rotate(-6deg) translate(-2px, -2px);
   }
-  .content:has(input[type="password"]:focus) .ilustracao-olhar {
+  .content:has(.input-senha:focus-within) .ilustracao-olhar {
     transform: translate(-2px, -1px) scaleY(0.35);
   }
   .digitando:has(input:focus) .ilustracao-mao {
