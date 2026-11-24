@@ -44,7 +44,7 @@ function normalizar(data) {
     status: data.status,
   }
 }
-function proximaPagina(link, oportunidade) {
+export function proximaPaginaCandidaturas(link, oportunidade) {
   if (typeof link !== 'string') throw new Error('Paginação inválida.')
   const base = new URL(api.defaults.baseURL, globalThis.location?.origin || 'http://localhost')
   const endpoint = new URL('candidaturas/', base),
@@ -109,7 +109,7 @@ export async function consultarCandidaturaPropria(id, signal) {
     }
     if (registros.size > total || (data.next != null && data.results.length === 0))
       throw new Error('Listagem de candidaturas inconsistente.')
-    pagina = data.next == null ? null : proximaPagina(data.next, oportunidade)
+    pagina = data.next == null ? null : proximaPaginaCandidaturas(data.next, oportunidade)
   }
   if (registros.size !== total) throw new Error('Consulta de candidaturas incompleta.')
   return encontrada

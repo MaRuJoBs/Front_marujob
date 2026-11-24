@@ -2,6 +2,7 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { listarOportunidades } from '../services/freelanceService.js'
 import { parametrosOportunidades, erroOportunidades } from '../utils/oportunidades.js'
 import { useFavoritosLocais } from './useFavoritosLocais.js'
+import { vagaDisponivel } from '../utils/vagaForm.js'
 
 export function useOportunidades() {
   const jobs = ref([])
@@ -29,7 +30,7 @@ export function useOportunidades() {
       const params = parametrosOportunidades({ ...filtros.value, search: pesquisa.value }, page)
       const data = await listarOportunidades(params, controlador.signal)
       if (atual !== revisao) return
-      jobs.value = data.results
+      jobs.value = data.results.filter(vagaDisponivel)
       total.value = data.count
       pagina.value = page
       proxima.value = Boolean(data.next)

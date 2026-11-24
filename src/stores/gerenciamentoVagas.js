@@ -8,6 +8,8 @@ import {
   vagaPropria,
   mensagemErroVagas,
 } from '../services/freelanceService.js'
+import { listarCandidaturasEmpresa } from '../services/notificacoesService.js'
+import { vagaAberta } from '../utils/vagaForm.js'
 
 export const useGerenciamentoVagas = defineStore('gerenciamentoVagas', () => {
   const vagas = ref([])
@@ -17,8 +19,9 @@ export const useGerenciamentoVagas = defineStore('gerenciamentoVagas', () => {
   const selecionada = ref(null)
   const excluindo = ref(false)
   const erroExclusao = ref('')
+  const aprovadosPorVaga = ref(null)
   const ultima = computed(
-    () => [...vagas.value].sort((a, b) => Number(b.id) - Number(a.id))[0] || null,
+    () => vagas.value.find(vagaAberta) || null,
   )
   let consulta = 0
   watch(
@@ -26,6 +29,7 @@ export const useGerenciamentoVagas = defineStore('gerenciamentoVagas', () => {
     () => {
       consulta++
       vagas.value = []
+      aprovadosPorVaga.value = null
       selecionada.value = null
       erro.value = sucesso.value = erroExclusao.value = ''
       carregando.value = excluindo.value = false
@@ -36,11 +40,25 @@ export const useGerenciamentoVagas = defineStore('gerenciamentoVagas', () => {
     const numero = ++consulta
     const conta = capturarEmpresa()
     vagas.value = []
+    aprovadosPorVaga.value = null
     erro.value = ''
     carregando.value = true
     try {
       const resultado = await listarVagasEmpresa()
       if (numero === consulta && conta.atual()) vagas.value = resultado
+      if (resultado.length && numero === consulta && conta.atual()) {
+        try {
+          const candidaturas = await listarCandidaturasEmpresa()
+          if (numero !== consulta || !conta.atual()) return
+          const contagens = Object.fromEntries(resultado.map(({ id }) => [id, 0]))
+          for (const { oportunidade, status } of candidaturas)
+            if (status === 'aprovada' && Object.hasOwn(contagens, oportunidade))
+              contagens[oportunidade]++
+          aprovadosPorVaga.value = contagens
+        } catch {
+          // Não apresente a contagem como zero quando a consulta não foi confirmada.
+        }
+      }
     } catch (error) {
       if (numero === consulta && conta.atual()) erro.value = mensagemErroVagas(error)
     } finally {
@@ -82,6 +100,7 @@ export const useGerenciamentoVagas = defineStore('gerenciamentoVagas', () => {
   return {
     vagas,
     ultima,
+    aprovadosPorVaga,
     carregando,
     erro,
     sucesso,

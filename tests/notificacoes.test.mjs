@@ -121,6 +121,7 @@ beforeEach(() => {
     whatsapp: { disponivel: false, url: null, modo: 'link', mensagem_enviada: false },
   }
   transporte = (c) => {
+    if (c.url === 'freelances/45/') return { id: 45, empresa: 80, status: 'publicada', max_profissionais: null }
     if (c.url === 'notificacoes/')
       return respostaPagina(
         notificacoes.filter((n) => !c.params.status || n.status === c.params.status),
@@ -673,6 +674,80 @@ test('erro de reconsulta após decisão preserva confirmação e nunca repete PO
     assert.ok(e.erro.value)
     await e.confirmarDecisao()
     assert.equal(chamadas.filter((c) => c.method === 'post').length, 1)
+  } finally {
+    fechar()
+  }
+})
+
+for (const falhaEncerramento of [false, true]) {
+  test(`F66 confirma aprovação, conta todas as páginas e ${falhaEncerramento ? 'permite repetir só o encerramento' : 'encerra a vaga'}`, async () => {
+    const { e, fechar } = montar()
+    try {
+      await pronto(e)
+      const original = transporte
+      let falharPatch = falhaEncerramento
+      let vaga = { id: 45, empresa: 80, status: 'publicada', max_profissionais: 3 }
+      transporte = (c) => {
+        if (c.url === 'candidaturas/') {
+          assert.equal(c.params.oportunidade, 45)
+          const exemplo = { ...candidatura, status: 'aprovada' }
+          return c.params.page === 1
+            ? respostaPagina([{ ...exemplo, id: 10 }, { ...exemplo, id: 11, status: 'pendente' }], '?page=2&oportunidade=45', null, 5)
+            : respostaPagina([{ ...exemplo, id: 13 }, { ...candidatura }, { ...exemplo, id: 14, status: 'recusada' }], null, '?page=1', 5)
+        }
+        if (c.url === 'freelances/45/') {
+          if (c.method === 'patch') {
+            assert.deepEqual(JSON.parse(c.data), { status: 'encerrada' })
+            if (falharPatch) falhar(503)
+            vaga = { ...vaga, status: 'encerrada' }
+          }
+          return vaga
+        }
+        return original(c)
+      }
+      e.pedirDecisao(e.notificacoes.value[0], 'aprovar')
+      await e.confirmarDecisao()
+      assert.equal(candidatura.status, 'aprovada')
+      assert.equal(e.confirmacao.value, null)
+      assert.equal(chamadas.filter(c => c.method === 'post').length, 1)
+      assert.deepEqual(chamadas.filter(c => c.url === 'candidaturas/').map(c => c.params.page), [1, 2])
+      if (falhaEncerramento) {
+        assert.equal(vaga.status, 'publicada')
+        assert.match(e.feedback.value, /aprovada/)
+        assert.match(e.erroAcao.value, /encerramento não foi confirmado/)
+        falharPatch = false
+        assert.equal((await service.encerrarVagaPreenchida(45)).status, 'encerrada')
+      } else {
+        assert.equal(vaga.status, 'encerrada')
+        assert.match(e.feedback.value, /histórico/)
+      }
+      assert.equal((await service.listarCandidaturasEmpresa(45)).length, 5)
+      assert.equal(chamadas.filter(c => c.method === 'post').length, 1)
+      assert.equal(chamadas.filter(c => c.method === 'delete').length, 0)
+    } finally {
+      fechar()
+    }
+  })
+}
+
+test('F66 distingue HTTP 409 por limite atingido e mantém a decisão pendente', async () => {
+  const { e, fechar } = montar()
+  try {
+    await pronto(e)
+    const original = transporte
+    transporte = (c) => {
+      if (c.url === 'candidaturas/12/aprovar/') {
+        const erro = new Error('Limite')
+        erro.response = { status: 409, data: { detail: 'Esta oportunidade atingiu o limite de profissionais.' } }
+        throw erro
+      }
+      return original(c)
+    }
+    e.pedirDecisao(e.notificacoes.value[0], 'aprovar')
+    await e.confirmarDecisao()
+    assert.match(e.erroAcao.value, /atingiu o limite/)
+    assert.equal(e.notificacoes.value[0].status, 'pendente')
+    assert.equal(chamadas.filter(c => c.method === 'patch').length, 0)
   } finally {
     fechar()
   }

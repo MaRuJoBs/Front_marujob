@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { listarOportunidades } from '@/services/freelanceService'
 import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
 import FavoritoButton from '@/components/FavoritoButton.vue'
+import IdentidadeEmpresaVaga from '@/components/IdentidadeEmpresaVaga.vue'
+import { formularioDaVaga, localDaVaga, vagaDisponivel } from '@/utils/vagaForm'
 import NotificationPrompt from '@/components/NotificationPrompt.vue'
 import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
 
@@ -53,13 +55,14 @@ const buscarJobs = async () => {
   carregandoJobs.value = true
   erroJobs.value = ''
   try {
-    const data = await listarOportunidades({ page: page.value }, controlador.signal)
-    if (controlador.signal.aborted) return
-
-    jobs.value = [...jobs.value, ...data.results]
-    totalFreelances.value = data.count
-    temProximaPagina.value = data.next !== null
-    page.value++
+    do {
+      const data = await listarOportunidades({ page: page.value }, controlador.signal)
+      if (controlador.signal.aborted) return
+      jobs.value = [...jobs.value, ...data.results.filter(vagaDisponivel)]
+      totalFreelances.value = data.count
+      temProximaPagina.value = Boolean(data.next && data.results.length && page.value < data.count)
+      page.value++
+    } while (!jobs.value.length && temProximaPagina.value)
   } catch (error) {
     if (!controlador.signal.aborted) erroJobs.value = erroOportunidades(error)
   } finally {
@@ -95,12 +98,6 @@ const slides = computed(() => {
 const jobsHome = computed(() => {
   return jobs.value.slice(0, 6)
 })
-
-const getImageUrl = (path) => {
-  if (!path) return null
-  if (path.startsWith('http')) return path
-  return path
-}
 
 const atualizarSlide = () => {
   const carrossel = slideContainer.value
@@ -189,16 +186,14 @@ const atualizarSlide = () => {
         <div v-for="(slide, index) in slides" :key="index" class="slide">
           <article v-for="job in slide" :key="job.id" class="card">
             <router-link :to="`/oportunidade/${job.id}`" class="card-conteudo">
-              <div class="imagem">
-                <img v-if="job.foto" :src="getImageUrl(job.foto)" class="avatar" alt="" />
-                <i v-else class="fa-solid fa-briefcase" aria-hidden="true"></i>
-
-                <div class="selo" v-if="job.preco >= 2500">★ Destaque</div>
-              </div>
-
               <div class="info">
+                <IdentidadeEmpresaVaga :vaga="job" />
+                <span class="selo" v-if="job.preco >= 2500">★ Destaque</span>
                 <h3 :title="job.titulo">{{ job.titulo }}</h3>
                 <p>{{ job.tag }}</p>
+                <p v-if="formularioDaVaga(job).modalidade || localDaVaga(job)">
+                  {{ [formularioDaVaga(job).modalidade, localDaVaga(job)].filter(Boolean).join(' · ') }}
+                </p>
 
                 <div class="preco">
                   <span>R$ {{ formatarPreco(job.preco) }}</span>
@@ -250,13 +245,14 @@ const atualizarSlide = () => {
           :style="{ '--entrada-atraso': `${index * 65}ms` }"
         >
           <div class="mini-card-topo">
-            <span class="mini-card-icone"
-              ><i class="fa-solid fa-briefcase" aria-hidden="true"></i
-            ></span>
+            <IdentidadeEmpresaVaga :vaga="job" />
             <span v-if="job.tag" class="categoria-vaga">{{ job.tag }}</span>
             <FavoritoButton :id="job.id" />
           </div>
           <h3 class="mini-card-titulo" :title="job.titulo">{{ job.titulo }}</h3>
+          <p v-if="formularioDaVaga(job).modalidade || localDaVaga(job)">
+            {{ [formularioDaVaga(job).modalidade, localDaVaga(job)].filter(Boolean).join(' · ') }}
+          </p>
           <div class="mini-card-resumo">
             <div>
               <span class="mini-rotulo">Valor do projeto</span>
@@ -458,35 +454,14 @@ const atualizarSlide = () => {
   color: inherit;
   text-decoration: none;
 }
-.imagem {
-  width: 48px;
-  height: 60px;
-  flex: 0 0 48px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: var(--mrj-color-secondary);
-  color: var(--mrj-color-primary);
-  position: relative;
-  overflow: hidden;
-}
-.avatar {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.imagem:has(.selo) > i {
-  align-self: start;
-  margin-top: var(--mrj-space-2);
-}
 .selo {
-  position: absolute;
-  bottom: 0;
-  inset-inline: 0;
-  padding: 2px;
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 5px;
+  border-radius: 6px;
   background: var(--mrj-color-primary);
   color: white;
-  font-size: 8px;
+  font-size: 0.6875rem;
   text-align: center;
 }
 .info {

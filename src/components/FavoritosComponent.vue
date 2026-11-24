@@ -1,4 +1,6 @@
 <script setup>
+import IdentidadeEmpresaVaga from '@/components/IdentidadeEmpresaVaga.vue'
+import { formularioDaVaga, localDaVaga, vagaDisponivel } from '@/utils/vagaForm'
 import { watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -60,6 +62,7 @@ watch(
     >
       <div class="parte-superior">
         <div>
+          <IdentidadeEmpresaVaga v-if="item.job" :vaga="item.job" />
           <h2 :title="item.job?.titulo">
             {{
               item.job?.titulo ||
@@ -67,6 +70,10 @@ watch(
             }}
           </h2>
           <p v-if="item.job?.tag" class="company">{{ item.job.tag }}</p>
+          <p v-if="item.job && (formularioDaVaga(item.job).modalidade || localDaVaga(item.job))">
+            {{ [formularioDaVaga(item.job).modalidade, localDaVaga(item.job)].filter(Boolean).join(' · ') }}
+          </p>
+          <p v-if="item.job && !vagaDisponivel(item.job)">Vaga indisponível para candidatura.</p>
         </div>
 
         <FavoritoButton :id="item.id" />

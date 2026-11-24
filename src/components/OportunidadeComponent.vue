@@ -1,4 +1,5 @@
 <script setup>
+import IdentidadeEmpresaVaga from '@/components/IdentidadeEmpresaVaga.vue'
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -110,15 +111,13 @@ const {
       <template v-else>
         <p v-if="!jobs.length" class="estado" role="status">Nenhuma oportunidade encontrada.</p>
         <p v-else class="resumo-resultados" role="status">
-          {{ total }} oportunidades · Página {{ pagina }}
+          {{ jobs.length }} oportunidades nesta página · Página {{ pagina }}
         </p>
         <template v-for="(job, index) in jobs" :key="job.id">
           <article class="vaga">
             <header class="vaga-superior">
               <div class="vaga-categoria">
-                <span class="vaga-icone"
-                  ><i class="fa-solid fa-briefcase" aria-hidden="true"></i
-                ></span>
+                <IdentidadeEmpresaVaga :vaga="job" />
                 <p v-if="job.tag" class="tag">{{ job.tag }}</p>
               </div>
               <FavoritoButton :id="job.id" />
@@ -174,7 +173,7 @@ const {
           </aside>
         </template>
         <nav class="paginacao" aria-label="Paginação de oportunidades">
-          <p>{{ total }} oportunidades</p>
+          <p>{{ total }} registros na busca</p>
           <div>
             <button class="chip" :disabled="!anterior" @click="carregar(pagina - 1)">
               Anterior</button

@@ -107,6 +107,10 @@ export function dataCandidatura(valor) {
     : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(data)
 }
 export function erroNotificacoes(error) {
+  if (error.response?.status === 409 &&
+      (error.response.data?.code === 'oportunidade_limite_atingido' ||
+       error.response.data?.detail === 'Esta oportunidade atingiu o limite de profissionais.'))
+    return 'Esta oportunidade atingiu o limite de profissionais. Nenhuma nova aprovação foi registrada.'
   return (
     {
       400: 'Não foi possível processar a solicitação. Atualize e tente novamente.',

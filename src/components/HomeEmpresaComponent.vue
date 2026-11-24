@@ -2,18 +2,36 @@
 import { computed, nextTick, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ConfirmarExclusaoVaga from '@/components/ConfirmarExclusaoVaga.vue'
+import IdentidadeEmpresaVaga from '@/components/IdentidadeEmpresaVaga.vue'
+import { useIdentidadeEmpresaVaga } from '@/composables/useIdentidadeEmpresaVaga'
 import fundoEmpresa from '@/assets/images/fundoempresa.png'
 import { sessao } from '@/services/authService'
 import { storeToRefs } from 'pinia'
 import { useVagasStore } from '@/stores/vagas'
 import { useGerenciamentoVagas } from '@/stores/gerenciamentoVagas'
-import { formatarTempo, formatarPagamento } from '@/utils/vagaForm'
+import {
+  formatarTempo,
+  formatarPagamento,
+  localDaVaga,
+  resumoAprovados,
+  vagaAberta,
+  vagaPreenchida,
+  statusVaga,
+} from '@/utils/vagaForm'
 import { ANCORA_VAGAS_EMPRESA } from '@/components/navegacaoDesktop'
 
 const vagasStore = useVagasStore()
 const { confirmacao } = storeToRefs(vagasStore)
 const gerenciamento = useGerenciamentoVagas()
-const { vagas, ultima: ultimaPublicada, carregando, erro, sucesso } = storeToRefs(gerenciamento)
+const {
+  vagas,
+  ultima: ultimaPublicada,
+  carregando,
+  erro,
+  sucesso,
+  aprovadosPorVaga,
+} = storeToRefs(gerenciamento)
+const perfilEmpresa = useIdentidadeEmpresaVaga()
 const busca = ref('')
 const categoria = ref('')
 const categorias = computed(() => [...new Set(vagas.value.map((vaga) => vaga.tag).filter(Boolean))])
@@ -31,6 +49,13 @@ const vagasFiltradas = computed(() =>
       ),
   ),
 )
+const gruposVagas = computed(() => [
+  { nome: 'Vagas abertas', vagas: vagasFiltradas.value.filter(vagaAberta) },
+  {
+    nome: 'Histórico de vagas',
+    vagas: vagasFiltradas.value.filter(({ status }) => ['encerrada', 'cancelada'].includes(status)),
+  },
+])
 watch(
   () => [sessao.usuario?.id, sessao.revisao, sessao.tipo],
   () => {
@@ -132,9 +157,7 @@ onMounted(() => {
         :to="'/empresa/vagas/' + ultimaPublicada.id"
         :aria-label="'Ver detalhes de ' + ultimaPublicada.titulo"
       >
-        <span class="vaga-icone" aria-hidden="true"
-          ><FontAwesomeIcon :icon="['fas', 'briefcase']"
-        /></span>
+        <IdentidadeEmpresaVaga :vaga="ultimaPublicada" :perfil="perfilEmpresa" />
         <div class="vaga-conteudo">
           <div class="job-header">
             <h3>{{ ultimaPublicada.titulo }}</h3>
@@ -146,14 +169,20 @@ onMounted(() => {
             <span v-if="ultimaPublicada.modalidade" class="job-info">{{
               ultimaPublicada.modalidade
             }}</span>
+            <span v-if="localDaVaga(ultimaPublicada)" class="job-info">{{
+              localDaVaga(ultimaPublicada)
+            }}</span>
           </div>
+          <p class="resumo-aprovados">
+            {{ resumoAprovados(ultimaPublicada, aprovadosPorVaga?.[ultimaPublicada.id]) }}
+          </p>
           <span class="abrir-vaga">Ver detalhes <span aria-hidden="true">›</span></span>
         </div>
       </router-link>
 
       <div v-else class="sem-publicacao vazio-publicacao">
         <FontAwesomeIcon :icon="['fas', 'briefcase']" aria-hidden="true" />
-        <h3>Publique sua primeira vaga</h3>
+        <h3>{{ vagas.length ? 'Nenhuma vaga aberta' : 'Publique sua primeira vaga' }}</h3>
         <p>Você ainda não tem oportunidades publicadas.</p>
         <router-link to="/criar-vaga">Criar nova vaga</router-link>
       </div>
@@ -190,42 +219,58 @@ onMounted(() => {
       <p v-if="!vagasFiltradas.length" class="sem-publicacao" role="status">
         Nenhuma vaga encontrada com esses filtros.
       </p>
-      <div class="lista-vagas">
-        <article v-for="vaga in vagasFiltradas" :key="vaga.id" class="job-card vaga-publicada">
-          <div class="vaga-icone" aria-hidden="true">
-            <FontAwesomeIcon :icon="['fas', 'briefcase']" />
-          </div>
-          <div class="vaga-conteudo">
-            <div class="job-header">
-              <h4>
-                <router-link class="titulo-vaga" :to="'/empresa/vagas/' + vaga.id">{{
-                  vaga.titulo
-                }}</router-link>
-              </h4>
-              <strong class="price">{{ formatarPagamento(vaga.preco) }}</strong>
-            </div>
-            <div class="job-footer">
-              <span class="job-info">{{ vaga.tag }}</span>
-              <span class="job-info">{{ formatarTempo(vaga.tempo) }}</span>
-              <span v-if="vaga.modalidade" class="job-info">{{ vaga.modalidade }}</span>
-              <span v-if="vaga.cidade || vaga.uf" class="job-info">{{
-                [vaga.cidade, vaga.uf].filter(Boolean).join(' / ')
-              }}</span>
-            </div>
-            <div class="acoes-vaga">
-              <router-link :to="'/editar-vaga/' + vaga.id"
-                >Editar<span class="sr-only"> {{ vaga.titulo }}</span></router-link
+      <section v-for="grupo in gruposVagas" :key="grupo.nome" class="grupo-vagas">
+        <h3>{{ grupo.nome }}</h3>
+        <p v-if="!grupo.vagas.length" class="sem-publicacao">Nenhuma vaga nesta seção.</p>
+        <div class="lista-vagas">
+          <article v-for="vaga in grupo.vagas" :key="vaga.id" class="job-card vaga-publicada">
+            <IdentidadeEmpresaVaga :vaga="vaga" :perfil="perfilEmpresa" />
+            <div class="vaga-conteudo">
+              <div class="job-header">
+                <h4>
+                  <router-link class="titulo-vaga" :to="'/empresa/vagas/' + vaga.id">{{
+                    vaga.titulo
+                  }}</router-link>
+                </h4>
+                <strong class="price">{{ formatarPagamento(vaga.preco) }}</strong>
+              </div>
+              <div class="job-footer">
+                <span class="job-info">{{ vaga.tag }}</span>
+                <span class="job-info">{{ formatarTempo(vaga.tempo) }}</span>
+                <span v-if="vaga.modalidade" class="job-info">{{ vaga.modalidade }}</span>
+                <span v-if="vaga.cidade || vaga.uf" class="job-info">{{
+                  [vaga.cidade, vaga.uf].filter(Boolean).join(' / ')
+                }}</span>
+                <span v-if="vaga.status" class="job-info">{{ statusVaga[vaga.status] }}</span>
+              </div>
+              <p class="resumo-aprovados">
+                {{ resumoAprovados(vaga, aprovadosPorVaga?.[vaga.id]) }}
+              </p>
+              <p
+                v-if="vagaAberta(vaga) && vagaPreenchida(vaga, aprovadosPorVaga?.[vaga.id])"
+                class="resumo-aprovados"
               >
-              <button type="button" @click="gerenciamento.pedirExclusao(vaga)">
-                Excluir<span class="sr-only"> {{ vaga.titulo }}</span>
-              </button>
-              <router-link class="ver-detalhes" :to="'/empresa/vagas/' + vaga.id"
-                >Ver detalhes<span class="sr-only"> {{ vaga.titulo }}</span></router-link
-              >
+                Limite atingido. Consulte os detalhes para confirmar o encerramento.
+              </p>
+              <div class="acoes-vaga">
+                <router-link v-if="vagaAberta(vaga)" :to="'/editar-vaga/' + vaga.id"
+                  >Editar<span class="sr-only"> {{ vaga.titulo }}</span></router-link
+                >
+                <button
+                  v-if="vagaAberta(vaga)"
+                  type="button"
+                  @click="gerenciamento.pedirExclusao(vaga)"
+                >
+                  Excluir<span class="sr-only"> {{ vaga.titulo }}</span>
+                </button>
+                <router-link class="ver-detalhes" :to="'/empresa/vagas/' + vaga.id"
+                  >Ver detalhes<span class="sr-only"> {{ vaga.titulo }}</span></router-link
+                >
+              </div>
             </div>
-          </div>
-        </article>
-      </div>
+          </article>
+        </div>
+      </section>
     </section>
     <p v-if="sucesso && !vagas.length" role="status" class="confirmacao-publicacao">
       {{ sucesso }}
@@ -316,7 +361,7 @@ onMounted(() => {
 }
 .job-card {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px 10px;
   padding: 12px 10px;
   min-width: 0;
@@ -324,17 +369,16 @@ onMounted(() => {
   border-radius: var(--mrj-radius-md);
   background: var(--mrj-color-surface);
 }
-.vaga-icone {
-  display: grid;
-  place-items: center;
-  align-self: start;
-  grid-row: 1 / 3;
-  width: 32px;
-  height: 36px;
-  border-radius: var(--mrj-radius-sm);
-  background: var(--mrj-color-primary);
-  color: var(--mrj-color-on-primary);
-  font-size: 16px;
+.grupo-vagas {
+  margin-top: 16px;
+}
+.grupo-vagas h3 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+.resumo-aprovados {
+  font-size: var(--mrj-font-size-sm);
+  color: var(--mrj-color-text-secondary);
 }
 .vaga-conteudo {
   display: contents;
@@ -345,7 +389,7 @@ onMounted(() => {
   align-items: start;
   gap: 8px;
   min-width: 0;
-  grid-column: 2;
+  grid-column: 1;
 }
 .job-header :is(h3, h4) {
   min-width: 0;
@@ -379,7 +423,7 @@ onMounted(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  grid-column: 2;
+  grid-column: 1;
   min-width: 0;
 }
 .job-info {
@@ -396,7 +440,7 @@ onMounted(() => {
   text-decoration: none;
 }
 .abrir-vaga {
-  grid-column: 2;
+  grid-column: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -504,7 +548,7 @@ button:disabled {
   font-weight: 600;
 }
 .vazio-publicacao p {
-  grid-column: 2;
+  grid-column: 1;
 }
 .vazio-publicacao a {
   grid-column: 1 / -1;
@@ -616,13 +660,8 @@ button:disabled {
     padding: 10px;
   }
   .job-card {
-    grid-template-columns: 28px minmax(0, 1fr);
     gap: 6px 8px;
     padding: 10px 8px;
-  }
-  .vaga-icone {
-    width: 28px;
-    height: 32px;
   }
   .job-header {
     grid-template-columns: minmax(0, 1fr) auto;

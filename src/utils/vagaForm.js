@@ -87,6 +87,7 @@ export const novoRascunhoVaga = () => ({
   cidade: '',
   uf: '',
   status: 'publicada',
+  max_profissionais: null,
   descricao: '',
   preco: '',
   tempo: '',
@@ -114,6 +115,7 @@ export function formularioDaVaga(vaga) {
     cidade: textoCampo(vaga.cidade),
     uf: textoCampo(vaga.uf),
     status: textoCampo(vaga.status) || 'publicada',
+    max_profissionais: limiteProfissionais(vaga.max_profissionais),
     descricao: legado ? descricao.slice(prefixoModalidade(legado).length) : descricao,
     preco: String(vaga.preco ?? ''),
     tempo: String(vaga.tempo ?? ''),
@@ -147,6 +149,7 @@ export function validarEdicaoVaga(form, original) {
 export function montarPayloadEdicao(form, original) {
   const anterior = formularioDaVaga(original)
   const payload = montarPayloadVaga(form)
+  if (payload.max_profissionais === anterior.max_profissionais) delete payload.max_profissionais
   for (const [campo, api] of Object.entries({
     titulo: 'titulo',
     categoria: 'tag',
@@ -179,6 +182,8 @@ export const formatarTempo = (valor) =>
 
 export function validarVaga(form) {
   const erros = {}
+  if (form.max_profissionais != null && limiteProfissionais(form.max_profissionais) === null)
+    erros.max_profissionais = 'Informe um número inteiro maior que zero.'
   if (!form.titulo.trim()) erros.titulo = 'Informe o título da vaga.'
   else if ([...form.titulo.trim()].length > limitesVaga.titulo)
     erros.titulo = 'Use até 100 caracteres no título.'
@@ -245,6 +250,8 @@ function dataPublicacaoValida(valor) {
 
 export function camposNaoConfirmados(vaga, payload) {
   const campos = [...camposComplementaresVaga, ...camposEstruturadosVaga]
+  if (Object.hasOwn(payload, 'max_profissionais'))
+    campos.push({ nome: 'max_profissionais', rotulo: 'Limite de profissionais' })
   // Na remoção legada, confirmar só modalidade vazia permitiria o prefixo reaparecer.
   if (payload.modalidade === '' && Object.hasOwn(payload, 'descricao'))
     campos.push({ nome: 'descricao', rotulo: 'Descrição' })
@@ -252,6 +259,9 @@ export function camposNaoConfirmados(vaga, payload) {
     .filter(({ nome, tipo }) => {
       if (!Object.hasOwn(payload, nome)) return false
       if (!Object.hasOwn(vaga || {}, nome)) return true
+      if (nome === 'max_profissionais')
+        return (vaga[nome] !== null && vaga[nome] !== 0 && limiteProfissionais(vaga[nome]) === null) ||
+          limiteProfissionais(vaga[nome]) !== payload[nome]
       if (payload[nome] === null || payload[nome] === '')
         return vaga[nome] != null && vaga[nome] !== ''
       if (tipo === 'moeda') return normalizarPagamento(vaga[nome]) !== payload[nome]
@@ -280,6 +290,7 @@ export function formatarFaixaSalarial(minimo, maximo) {
 export function montarPayloadVaga(form) {
   return {
     titulo: form.titulo.trim(),
+    max_profissionais: limiteProfissionais(form.max_profissionais),
     descricao: form.descricao.trim(),
     modalidade: textoCampo(form.modalidade),
     cidade: textoCampo(form.cidade).trim().normalize('NFC'),
@@ -303,9 +314,36 @@ const camposApi = {
   tag: 'categoria',
   preco: 'preco',
   tempo: 'tempo',
+  max_profissionais: 'max_profissionais',
   ...Object.fromEntries(
     [...camposComplementaresVaga, ...camposEstruturadosVaga].map(({ nome }) => [nome, nome]),
   ),
+}
+
+export function limiteProfissionais(valor) {
+  if (!/^[0-9]+$/.test(String(valor ?? ''))) return null
+  const numero = Number(valor)
+  return Number.isSafeInteger(numero) && numero > 0 && numero <= 2147483647 ? numero : null
+}
+
+export const vagaAberta = (vaga) => vaga?.status === 'publicada'
+
+export function vagaPreenchida(vaga, aprovados = vaga?.total_aprovados) {
+  const limite = limiteProfissionais(vaga?.max_profissionais)
+  return limite !== null && Number.isSafeInteger(aprovados) && aprovados >= limite
+}
+
+export const vagaDisponivel = (vaga) =>
+  (!vaga?.status || vagaAberta(vaga)) && !vagaPreenchida(vaga)
+export const localDaVaga = (vaga) => [vaga.cidade, vaga.uf].filter(Boolean).join(' / ')
+
+export function resumoAprovados(vaga, aprovados) {
+  const limite = limiteProfissionais(vaga.max_profissionais)
+  if (!Number.isSafeInteger(aprovados))
+    return limite === null ? 'Limite: sem limite definido. Aprovados indisponíveis.' :
+      `Limite: ${limite}. Aprovados indisponíveis.`
+  return limite === null ? `${aprovados} aprovados — sem limite definido.` :
+    `Profissionais aprovados: ${aprovados} de ${limite}`
 }
 
 export function interpretarErroPublicacao(error) {

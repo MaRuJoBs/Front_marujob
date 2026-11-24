@@ -79,10 +79,11 @@ export async function consultarVagaPropria(id) {
   return data
 }
 
-export async function editarVaga(id, payload) {
+export async function editarVaga(id, payload, { antesDeSalvar } = {}) {
   const conta = capturarEmpresa()
-  await consultarVagaPropria(id)
+  const atual = await consultarVagaPropria(id)
   conta.verificar()
+  if (antesDeSalvar && !antesDeSalvar(atual)) return null
   const campos = Object.fromEntries(
     [
       'titulo',
@@ -94,6 +95,7 @@ export async function editarVaga(id, payload) {
       'cidade',
       'uf',
       'status',
+      'max_profissionais',
       ...camposComplementaresVaga.map(({ nome }) => nome),
     ]
       .filter((campo) => Object.hasOwn(payload, campo))
@@ -101,7 +103,9 @@ export async function editarVaga(id, payload) {
   )
   const response = await api.patch(caminhoVaga(id), campos)
   conta.verificar()
-  if (response.status !== 200) throw new Error('O servidor não confirmou a edição.')
+  if (response.status !== 200 || !response.data || typeof response.data !== 'object' ||
+      Array.isArray(response.data))
+    throw new Error('O servidor não confirmou a edição.')
   return response.data
 }
 

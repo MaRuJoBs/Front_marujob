@@ -270,6 +270,39 @@ function alterarModalidade() {
 
           <fieldset :disabled="publicando" class="condicoes complementos-vaga">
             <legend>Informações complementares</legend>
+            <div class="campo">
+              <label for="limite-profissionais">Quantos profissionais você deseja contratar para esta oportunidade?</label>
+              <select
+                id="limite-profissionais"
+                :value="form.max_profissionais === null ? 'sem-limite' : 'quantidade'"
+                aria-describedby="limite-profissionais-ajuda"
+                @change="form.max_profissionais = $event.target.value === 'sem-limite' ? null : ''"
+              >
+                <option value="sem-limite">Sem limite</option>
+                <option value="quantidade">Definir quantidade</option>
+              </select>
+              <p id="limite-profissionais-ajuda" class="ajuda">
+                A quantidade definida corresponde ao máximo de freelancers que poderão ser aprovados,
+                não ao máximo de candidaturas recebidas.
+              </p>
+              <template v-if="form.max_profissionais !== null">
+                <label for="quantidade-profissionais">Quantidade de profissionais</label>
+                <input
+                  id="quantidade-profissionais"
+                  name="max_profissionais"
+                  v-model="form.max_profissionais"
+                  inputmode="numeric"
+                  placeholder="Ex.: 3"
+                  required
+                  :aria-invalid="!!erros.max_profissionais"
+                  :aria-describedby="erros.max_profissionais ? 'quantidade-profissionais-erro' : 'limite-profissionais-ajuda'"
+                  @blur="validarCampo('max_profissionais')"
+                />
+                <p v-if="erros.max_profissionais" id="quantidade-profissionais-erro" class="erro" role="alert">
+                  {{ erros.max_profissionais }}
+                </p>
+              </template>
+            </div>
             <p class="descricao-secao">
               Preencha os detalhes da oportunidade. Estes campos são opcionais.
             </p>

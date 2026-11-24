@@ -12,16 +12,18 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import FavoritoButton from '@/components/FavoritoButton.vue'
+import IdentidadeEmpresaVaga from '@/components/IdentidadeEmpresaVaga.vue'
 import { useFavoritosLocais } from '@/composables/useFavoritosLocais'
 import { obterOportunidade } from '@/services/freelanceService'
 import { erroOportunidades, formatarPreco } from '@/utils/oportunidades'
 import { useCandidatura } from '@/composables/useCandidatura'
 import ConversarButton from '@/features/chat/components/ConversarButton.vue'
-import { formularioDaVaga, detalhesComplementaresVaga } from '@/utils/vagaForm'
+import { formularioDaVaga, detalhesComplementaresVaga, vagaDisponivel } from '@/utils/vagaForm'
 const informacoes = computed(() => (job.value ? formularioDaVaga(job.value) : null))
 const complementos = computed(() => detalhesComplementaresVaga(job.value))
 const route = useRoute()
 const job = ref(null)
+const disponivel = computed(() => Boolean(job.value && vagaDisponivel(job.value)))
 const {
   candidatura,
   carregando: consultandoCandidatura,
@@ -32,7 +34,7 @@ const {
   feedback: feedbackCandidatura,
   consultar: consultarCandidatura,
   enviar: candidatar,
-} = useCandidatura(() => job.value?.id)
+} = useCandidatura(() => job.value?.id, () => disponivel.value)
 const { erroFavorito } = useFavoritosLocais()
 const carregando = ref(false)
 const erro = ref('')
@@ -67,6 +69,7 @@ onBeforeUnmount(() => {
         ><FontAwesomeIcon :icon="faArrowLeft"
       /></RouterLink>
       <div class="cabecalho">
+        <IdentidadeEmpresaVaga v-if="job" :vaga="job" />
         <h1>{{ job?.titulo || (carregando ? 'Carregando...' : 'Oportunidade') }}</h1>
         <p v-if="job?.tag">{{ job.tag }}</p>
       </div>
@@ -150,7 +153,7 @@ onBeforeUnmount(() => {
           @click="candidatar"
         >
           <FontAwesomeIcon :icon="faPaperPlane" aria-hidden="true" />
-          {{ enviandoCandidatura ? 'Confirmando candidatura...' : 'Quero me candidatar' }}
+          {{ enviandoCandidatura ? 'Confirmando candidatura...' : disponivel ? 'Quero me candidatar' : 'Vaga indisponível' }}
         </button>
         <p id="candidatura-ajuda" class="ajuda" role="status">
           <template v-if="!candidaturaPermitida"
@@ -161,6 +164,7 @@ onBeforeUnmount(() => {
           <template v-else-if="candidatura"
             >Sua candidatura está {{ candidatura.status }}.</template
           >
+          <template v-else-if="!disponivel">Esta oportunidade está encerrada ou preenchida.</template>
           <template v-else-if="podeCandidatar"
             >Você pode se candidatar a esta oportunidade.</template
           >
