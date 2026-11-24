@@ -354,4 +354,65 @@ onBeforeUnmount(() => {
 .estado {
   margin-bottom: 20px;
 }
+/* F61 · Desktop: coluna principal (descrição, requisitos, benefícios) + coluna lateral
+   (candidatura no topo e informações/pagamento abaixo). Só CSS: a ordem do DOM e do leitor de
+   tela não muda. "Sobre" ocupa as linhas 2–3: a linha 2 tem a altura da candidatura e o resto
+   da descrição vai para a linha 3, onde a lateral já continua (sem vão entre candidatura e
+   informações). A última linha (1fr) absorve a altura extra da lateral, sem esticar nem afastar
+   os cards da coluna principal. */
+@media (min-width: 48rem) {
+  .oportunidade {
+    padding-inline: 32px;
+  }
+}
+@media (min-width: 64rem) {
+  .oportunidade {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+    grid-template-rows: auto auto auto auto auto 1fr;
+    align-content: start;
+    column-gap: 24px;
+    max-width: 72rem;
+    min-height: auto;
+    margin-inline: auto;
+    padding: 32px 40px 56px;
+  }
+  .topo {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .estado {
+    grid-column: 1 / -1;
+  }
+  .blocos {
+    display: contents;
+  }
+  .blocos > .card {
+    grid-column: 1;
+    align-self: start;
+    margin-bottom: 20px;
+  }
+  .blocos > .sobre {
+    grid-row: 2 / 4;
+  }
+  .informacoes-card + .card {
+    grid-row: 4;
+  }
+  .informacoes-card + .card + .card {
+    grid-row: 5;
+  }
+  .blocos > .informacoes-card {
+    grid-column: 2;
+    grid-row: 3 / 7;
+    position: sticky;
+    top: 24px;
+  }
+  .acoes {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    max-width: none;
+    margin: 0 0 20px;
+  }
+}
 </style>

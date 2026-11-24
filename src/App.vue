@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import DesktopNav from './components/DesktopNav.vue'
 import Footer from './components/Footer.vue'
 import FooterEmpresa from './components/FooterEmpresaComponent.vue'
 import ChatToastHost from './features/chat/components/ChatToastHost.vue'
@@ -86,6 +87,10 @@ const rodapeOculto = computed(
   () => Boolean(route.meta.hideFooter) || (route.name === 'mensagens' && route.query.room != null),
 )
 
+// F61: navegação desktop (≥ 64rem) em toda página autenticada. Independe de rodapeOculto, para que
+// a conversa aberta e os formulários de vaga mantenham a navegação no computador.
+const navegacaoDesktop = computed(() => Boolean(sessao.usuario) && !route.meta.publica)
+
 // Chat em tempo real ligado só com usuário logado. Trocar de conta (ou sair) desliga e limpa tudo,
 // para nada de uma conta sobrar na outra.
 watch(
@@ -154,6 +159,8 @@ const paginasComReserva = new Set([
     class="app"
     :class="{
       'app--navigation': !rodapeOculto && sessao.usuario,
+      'app--desktop-nav': navegacaoDesktop,
+      'app--publica': $route.meta.publica,
       'app--empresa': sessao.tipo === 'empresa',
       'app--notificacoes mrj-ui': $route.name === 'notificacoes-freelancer',
       'app--page-reserve': paginasComReserva.has($route.name),
@@ -164,6 +171,7 @@ const paginasComReserva = new Set([
     <a class="saltar-conteudo" href="#conteudo-principal" @click.prevent="focarConteudo">
       Pular para o conteúdo
     </a>
+    <DesktopNav v-if="navegacaoDesktop" />
     <section
       id="conteudo-principal"
       ref="conteudo"

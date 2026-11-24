@@ -4,17 +4,20 @@ import { useChatStore } from '@/features/chat/stores/chat'
 import { useContadorNotificacoes } from '@/stores/contadorNotificacoes'
 import { useNotificacoesFreelancer } from '@/stores/notificacoesFreelancer'
 
-const props = defineProps({ empresa: Boolean, candidaturas: Boolean })
+// candidaturasEmpresa (F61): só as notificações de candidatura da empresa, para a navegação desktop.
+const props = defineProps({ empresa: Boolean, candidaturas: Boolean, candidaturasEmpresa: Boolean })
 const chat = useChatStore()
 const contador = useContadorNotificacoes()
 const freelancer = useNotificacoesFreelancer()
 const total = computed(() =>
-  props.candidaturas
-    ? (freelancer.total ?? 0)
-    : chat.unreadTotal + (props.empresa ? (contador.total ?? 0) : 0),
+  props.candidaturasEmpresa
+    ? (contador.total ?? 0)
+    : props.candidaturas
+      ? (freelancer.total ?? 0)
+      : chat.unreadTotal + (props.empresa ? (contador.total ?? 0) : 0),
 )
 const descricao = computed(() =>
-  props.candidaturas
+  props.candidaturas || props.candidaturasEmpresa
     ? total.value === 1
       ? 'notificação de candidatura não lida'
       : 'notificações de candidaturas não lidas'

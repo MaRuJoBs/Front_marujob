@@ -214,6 +214,7 @@ async function aguardar(expression, tentativas = 100, sessionId, conexao = ws) {
   throw Error('Timeout: ' + expression)
 }
 async function foto(nome) {
+  if (process.argv.includes('--sem-capturas')) return
   const r = await cdp('Page.captureScreenshot', { format: 'png' })
   writeFileSync(resolve(pasta, nome + '.png'), Buffer.from(r.data, 'base64'))
 }
@@ -261,6 +262,8 @@ try {
     ? []
     : [320, 375, 390, 430, 768, 1280])
     for (const scenario of ['lista', 'vazio', 'erro', 'conflito', 'sessao', 'freelancer']) {
+      const desktop = largura >= 1024
+      const navegacao = desktop ? '.desktop-nav' : '.app-navigation'
       await cdp('Emulation.setDeviceMetricsOverride', {
         width: largura,
         height: 1000,
@@ -278,7 +281,8 @@ try {
       })
       await aguardar("document.body?.dataset.pronto==='sim'")
       await semOverflow()
-      assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 1)
+      assert.equal(await avaliar('Boolean(document.querySelector(".app-navigation")?.getClientRects().length)'), !desktop)
+      assert.equal(await avaliar('Boolean(document.querySelector(".desktop-nav")?.getClientRects().length)'), desktop)
       if (scenario === 'freelancer') {
         await aguardar(
           "document.querySelector('.historico h3')?.textContent==='Candidatura aprovada!'",
@@ -292,11 +296,11 @@ try {
           '/oportunidade/45',
         )
         await aguardar(
-          'document.querySelector(\'nav a[href="/notificacoes"] .indicador\')?.textContent==="2"',
+          `document.querySelector('${navegacao} a[href="/notificacoes"] .indicador')?.textContent==="2"`,
         )
         await clicarTexto('.historico li button', 'Marcar como lida')
         await aguardar(
-          'document.querySelector(\'nav a[href="/notificacoes"] .indicador\')?.textContent==="1"',
+          `document.querySelector('${navegacao} a[href="/notificacoes"] .indicador')?.textContent==="1"`,
         )
         assert.equal(
           await avaliar("document.querySelector('.historico li').classList.contains('nao-lida')"),
@@ -337,7 +341,7 @@ try {
         )
         assert.equal(
           await avaliar(
-            'document.querySelector(\'nav a[href="/mensagens"] .indicador\')?.textContent',
+            `document.querySelector('${navegacao} a[href="/mensagens"] .indicador')?.textContent`,
           ),
           '2',
         )
@@ -376,7 +380,14 @@ try {
               Math.abs((barra.left + barra.right) - (area.left + area.right)) < 1,
           }
         })()`
-        assert.deepEqual(await avaliar(geometriaRodape), {
+        if (desktop) {
+          assert.ok(await avaliar(`(() => {
+            const sidebar = document.querySelector('.desktop-nav').getBoundingClientRect()
+            const painel = document.querySelector('.central-freelancer').getBoundingClientRect()
+            return sidebar.width === 240 && painel.left >= sidebar.right &&
+              getComputedStyle(document.querySelector('.app')).paddingBottom === '0px'
+          })()`))
+        } else assert.deepEqual(await avaliar(geometriaRodape), {
           fundoContinuo: true,
           reserva: 88 + inset,
           altura: 76 + inset,
@@ -391,10 +402,10 @@ try {
         assert.ok(
           await avaliar(`(() => {
           const fim = document.querySelector('.central-freelancer').getBoundingClientRect().bottom
-          const topo = document.querySelector('.app-navigation').getBoundingClientRect().top
+          const topo = ${desktop ? 'innerHeight' : "document.querySelector('.app-navigation').getBoundingClientRect().top"}
           return scrollY > 0 && fim <= topo + 1
         })()`),
-          'O fim da central fica acima da barra após rolar',
+          'O fim da central fica na área útil após rolar',
         )
         await avaliar(
           "document.querySelector('.historico').style.minHeight = ''; window.scrollTo(0, 0)",
@@ -405,6 +416,7 @@ try {
         )
         await aguardar("window.teste.router.currentRoute.value.query.room==='42'")
         assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 0)
+        assert.equal(await avaliar('Boolean(document.querySelector(".desktop-nav")?.getClientRects().length)'), desktop)
         await aguardar(
           "window.teste.requests.some(r=>r.method==='post'&&r.url==='chat/rooms/42/read/')",
         )
@@ -553,7 +565,7 @@ try {
         assert.equal(await avaliar("window.teste.requests.filter(r=>r.method==='post').length"), 1)
         await foto('conflito-' + largura)
       } else {
-        await clicarTexto('nav.app-navigation button', 'Sair')
+        await clicarTexto(`${navegacao} button`, 'Sair')
         await aguardar("window.teste.router.currentRoute.value.name==='login'")
         assert.ok(
           await avaliar(

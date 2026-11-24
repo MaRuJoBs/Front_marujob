@@ -416,4 +416,24 @@ onMounted(carregar)
 .config-item.sair {
   color: var(--mrj-color-danger);
 }
+/* F61 · Desktop (layout wide): cabeçalho e seções com o respiro do shell; reserva da barra
+   inferior removida. Os grids minmax() existentes passam a ter colunas. */
+@media (min-width: 48rem) {
+  .header-perfil {
+    padding-inline: 32px;
+  }
+}
+@media (min-width: 64rem) {
+  .perfil {
+    min-height: auto;
+    padding: 24px 40px 56px;
+  }
+  .header-perfil {
+    padding: 40px;
+    border-radius: 20px;
+  }
+  .perfil-conteudo {
+    padding: 32px 0 0;
+  }
+}
 </style>

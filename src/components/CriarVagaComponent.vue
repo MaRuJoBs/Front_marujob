@@ -861,4 +861,62 @@ textarea:disabled {
 .dica-card {
   border: 1px solid var(--mrj-color-border-subtle);
 }
+/* F61 · Desktop: formulário com grupos em duas colunas (pares curtos lado a lado; título e
+   textos longos em largura total) e ações no fim do formulário em vez da barra fixa mobile.
+   Campos, validações, ordem do DOM e payload não mudam. */
+@media (min-width: 64rem) {
+  .criar-vaga {
+    min-height: auto;
+    background: transparent;
+  }
+  .conteudo {
+    max-width: 64rem;
+    margin-inline: auto;
+    padding: 32px 40px 56px;
+  }
+  h1 {
+    font-size: clamp(1.5rem, 1rem + 1vw, 2rem);
+  }
+  .layout-publicacao {
+    grid-template-columns: minmax(0, 1fr) 16rem;
+    align-items: start;
+    gap: 24px;
+  }
+  .form-card {
+    padding: 28px 32px;
+  }
+  .form-card fieldset {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    column-gap: 20px;
+  }
+  .form-card fieldset > :not(.campo),
+  .form-card .campo:has(#vaga-titulo, textarea) {
+    grid-column: 1 / -1;
+  }
+  .campos-duplos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 20px;
+  }
+  .acoes {
+    position: static;
+    justify-content: flex-end;
+    width: auto;
+    margin-top: 8px;
+    padding: 20px 0 0;
+    transform: none;
+    background: transparent;
+    border-top: 1px solid var(--mrj-color-border-subtle);
+    box-shadow: none;
+  }
+  .btn-publicar {
+    flex: 0 1 auto;
+    min-width: 12rem;
+  }
+  .painel-lateral {
+    position: sticky;
+    top: 32px;
+  }
+}
 </style>

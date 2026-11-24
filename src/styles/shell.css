@@ -107,16 +107,50 @@
   .app--wide {
     --mrj-content-width: var(--mrj-shell-width);
   }
-  .app--wide .app-navigation {
-    padding-inline: var(--mrj-space-8);
+  /* F61: as regras de barra larga em linha (ícone ao lado do rótulo) foram removidas: as barras
+     inferiores são flutuantes de 396px e mantêm ícone sobre rótulo também no modo wide. */
+}
+
+/* F61 · Desktop (≥ 64rem): sidebar fixa à esquerda substitui a barra inferior.
+   Abaixo de 64rem nada muda: a sidebar não é exibida e as regras acima valem integralmente. */
+@media (min-width: 64rem) {
+  .app.app--desktop-nav {
+    max-width: none;
+    margin-inline: 0;
+    padding-left: var(--mrj-layout-sidebar);
+    padding-bottom: 0;
+    --mrj-page-reserve: 0px;
+    --mrj-footer-occupied-height: 0px;
+    --mrj-navigation-height: 0px;
   }
-  .app--wide .app-navigation .item {
-    flex: 1;
-    flex-direction: row;
-    gap: var(--mrj-space-2);
-    font-size: var(--mrj-font-size-sm);
+  /* Fundo contínuo entre a sidebar e o conteúdo (a empresa mantém o fundo de .app--empresa). */
+  .app.app--desktop-nav:not(.app--empresa) {
+    background: var(--mrj-layout-page-background);
   }
-  .app--wide .app-navigation .icon {
-    margin-bottom: 0;
+  /* Nunca duas navegações: a barra inferior mobile some quando a sidebar está ativa. */
+  .app.app--desktop-nav .app-navigation {
+    display: none;
+  }
+  /* Login e cadastros (sem sessão, sem sidebar): a própria página compõe o desktop em largura
+     total; o formulário continua com largura máxima confortável definida em cada página. */
+  .app.app--publica {
+    max-width: none;
+    --mrj-content-width: none;
+  }
+  /* Páginas adaptadas pela F61 (opt-in meta.layout = 'wide') usam a largura desktop. */
+  .app.app--desktop-nav.app--wide {
+    --mrj-content-width: var(--mrj-layout-content-max);
+  }
+}
+
+@media (min-width: 80rem) {
+  .app.app--desktop-nav {
+    --mrj-layout-sidebar: var(--mrj-layout-sidebar-expanded);
+  }
+}
+
+@media (min-width: 90rem) {
+  .app.app--desktop-nav.app--wide {
+    --mrj-content-width: var(--mrj-layout-content-max-wide);
   }
 }

@@ -201,9 +201,9 @@ try {
     writeFileSync(resolve(folder, `lista-${width}.png`), Buffer.from(shot.data, 'base64'))
   }
   await click('Próxima')
-  await until('document.querySelector("[aria-current=page]")?.textContent.includes("2")')
+  await until('document.querySelector(".paginacao [aria-current=page]")?.textContent.includes("2")')
   await click('Anterior')
-  await until('document.querySelector("[aria-current=page]")?.textContent.includes("1")')
+  await until('document.querySelector(".paginacao [aria-current=page]")?.textContent.includes("1")')
   await input('Vue')
   await wait(100)
   await input('UI/UX')
@@ -265,11 +265,15 @@ try {
     })
     assert.equal(
       await evaluate(`{
-      const footer=document.querySelector('.footer').getBoundingClientRect();
-      footer.left >= 10 && footer.right <= innerWidth - 10 && footer.bottom <= innerHeight - 10
+      const footer = document.querySelector('.footer').getBoundingClientRect();
+      const sidebar = document.querySelector('.desktop-nav').getBoundingClientRect();
+      const conteudo = document.querySelector('.app-content').getBoundingClientRect();
+      ${width >= 1024
+        ? 'footer.width === 0 && sidebar.width === 240 && conteudo.left >= sidebar.right'
+        : 'sidebar.width === 0 && footer.width > 0 && footer.left >= 10 && footer.right <= innerWidth - 10 && footer.bottom <= innerHeight - 10'}
     }`),
       true,
-      `Footer do usuário flutuante em ${width}px`,
+      `Navegação do usuário em ${width}px`,
     )
   }
   assert.deepEqual(errors, [])

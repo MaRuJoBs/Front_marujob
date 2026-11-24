@@ -259,9 +259,11 @@ try {
           '/portfolio/1/editar': '.acoes',
         }
         await evaluate('window.scrollTo(0,document.documentElement.scrollHeight)')
+        assert.equal(await evaluate('Boolean(document.querySelector(".app-navigation")?.getClientRects().length)'), width < 1024)
+        assert.equal(await evaluate('Boolean(document.querySelector(".desktop-nav")?.getClientRects().length)'), width >= 1024)
         assert.equal(
           await evaluate(
-            `document.querySelector(${JSON.stringify(endSelectors[path])}).getBoundingClientRect().bottom <= document.querySelector('.app-navigation').getBoundingClientRect().top + 1`,
+            `document.querySelector(${JSON.stringify(endSelectors[path])}).getBoundingClientRect().bottom <= (${width >= 1024 ? 'innerHeight' : "document.querySelector('.app-navigation').getBoundingClientRect().top"}) + 1`,
           ),
           true,
           `Navegação cobre ação final: ${path} ${width}`,

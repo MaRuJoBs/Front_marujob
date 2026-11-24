@@ -170,7 +170,8 @@ test('empresa carrega dados reais e contagem DRF sem confundir as datas', async 
 test('rota exige empresa; freelancer e anônimo não acessam', async () => {
   const rota = routes.find((r) => r.name === 'notificacoes-empresa')
   assert.equal(rota.path, '/empresa/notificacoes')
-  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa' })
+  // F61: layout desktop opt-in; a proteção por tipo de conta continua a mesma.
+  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'empresa', layout: 'wide' })
   assert.equal(await protegerRota({ ...rota, query: {} }), true)
   sessao.tipo = 'usuario'
   sessao.usuario = { id: 7, groups: ['Usuário'] }
@@ -753,7 +754,8 @@ test('contador mantém valor desconhecido em caso de erro ou resposta inválida'
 test('central freelancer usa a proteção por tipo de conta existente', async () => {
   const rota = routes.find((r) => r.name === 'notificacoes-freelancer')
   assert.equal(rota.path, '/notificacoes')
-  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'usuario' })
+  // F61: layout desktop opt-in; a proteção por tipo de conta continua a mesma.
+  assert.deepEqual(rota.meta, { requiresAuth: true, tipo: 'usuario', layout: 'wide' })
   assert.deepEqual(await protegerRota({ meta: rota.meta }), { path: '/homeEmpresa', replace: true })
   sessao.tipo = 'usuario'
   assert.equal(await protegerRota({ meta: rota.meta }), true)

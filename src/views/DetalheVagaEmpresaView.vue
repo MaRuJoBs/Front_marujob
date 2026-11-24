@@ -345,4 +345,19 @@ button:focus-visible {
 .acoes .primario:hover {
   background: var(--mrj-color-primary-hover);
 }
+/* F61 · Desktop: largura de leitura e informações em grid. */
+@media (min-width: 64rem) {
+  .detalhe-vaga-empresa {
+    min-height: auto;
+    background: transparent;
+  }
+  .detalhe-conteudo {
+    max-width: 60rem;
+    margin-inline: auto;
+    padding: 32px 40px 56px;
+  }
+  .informacoes-vaga {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  }
+}
 </style>

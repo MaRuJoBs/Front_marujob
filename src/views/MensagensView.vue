@@ -9,6 +9,7 @@ import RoomList from '@/features/chat/components/RoomList.vue'
 import { useChatToast } from '@/features/chat/composables/useChatToast'
 import { STATUS } from '@/features/chat/lib/socketClient'
 import { useChatStore } from '@/features/chat/stores/chat'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 
 // O chat (WebSocket, conversas, avisos) é ligado no App.vue conforme o login;
 // aqui só se abre/fecha a conversa indicada na URL (/mensagens?room=<id>).
@@ -23,6 +24,9 @@ const routeRoomId = computed(() => {
   return Number.isSafeInteger(id) && id > 0 ? id : null
 })
 const room = computed(() => chat.activeRoom)
+// F61: a partir de 64rem, lista e conversa lado a lado (mesma instância, mesmo store; o
+// WebSocket continua sendo aberto só no App.vue). Abaixo disso, o fluxo mobile é o de sempre.
+const desktop = useMediaQuery('(min-width: 64rem)')
 const viewportStyle = shallowRef(null)
 
 // Quando o teclado reduz só o viewport visual, a conversa precisa caber nele.
@@ -112,19 +116,17 @@ function selectRoom(id) {
 </script>
 
 <template>
-  <!-- Layout de celular, uma tela por vez: a lista de conversas; ao tocar, a conversa ocupa a tela
-       toda (sem título nem rodapé de navegação, que o App.vue esconde com ?room=). -->
+  <!-- O painel fica montado ao cruzar o breakpoint, preservando o compositor. -->
   <main
     class="mensagens mrj-ui"
-    :style="viewportStyle"
-    :class="routeRoomId !== null ? 'mensagens--conversa' : 'mensagens--lista'"
+    :style="desktop ? null : viewportStyle"
+    :class="desktop ? 'mensagens--desktop' : routeRoomId !== null ? 'mensagens--conversa' : 'mensagens--lista'"
   >
-    <!-- Lista: o título "Mensagens" fica no cabeçalho em degradê do próprio RoomList. -->
     <RoomList
-      v-if="routeRoomId === null"
+      v-if="desktop || routeRoomId === null"
       class="mensagens__lista"
       :rooms="chat.rooms"
-      :active-id="null"
+      :active-id="routeRoomId"
       :loading="chat.loadingRooms"
       :error="chat.roomsError"
       :presence="chat.presence"
@@ -133,19 +135,22 @@ function selectRoom(id) {
     >
       <ConnectionBanner :state="banner" @retry="chat.retryConnection()" />
     </RoomList>
-
-    <template v-else>
-      <ConnectionBanner :state="banner" @retry="chat.retryConnection()" />
+    <div v-if="desktop || routeRoomId !== null" class="mensagens__painel">
+      <ConnectionBanner v-if="!desktop" :state="banner" @retry="chat.retryConnection()" />
       <ChatPane
-        v-if="room"
+        v-if="routeRoomId !== null && room"
         class="mensagens__conversa"
         @back="router.push({ name: 'mensagens' })"
       />
-      <section v-else class="mensagens__abrindo" role="status">
+      <section v-else-if="routeRoomId !== null" class="mensagens__abrindo" role="status">
         <FontAwesomeIcon :icon="faComments" :style="{ fontSize: '40px' }" aria-hidden="true" />
         <p>Abrindo conversa...</p>
       </section>
-    </template>
+      <section v-else class="mensagens__abrindo mensagens__vazio">
+        <FontAwesomeIcon :icon="faComments" :style="{ fontSize: '40px' }" aria-hidden="true" />
+        <p>Selecione uma conversa para ver as mensagens.</p>
+      </section>
+    </div>
   </main>
 </template>
 
@@ -216,6 +221,10 @@ function selectRoom(id) {
   min-height: 0;
 }
 
+.mensagens__painel {
+  display: contents;
+}
+
 .mensagens__abrindo {
   display: flex;
   flex: 1;
@@ -224,6 +233,31 @@ function selectRoom(id) {
   justify-content: center;
   gap: 0.75rem;
   color: var(--mrj-color-text-secondary);
+}
+
+/* F61 · Desktop: ocupa a área à direita da sidebar, na altura da janela. Lista e histórico
+   rolam de forma independente; nenhuma barra cobre a conversa. */
+@media (min-width: 64rem) {
+  .mensagens--desktop {
+    left: var(--mrj-layout-sidebar);
+    right: 0;
+    width: auto;
+    max-width: none;
+    transform: none;
+    display: grid;
+    grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+  }
+  .mensagens--desktop .mensagens__lista {
+    min-height: 0;
+    overflow-y: auto;
+    border-right: 1px solid var(--mrj-color-border-subtle);
+  }
+  .mensagens__painel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
 }
 </style>
 

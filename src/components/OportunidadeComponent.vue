@@ -467,4 +467,27 @@ const {
   border-radius: 50%;
   margin-right: 6px;
 }
+/* F61 · Tablet e desktop (layout wide). Abaixo de 48rem nada muda; o grid já usa minmax(19rem). */
+@media (min-width: 48rem) {
+  .body {
+    padding-inline: 32px;
+  }
+}
+@media (min-width: 64rem) {
+  .body {
+    min-height: auto;
+    padding: 32px 40px 56px;
+  }
+  .descricao-pagina,
+  .busca-filtros {
+    max-width: 44rem;
+  }
+  /* A dica de favoritos (após o 2º card no DOM) vai para cima do grid, sem abrir buracos. */
+  .resumo-resultados {
+    order: -2;
+  }
+  .obs {
+    order: -1;
+  }
+}
 </style>

@@ -231,4 +231,11 @@ const trocarSenha = async () => {
   opacity: 0.6;
   cursor: not-allowed;
 }
+/* F61 · Desktop: formulário centralizado com largura confortável. */
+@media (min-width: 64rem) {
+  .trocar-senha {
+    min-height: 100dvh;
+    padding-inline: max(40px, calc((100% - 36rem) / 2));
+  }
+}
 </style>
