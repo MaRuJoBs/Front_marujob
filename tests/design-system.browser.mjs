@@ -186,17 +186,21 @@ try {
     await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', windowsVirtualKeyCode: 9 })
     assert.equal(await evaluate('document.activeElement.id'), 'primary')
     assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid')
-    const focus = await cdp('Page.captureScreenshot', {
-      format: 'png',
-      captureBeyondViewport: true,
-    })
-    writeFileSync(resolve(folder, `focus-${width}.png`), Buffer.from(focus.data, 'base64'))
+    if (!process.argv.includes('--sem-capturas')) {
+      const focus = await cdp('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: true,
+      })
+      writeFileSync(resolve(folder, `focus-${width}.png`), Buffer.from(focus.data, 'base64'))
+    }
     await cdp('Input.dispatchKeyEvent', {
       type: 'keyDown',
       key: 'Enter',
+      code: 'Enter',
       windowsVirtualKeyCode: 13,
+      text: '\r',
     })
-    await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', windowsVirtualKeyCode: 13 })
+    await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
     assert.equal(await evaluate('window.clicks'), 1)
     assert.equal(
       await evaluate(
@@ -223,14 +227,16 @@ try {
       await evaluate("getComputedStyle(document.querySelector('#primary')).backgroundColor"),
       'rgb(99, 54, 158)',
     )
-    const screenshot = await cdp('Page.captureScreenshot', {
-      format: 'png',
-      captureBeyondViewport: true,
-    })
-    writeFileSync(
-      resolve(folder, `components-${width}.png`),
-      Buffer.from(screenshot.data, 'base64'),
-    )
+    if (!process.argv.includes('--sem-capturas')) {
+      const screenshot = await cdp('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: true,
+      })
+      writeFileSync(
+        resolve(folder, `components-${width}.png`),
+        Buffer.from(screenshot.data, 'base64'),
+      )
+    }
     await cdp('Emulation.setEmulatedMedia', {
       features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
     })

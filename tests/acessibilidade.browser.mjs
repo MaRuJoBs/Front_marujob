@@ -167,6 +167,7 @@ async function open(path, width = 375, state = 'filled') {
   await wait(200)
 }
 async function shot(name) {
+  if (process.argv.includes('--sem-capturas')) return
   const { data } = await cdp('Page.captureScreenshot', {
     format: 'png',
     captureBeyondViewport: true,
@@ -413,7 +414,11 @@ try {
         ),
         `${path} ${state}`,
       )
-      if (state === 'loading')
+      if (state === 'loading' && path === '/empresa/notificacoes') {
+        assert.match(await evaluate('document.querySelector(".estado[role=status]")?.textContent ?? ""'),
+          /Carregando notificações/)
+        assert.ok(await evaluate('document.querySelector(".estado[role=status]")?.getClientRects().length'))
+      } else if (state === 'loading')
         assert.ok(await evaluate('!!document.querySelector("[aria-busy=true]")'), path)
       record('Feedback de estado', { path, state })
     }

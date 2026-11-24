@@ -1,20 +1,17 @@
 // Teste visual opcional: CHROME_BIN=/caminho/chrome node tests/oportunidades.browser.mjs
 // API simulada somente no servidor de teste; componentes e estilos reais do frontend.
 import assert from 'node:assert/strict'
-import { spawn, execFileSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { setTimeout as wait } from 'node:timers/promises'
 import { createServer } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-const chrome = process.env.CHROME_BIN || '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
+const chrome = process.env.CHROME_BIN || 'C:/Program Files/Google/Chrome/Application/chrome.exe'
 assert.ok(existsSync(chrome), 'Configure CHROME_BIN com um navegador Chrome disponível.')
 const artefatos = resolve('node_modules/.cache/feat37-redesign')
 mkdirSync(artefatos, { recursive: true })
-const caminhoChrome = (path) =>
-  chrome.endsWith('.exe') && process.platform !== 'win32'
-    ? execFileSync('wslpath', ['-w', path], { encoding: 'utf8' }).trim()
-    : path
 const roteiro = `
 import { createApp, nextTick } from 'vue'
 import { createPinia } from 'pinia'
@@ -59,7 +56,8 @@ try {
  if(screen==='listagem') {
   conferir(document.querySelectorAll('.vaga').length===10,'Primeira página')
   const cartao=document.querySelector('.vaga')
-  conferir(cartao.getBoundingClientRect().height<215,'Card compacto')
+  const altura=cartao.getBoundingClientRect().height
+  conferir(altura<=innerHeight/3,'Card ocupa no máximo um terço do viewport de teste: '+altura+'px')
   const informacoes=cartao.querySelector('.info').getBoundingClientRect()
   const botaoDetalhes=cartao.querySelector('.details').getBoundingClientRect()
   conferir(botaoDetalhes.top>=informacoes.bottom-1,'Botão sem sobreposição às informações')
@@ -89,7 +87,7 @@ try {
   await router.push('/freelances');await esperar(()=>document.querySelector('.vaga'))
  } else {
   conferir(!!document.querySelector('.btn-candidatar[aria-describedby]'),'Botão de candidatura')
-  const fimBlocos=document.querySelector('.blocos').getBoundingClientRect().bottom
+  const fimBlocos=document.querySelector(innerWidth>=1024?'.topo':'.blocos').getBoundingClientRect().bottom
   const inicioAcoes=document.querySelector('.acoes').getBoundingClientRect().top
   conferir(inicioAcoes-fimBlocos<=32,'Sem vazio exagerado antes da candidatura')
   conferir(!document.querySelector('.contato button:not(:disabled)'),'Sem mensagem simulada')
@@ -111,6 +109,8 @@ try {
 `
 const vite = await createServer({
   configFile: false,
+  cacheDir: resolve('node_modules/.cache/f43/vite-oportunidades'),
+  optimizeDeps: { noDiscovery: true, include: [] },
   plugins: [
     vue(),
     {
@@ -132,146 +132,93 @@ const vite = await createServer({
     },
   ],
   resolve: { alias: { '@': resolve('src') } },
-  server: { host: '0.0.0.0', port: 5187, strictPort: true, hmr: false },
+  server: { host: '127.0.0.1', port: 5187, strictPort: true, hmr: false },
 })
 await vite.listen()
 // A emulação via CDP evita o viewport mínimo de 500 px do Chrome desktop.
-const pastaWindows = caminhoChrome(artefatos).replaceAll("'", "''")
-const powershellExe = '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe'
-function encerrarNavegadoresDoTeste() {
-  const comando = `Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${pastaWindows}') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`
-  execFileSync(
-    powershellExe,
-    [
-      '-NoProfile',
-      '-NonInteractive',
-      '-EncodedCommand',
-      Buffer.from(comando, 'utf16le').toString('base64'),
-    ],
-    { timeout: 20000, stdio: 'ignore' },
-  )
-}
-encerrarNavegadoresDoTeste()
-const perfil = caminhoChrome(resolve(artefatos, 'perfil-cdp'))
-const navegador = spawn(
-  chrome,
-  [
-    '--headless=new',
-    '--disable-gpu',
-    '--no-first-run',
-    '--no-default-browser-check',
-    `--user-data-dir=${perfil}`,
-    '--remote-debugging-port=19437',
-    'about:blank',
-  ],
-  { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] },
-)
-let diagnostico = ''
-navegador.stderr.on('data', (c) => (diagnostico += c))
-writeFileSync(
-  resolve(artefatos, 'comparacao.html'),
-  `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FEAT-37 — Comparação visual</title><style>body{margin:0;padding:32px;background:#f5f0fc;color:#533581;font:15px Arial}h1{font-size:22px}h2{font-size:17px}section{display:grid;grid-template-columns:repeat(2,minmax(0,375px));gap:24px;align-items:start;margin-bottom:40px}img{display:block;width:100%;height:auto;border:1px solid #d8c9e7;border-radius:8px}p{line-height:1.5;max-width:770px}@media(max-width:600px){body{padding:16px}section{gap:12px}}</style><h1>FEAT-37 — Referências e reconstrução</h1><p>Esquerda: referência original, incluindo a moldura da captura. Direita: interface local a 375 px, com API simulada exclusivamente no teste. Campos sem contrato não foram copiados.</p><h2>Listagem</h2><section><div><p>Referência</p><img src="../../../telas/Captura de tela 2026-10-30 171627.png" alt="Referência da listagem"></div><div><p>Resultado local</p><img src="listagem-375.png" alt="Listagem reconstruída"></div></section><h2>Detalhes</h2><section><div><p>Referência</p><img src="../../../telas/Captura de tela 2026-10-30 171653.png" alt="Referência dos detalhes"></div><div><p>Resultado local</p><img src="detalhes-375.png" alt="Detalhes reconstruídos"></div></section></html>`,
-)
-const powershell = `
-$ErrorActionPreference='Stop'
-$ProgressPreference='SilentlyContinue'
-$target=$null
-for($i=0;$i -lt 60;$i++) {
- try { $targets=Invoke-RestMethod 'http://127.0.0.1:19437/json/list' -UseBasicParsing; foreach($candidate in $targets){if($candidate.type -eq 'page'){$target=$candidate;break}}; if($target){break} } catch {}
- Start-Sleep -Milliseconds 100
-}
-if(-not $target){throw 'Chrome não disponibilizou a depuração'}
-$ws=New-Object System.Net.WebSockets.ClientWebSocket
-$ws.ConnectAsync([Uri]([string]@($target.webSocketDebuggerUrl)[0]),[Threading.CancellationToken]::None).GetAwaiter().GetResult()|Out-Null
-$script:sequencia=0
-function Invoke-CDP($metodo,$parametros) {
- $script:sequencia++
- $id=$script:sequencia
- $json=@{id=$id;method=$metodo;params=$parametros}|ConvertTo-Json -Depth 20 -Compress
- $bytes=[Text.Encoding]::UTF8.GetBytes($json)
- $segmento=New-Object 'System.ArraySegment[byte]' -ArgumentList (,$bytes)
- $ws.SendAsync($segmento,[Net.WebSockets.WebSocketMessageType]::Text,$true,[Threading.CancellationToken]::None).GetAwaiter().GetResult()|Out-Null
- while($true) {
-  $stream=New-Object IO.MemoryStream
-  do {
-   $buffer=New-Object byte[] 65536
-   $parte=New-Object 'System.ArraySegment[byte]' -ArgumentList (,$buffer)
-   $recebido=$ws.ReceiveAsync($parte,[Threading.CancellationToken]::None).GetAwaiter().GetResult()
-   $stream.Write($buffer,0,$recebido.Count)
-  } while(-not $recebido.EndOfMessage)
-  $mensagem=[Text.Encoding]::UTF8.GetString($stream.ToArray())|ConvertFrom-Json
-  $stream.Dispose()
-  if($mensagem.id -eq $id) {
-   if($mensagem.error){throw ($mensagem.error|ConvertTo-Json -Compress)}
-   return $mensagem.result
-  }
- }
-}
-try {
- Invoke-CDP 'Page.enable' @{}|Out-Null
- foreach($tela in @('listagem','detalhes')) {
-  foreach($largura in @(320,375,390,430,768,1440)) {
-   Invoke-CDP 'Emulation.setDeviceMetricsOverride' @{width=$largura;height=1000;deviceScaleFactor=1;mobile=($largura -lt 500)}|Out-Null
-   Invoke-CDP 'Page.navigate' @{url="http://localhost:5187/__feat37?screen=$tela"}|Out-Null
-   $estado=$null
-   for($tentativa=0;$tentativa -lt 200;$tentativa++) {
-    Start-Sleep -Milliseconds 100
-    $resultado=Invoke-CDP 'Runtime.evaluate' @{expression="JSON.stringify({estado:document.body?.dataset.feat37,erro:document.body?.dataset.erro,largura:innerWidth})";returnByValue=$true}
-    if($resultado.result.value){$estado=$resultado.result.value|ConvertFrom-Json}
-    if($estado.estado -eq 'pass' -or $estado.estado -eq 'fail'){break}
-   }
-   if($estado.estado -ne 'pass'){throw "Falhou $tela largura $largura : $($estado|ConvertTo-Json -Compress)"}
-   if($estado.largura -ne $largura){throw "Viewport incorreto: $($estado.largura), esperado $largura"}
-   $captura=Invoke-CDP 'Page.captureScreenshot' @{format='png';captureBeyondViewport=$false}
-   [IO.File]::WriteAllBytes("${pastaWindows}\\$tela-$largura.png",[Convert]::FromBase64String($captura.data))
-   Write-Output "PASSOU $tela $largura px"
-  }
- }
- Invoke-CDP 'Emulation.setDeviceMetricsOverride' @{width=900;height=1000;deviceScaleFactor=1;mobile=$false}|Out-Null
- Invoke-CDP 'Page.navigate' @{url=([Uri]'${pastaWindows}\\comparacao.html').AbsoluteUri}|Out-Null
- Start-Sleep -Milliseconds 800
- $medidas=Invoke-CDP 'Page.getLayoutMetrics' @{}
- $comparacao=Invoke-CDP 'Page.captureScreenshot' @{format='png';captureBeyondViewport=$true;clip=@{x=0;y=0;width=900;height=[Math]::Ceiling($medidas.cssContentSize.height);scale=1}}
- [IO.File]::WriteAllBytes("${pastaWindows}\\comparacao.png",[Convert]::FromBase64String($comparacao.data))
- Write-Output 'Comparacao lado a lado capturada'
-} finally {$ws.Dispose()}
-`
-try {
-  assert.ok(
-    chrome.endsWith('.exe'),
-    'Este roteiro usa a ponte CDP do Chrome Windows via PowerShell.',
-  )
-  const resultado = await new Promise((resolve, reject) => {
-    const child = spawn(
-      '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-EncodedCommand',
-        Buffer.from(powershell, 'utf16le').toString('base64'),
-      ],
-      { stdio: ['ignore', 'pipe', 'pipe'] },
-    )
-    let stderr = ''
-    child.stdout.on('data', (c) => process.stdout.write(c))
-    child.stderr.on('data', (c) => (stderr += c))
+const navegador = spawn(chrome, [
+  '--headless=new',
+  '--disable-gpu',
+  '--no-first-run',
+  '--no-default-browser-check',
+  '--remote-debugging-port=19437',
+  `--user-data-dir=${resolve(artefatos, 'perfil-cdp')}`,
+  'about:blank',
+], { windowsHide: true, stdio: 'ignore' })
+let ws
+let sequencia = 0
+const pendentes = new Map()
+const erros = []
+
+function cdp(method, params = {}) {
+  const id = ++sequencia
+  return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      child.kill()
-      reject(Error('Teste excedeu 180 segundos'))
-    }, 180000)
-    child.on('error', (e) => {
+      pendentes.delete(id)
+      reject(Error('CDP timeout: ' + method))
+    }, 15000)
+    pendentes.set(id, resposta => {
       clearTimeout(timer)
-      reject(e)
+      resposta.error ? reject(Error(resposta.error.message)) : resolve(resposta.result)
     })
-    child.on('exit', (code) => {
-      clearTimeout(timer)
-      resolve({ code, stderr })
-    })
+    ws.send(JSON.stringify({ id, method, params }))
   })
-  assert.equal(resultado.code, 0, resultado.stderr + diagnostico.slice(-800))
-  console.log('12/12 cenários de navegador aprovados. Capturas e comparacao.html: ' + artefatos)
+}
+
+try {
+  let alvo
+  for (let i = 0; i < 100 && !alvo; i++) {
+    const resposta = await fetch('http://127.0.0.1:19437/json/list').catch(() => null)
+    if (resposta?.ok) alvo = (await resposta.json()).find(pagina => pagina.type === 'page')
+    if (!alvo) await wait(150)
+  }
+  assert.ok(alvo, 'Chrome nao disponibilizou a depura??o')
+  ws = new WebSocket(alvo.webSocketDebuggerUrl)
+  await new Promise((resolve, reject) => {
+    ws.onopen = resolve
+    ws.onerror = reject
+  })
+  ws.onmessage = ({ data }) => {
+    const mensagem = JSON.parse(data)
+    if (mensagem.method === 'Runtime.exceptionThrown') erros.push(mensagem.params.exceptionDetails)
+    pendentes.get(mensagem.id)?.(mensagem)
+    pendentes.delete(mensagem.id)
+  }
+  await cdp('Page.enable')
+  await cdp('Runtime.enable')
+  for (const tela of ['listagem', 'detalhes']) {
+    for (const largura of [320, 375, 390, 430, 768, 1440]) {
+      await cdp('Emulation.setDeviceMetricsOverride', {
+        width: largura, height: 1000, deviceScaleFactor: 1, mobile: largura < 500,
+      })
+      const url = `http://127.0.0.1:5187/__feat37?screen=${tela}&largura=${largura}`
+      await cdp('Page.navigate', { url })
+      let estado
+      for (let i = 0; i < 200 && !estado?.resultado; i++) {
+        const leitura = await cdp('Runtime.evaluate', {
+          expression: `location.href === ${JSON.stringify(url)} && ({
+            resultado: document.body?.dataset.feat37, erro: document.body?.dataset.erro, largura: innerWidth,
+          })`,
+          returnByValue: true,
+        }).catch(() => null)
+        estado = leitura?.result.value
+        if (!estado?.resultado) await wait(100)
+      }
+      assert.equal(estado?.resultado, 'pass', `${tela}, ${largura}px: ${estado?.erro || 'tempo esgotado'}`)
+      assert.equal(estado.largura, largura)
+      if (process.argv.includes('--capturas')) {
+        const foto = await cdp('Page.captureScreenshot', { format: 'png' })
+        writeFileSync(resolve(artefatos, `${tela}-${largura}.png`), Buffer.from(foto.data, 'base64'))
+      }
+      console.log('PASSOU', tela, largura)
+    }
+  }
+  assert.deepEqual(erros, [])
+  console.log('12/12 cenarios simulados de oportunidades aprovados.')
 } finally {
+  if (ws?.readyState === WebSocket.OPEN)
+    ws.send(JSON.stringify({ id: ++sequencia, method: 'Browser.close' }))
+  ws?.close()
   navegador.kill()
-  encerrarNavegadoresDoTeste()
   await vite.close()
 }

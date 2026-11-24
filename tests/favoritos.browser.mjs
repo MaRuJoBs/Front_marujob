@@ -198,6 +198,7 @@ try {
     await esperar(pronto)
   }
   async function capturar(nome) {
+    if (process.argv.includes('--sem-capturas')) return
     const captura = await enviar('Page.captureScreenshot', {
       format: 'png',
       captureBeyondViewport: false,
@@ -295,7 +296,7 @@ try {
   await avaliar('feat38.entrar(39)')
   assert.deepEqual(await avaliar('[...feat38.store.favoritos]'), [])
   await clicar('.mini-card .favorito')
-  await avaliar('feat38.sair(); feat38.entrar(38)')
+  await avaliar('(async () => { await feat38.sair(); await feat38.entrar(38) })()')
   await esperar("!!document.querySelector('.home .card')")
   assert.deepEqual(await avaliar('[...feat38.store.favoritos]'), [1, 28])
   console.log('PASSOU 5–8: remoção, recarga real, logout/login A–B–A, favoritos paginados e cache.')

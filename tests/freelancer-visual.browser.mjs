@@ -157,6 +157,7 @@ async function evaluate(expression) {
   return result.result.value
 }
 async function shot(name) {
+  if (process.argv.includes('--sem-capturas')) return
   const { data } = await cdp('Page.captureScreenshot', {
     format: 'png',
     captureBeyondViewport: true,
