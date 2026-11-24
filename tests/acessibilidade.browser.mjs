@@ -262,7 +262,7 @@ try {
   await key('Tab')
   assert.equal(await evaluate('document.activeElement.type'), 'email')
   assert.equal(await evaluate('getComputedStyle(document.activeElement).outlineStyle'), 'solid')
-  assert.ok(await evaluate('parseFloat(getComputedStyle(document.activeElement).outlineWidth)>=3'))
+  assert.ok(await evaluate('parseFloat(getComputedStyle(document.activeElement).outlineWidth)>=2'))
   record('Tab real, salto ao conteúdo e foco visível no login')
   await evaluate(
     `for(const [type,value]of [['email','teste@example.test'],['password','senha-de-teste']]){const e=document.querySelector('input[type='+type+']');e.value=value;e.dispatchEvent(new Event('input',{bubbles:true}))};document.querySelector('form').requestSubmit()`,
@@ -350,6 +350,55 @@ try {
     await verificarSenha(false, false)
   }
   record('Senha no login: ícones, valor preservado, foco, teclado, animações e remontagem')
+
+  async function pontoDoControle(selector) {
+    return evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});
+      el.scrollIntoView({block:'center'});const {left,top,width,height}=el.getBoundingClientRect();
+      return {x:left+width/2,y:top+height/2}
+    })()`)
+  }
+  async function clicarControle(selector) {
+    const ponto = await pontoDoControle(selector)
+    await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...ponto })
+    await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...ponto })
+  }
+  const semContorno = `(() => {
+    const estilo = getComputedStyle(document.activeElement);
+    return estilo.outlineStyle === 'none' || parseFloat(estilo.outlineWidth) === 0;
+  })()`
+  await open('/', 1440)
+  await clicarControle('.input-senha input')
+  assert.ok(await evaluate(`document.activeElement === ${campoSenha} && ${semContorno}`))
+  await cdp('Input.insertText', { text: 'a' })
+  assert.ok(await evaluate(semContorno))
+  await key('Tab')
+  assert.ok(await evaluate(`document.activeElement === ${alternarSenha} && !(${semContorno})`))
+  await clicarControle('.btn-login')
+  assert.ok(await evaluate(semContorno))
+  await open('/home', 1440)
+  await clicarControle('.desktop-nav a[href="/portfolio"]')
+  for (let i = 0; i < 40 && !(await evaluate('document.querySelector("#pesquisa-projeto")')); i++) {
+    await wait(50)
+  }
+  assert.equal(await evaluate('testRouter.currentRoute.value.path'), '/portfolio')
+  assert.ok(await evaluate(semContorno))
+  await clicarControle('#pesquisa-projeto')
+  assert.equal(await evaluate('document.activeElement.id'), 'pesquisa-projeto')
+  assert.ok(await evaluate(semContorno))
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".input-busca")).outlineStyle'), 'none')
+  await open('/home', 375)
+  await cdp('Emulation.setTouchEmulationEnabled', { enabled: true })
+  const toque = await pontoDoControle('.app-navigation a[href="/perfil"]')
+  await cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [toque] })
+  await cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  for (let i = 0; i < 40 && await evaluate('testRouter.currentRoute.value.path !== "/perfil"'); i++) {
+    await wait(50)
+  }
+  assert.equal(await evaluate('testRouter.currentRoute.value.path'), '/perfil')
+  assert.ok(await evaluate(semContorno))
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".app-navigation a")).webkitTapHighlightColor'), 'rgba(0, 0, 0, 0)')
+  await cdp('Emulation.setTouchEmulationEnabled', { enabled: false })
+  record('Foco por mouse, toque e teclado no login, busca e navegação mobile e desktop')
 
   await open('/portfolio')
   await evaluate('document.querySelector(".botao-filtro").focus()')

@@ -436,7 +436,7 @@ button:disabled {
 }
 
 .alternar-senha:focus-visible {
-  outline: 3px solid #673fd7;
+  outline: var(--mrj-focus-width) solid #673fd7;
   outline-offset: -3px;
 }
 

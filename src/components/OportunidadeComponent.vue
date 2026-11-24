@@ -232,10 +232,6 @@ const {
   color: var(--mrj-color-text);
   outline: none;
 }
-.busca:focus-within {
-  outline: 3px solid var(--mrj-color-focus);
-  outline-offset: 3px;
-}
 .busca input::placeholder {
   color: var(--mrj-color-text-secondary);
 }
