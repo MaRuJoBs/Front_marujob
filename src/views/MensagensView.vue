@@ -116,11 +116,14 @@ function selectRoom(id) {
 </script>
 
 <template>
-  <!-- Layout de celular, uma tela por vez: a lista de conversas; ao tocar, a conversa ocupa a tela
-       toda (sem título nem rodapé de navegação, que o App.vue esconde com ?room=). -->
-  <!-- F61 · Desktop (≥ 64rem): duas colunas. A URL (?room=) continua sendo a conversa aberta. -->
-  <main v-if="desktop" class="mensagens mensagens--desktop mrj-ui">
+  <!-- O painel fica montado ao cruzar o breakpoint, preservando o compositor. -->
+  <main
+    class="mensagens mrj-ui"
+    :style="desktop ? null : viewportStyle"
+    :class="desktop ? 'mensagens--desktop' : routeRoomId !== null ? 'mensagens--conversa' : 'mensagens--lista'"
+  >
     <RoomList
+      v-if="desktop || routeRoomId === null"
       class="mensagens__lista"
       :rooms="chat.rooms"
       :active-id="routeRoomId"
@@ -132,7 +135,8 @@ function selectRoom(id) {
     >
       <ConnectionBanner :state="banner" @retry="chat.retryConnection()" />
     </RoomList>
-    <div class="mensagens__painel">
+    <div v-if="desktop || routeRoomId !== null" class="mensagens__painel">
+      <ConnectionBanner v-if="!desktop" :state="banner" @retry="chat.retryConnection()" />
       <ChatPane
         v-if="routeRoomId !== null && room"
         class="mensagens__conversa"
@@ -147,40 +151,6 @@ function selectRoom(id) {
         <p>Selecione uma conversa para ver as mensagens.</p>
       </section>
     </div>
-  </main>
-  <main
-    v-else
-    class="mensagens mrj-ui"
-    :style="viewportStyle"
-    :class="routeRoomId !== null ? 'mensagens--conversa' : 'mensagens--lista'"
-  >
-    <!-- Lista: o título "Mensagens" fica no cabeçalho em degradê do próprio RoomList. -->
-    <RoomList
-      v-if="routeRoomId === null"
-      class="mensagens__lista"
-      :rooms="chat.rooms"
-      :active-id="null"
-      :loading="chat.loadingRooms"
-      :error="chat.roomsError"
-      :presence="chat.presence"
-      @select="selectRoom"
-      @retry="chat.loadRooms()"
-    >
-      <ConnectionBanner :state="banner" @retry="chat.retryConnection()" />
-    </RoomList>
-
-    <template v-else>
-      <ConnectionBanner :state="banner" @retry="chat.retryConnection()" />
-      <ChatPane
-        v-if="room"
-        class="mensagens__conversa"
-        @back="router.push({ name: 'mensagens' })"
-      />
-      <section v-else class="mensagens__abrindo" role="status">
-        <FontAwesomeIcon :icon="faComments" :style="{ fontSize: '40px' }" aria-hidden="true" />
-        <p>Abrindo conversa...</p>
-      </section>
-    </template>
   </main>
 </template>
 
@@ -249,6 +219,10 @@ function selectRoom(id) {
 .mensagens__conversa {
   flex: 1;
   min-height: 0;
+}
+
+.mensagens__painel {
+  display: contents;
 }
 
 .mensagens__abrindo {

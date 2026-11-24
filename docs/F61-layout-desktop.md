@@ -219,3 +219,120 @@ Verificação (`--fase fase5`, 390/768/1024/1280×720/1366/1920): **1 WebSocket*
 
 - **`tests/favoritos.browser.mjs:298`** (preexistente, fora do escopo da F61, não corrigida): `feat38.sair(); feat38.entrar(38)` sem aguardar o logout assíncrono introduzido pela F60 (`ca038c7`). Correção sugerida para uma FEAT própria: aguardar `feat38.sair()` no roteiro antes de `entrar`.
 - **Precache 95 → 94** (`npm run build`): explicação definitiva prevista para a Fase 7.
+
+## Fase 7 · Testes e responsividade
+
+A branch local `F61-finalizacao` partiu de `origin/feat-61` (`96cd32a`) após atualizar as referências remotas. `origin/DEV` estava em `4906dae`, era ancestral da branch e ainda não continha a F61. A busca no GitHub por PR com origem `feat-61` retornou zero resultados. A base de revisão continua sendo `DEV`.
+
+### Correções comprovadas
+
+- **Carrossel da Home.** O indicador parava no segundo ponto ao atingir o fim em 1280 e 1920 px. Em larguras amplas, a posição inicial do último slide ultrapassa o limite rolável. O indicador agora reconhece a chegada ao limite e seleciona o último ponto. O CSS e a interação nativa de scroll snap continuam os mesmos.
+- **Chat.** Em 1366 → 390 px o campo de mensagem voltava vazio, apesar de preservar `?room=42` e uma única conexão. A mesma instância do painel agora permanece montada na mudança de largura. O roteiro verificou URL, rascunho e quantidade de sockets em 1366 → 390 → 1366 e 1024 → 768 → 1024. As capturas do chat com e sem sala a 390 e 1024 px coincidiram byte a byte com a implementação recebida.
+- **Roteiros.** As assertivas de navegação verificam visibilidade e geometria conforme o breakpoint, preservando os controles, o foco e o espaço antes da barra inferior no mobile. O teste de busca de profissionais passou a consultar o indicador da paginação dentro da própria paginação. O roteiro de capturas recebeu a matriz de larguras, cenários complementares e assertivas de rota, carrossel, chat e sidebar.
+
+### Validados sem ajustes visuais
+
+- Cards da Home nas cinco larguras desktop solicitadas. Scroll snap e avanço do indicador confirmados, incluindo teclado e roda horizontal via CDP a 1024 e 1366 px.
+- Filtros a 390 e 1366 px. Aplicar um preço fora da faixa produziu o estado sem resultado. Limpar restabeleceu a lista e fechar devolveu o foco ao botão.
+- Detalhes de oportunidade com descrição longa e com descrição curta sem requisitos ou benefícios, a 390 e 1366 px. A coluna lateral manteve as informações existentes e a ação de candidatura. No cenário curto, a área abaixo da descrição ficou livre.
+- Sidebar a 1024 e 1366 px. Hover e estados ativos distintos, foco visível e indicadores de 0, 1, 7 e 99+ contidos nos respectivos itens.
+- Troca de sala com URL, item ativo e histórico corretos, botão voltar funcional no mobile e histórico visível com o banner de reconexão.
+
+### Precache
+
+Builds com Vite 7.3.2 e vite-plugin-pwa 1.2.0 no mesmo ambiente. A DEV gerou 95 entradas e a F61 recebida gerou 94. Comparando as URLs do manifesto por nome lógico, a única remoção foi `assets/logo-tKVvxk5e.js`, que apenas reexportava o caminho do logo. A referência de `assets/logo-DGKktCA_.png` passou ao chunk principal com o uso do logo na sidebar, e o próprio PNG continua precacheado com o mesmo nome. `vite.config.js` e `src/sw.js` são idênticos na DEV e na F61 para essa comparação. O roteiro PWA isolado aprovou instalação, push simulado, navegação offline e atualização com duas abas.
+
+### Evidências
+
+As capturas usam sessão, API e WebSocket simulados. A primeira rodada completa registrou 198 combinações e a rodada de estados registrou 104, ambas com zero overflow horizontal e zero exceções coletadas. Uma repetição de estados encontrou uma interrupção de CDP após 1024 px. O resultado de cada rodada completa fica no respectivo `medidas.json`. Use `--saida node_modules/.cache/f61-capturas` para guardar a rodada completa fora do diff.
+
+| Tela | Mobile | Desktop |
+| --- | --- | --- |
+| Home freelancer | `home-freelancer-390.png` | `home-freelancer-1366.png` |
+| Detalhe da oportunidade | | `oportunidade-detalhe-1366.png` |
+| Painel da empresa | | `home-empresa-1366.png` |
+| Chat com conversa | `mensagens-conversa-390.png` | `mensagens-conversa-1366.png` |
+| Aprovação de candidatura | `estado-candidatura-aprovar-390.png` | |
+| Login com erro | `estado-login-erro-390.png` | |
+| Último indicador do carrossel | | `home-carrossel-1920.png` |
+| Hover na sidebar compacta | | `sidebar-hover-1024.png` |
+
+## Fase 8 · Resultado da revisão
+
+| Área | Verificado nesta retomada | Pendente de aceite |
+| --- | --- | --- |
+| Freelancer | Home com dados, carregamento, vazio e erro. Cards com títulos de diferentes extensões, largura limitada em 2560 px e botões alinhados. Lista de oportunidades, detalhe com candidatura disponível, favoritos e portfólio vazios, perfil, edição de perfil, adição e edição de projeto e notificações renderizados em mobile e desktop. | Persistência da foto, mídia e projeto com API de desenvolvimento. Jornada completa de candidatura e contato em conta de teste. |
+| Empresa | Painel cheio, vazio e em carregamento, gerenciamento no painel, criação/edição/detalhe de vaga, busca e perfil público, perfil empresarial, configurações, localização e notificações. Confirmação de exclusão e de aprovação revisadas visualmente. | Criar e editar vagas e completar as jornadas com dados de teste autorizados no backend. |
+| Chat | Colunas, lista mobile, estado inicial, lista vazia, banner de reconexão, troca de sala e preservação do rascunho e de uma conexão nos dois ciclos de redimensionamento. | Conectividade e entrega com WebSocket real de desenvolvimento. |
+| Autenticação | Login, erro de credenciais simulado, cadastros, validação local de cadastro, definir senha e trocar senha. | Login e cadastros reais, tempo de carga do Google, falha de rede e confirmação de sucesso nas operações de senha. |
+| Geral | Sidebar compacta e expandida, estados normal/hover/ativo, foco de teclado e contadores 0, 1, 7 e 99+. Navegação inferior em mobile, modais e estados locais de carregamento, erro e vazio. Service Worker testado com push e navegação offline simulados. | Zoom real do navegador em 200%, gesto em touchpad físico e revisão completa da interface de permissão de Web Push em cada estado e navegador. |
+
+### Suítes e limitações
+
+| Comando | Resultado da retomada |
+| --- | --- |
+| `npm test` / `npm run build` | 275/275 e build com 94 entradas no precache. |
+| `node tests/responsividade.browser.mjs` | Aprovado com as assertivas atualizadas. |
+| `node tests/responsividade.browser.mjs --matriz-atual` | Última rodada aprovada, com 493 combinações, sem overflow. A matriz inclui as 12 resoluções solicitadas e as dimensões auxiliares do roteiro. |
+| `node tests/freelancer-visual.browser.mjs` | Aprovado após ajustar a verificação da navegação desktop. |
+| `node tests/freelancers-publicos.browser.mjs` | Aprovado. Categoria, paginação, busca, chat, erros, privacidade, salvamento simulado do perfil e verificação de navegação em quatro larguras. |
+| `node tests/localizacao-empresa.browser.mjs` | 7 cenários aprovados. |
+| `node tests/notificacoes.browser.mjs --pwa` | 36 cenários do app aprovados após atualizar o contrato desktop. Na rodada completa, a etapa final de atualização observou o worker ainda em `activating` ao expirar a espera. O roteiro `--pwa --somente-pwa` passou isoladamente. |
+| `node tests/acessibilidade.browser.mjs` | Falha preexistente no `aria-busy` de notificações empresariais, registrada para F43. |
+| `node tests/vagas.browser.mjs` / `node tests/gerenciamentoVagas.browser.mjs` | Os dois roteiros ainda esperam seis erros obrigatórios, com cinco no contrato atual. O gerenciamento também encontrou timeout de inicialização na primeira rodada. |
+| `node tests/perfil-portfolio.browser.mjs` / `node tests/favoritos.browser.mjs` | Perfil/portfólio falhou no carregamento do harness sem Pinia. O reteste de favoritos reproduziu a corrida de logout já registrada acima. |
+| `node tests/design-system.browser.mjs` | Reproduzida a falha histórica do Enter via CDP na linha 200, com Chrome explícito. |
+| `node tests/empresa-visual.browser.mjs` | Arquivo ausente em `96cd32a`. As rotas empresariais foram cobertas pelo roteiro F61 e pela matriz. |
+| `node tests/oportunidades.browser.mjs` | Depende da ponte PowerShell/CDP com caminhos `/mnt/c`, incompatíveis com a execução direta em PowerShell do Windows. |
+
+A porta local de desenvolvimento `127.0.0.1:8000` estava indisponível. A revisão usou dados de teste em memória. As pendências funcionais independentes da F61 seguem registradas para triagem na F43.
+
+**Veredito — PARCIAL.** As duas regressões reproduzidas foram corrigidas e os resultados permitem revisão local. O aceite integral depende das jornadas com backend autorizado e dos itens de validação remanescentes da tabela.
+
+### Descrição de PR para revisão
+
+**Título** — F61 · Layout desktop para freelancer e empresa
+
+**Base** — `DEV`. **Origem** — `F61-finalizacao`, incluindo o commit original `96cd32a`.
+
+**Resumo** — Inclui a sidebar responsiva por papel, as adaptações de Home, oportunidades, perfis, portfólio, painel empresarial, vagas, autenticação e notificações, além do chat em duas colunas. A finalização corrige o último indicador do carrossel e preserva o rascunho no chat durante o redimensionamento. Atualiza os roteiros desktop mantendo as verificações mobile e documenta a consolidação do chunk do logo.
+
+**Validação** — Consultar a matriz, resultados dos roteiros, evidências e pendências de aceite acima.
+
+## Revisão final · Login desktop animado
+
+A partir de 1024 px, a coluna de apresentação do login ganhou o título “Onde talentos encontram oportunidades”, texto de apoio e um diagrama de profissional e empresa conectados a uma oportunidade. A marca usa os arquivos existentes, os cartões usam ícones Font Awesome e os caminhos são SVG. A marca, o título, o subtítulo e os cartões entram em sequência. Depois, os cartões flutuam até 5 px em ritmos diferentes e o traçado pontilhado avança nas conexões. `prefers-reduced-motion: reduce` desativa toda a animação. O diagrama é decorativo e fica fora da árvore de acessibilidade. Abaixo de 1024 px, a apresentação anterior continua visível.
+
+O formulário reaproveita o mesmo markup, estilos dos controles e handlers de login e Google. No Chrome, a auditoria de login verificou os seis viewports solicitados, a geometria do formulário e dos cartões, Tab do título ao primeiro campo, deslocamento real dos cartões, avanço do traçado e ausência de animação em movimento reduzido. O erro de credenciais foi verificado com resposta simulada em 390 e 1366 px.
+
+Foram abertas as imagens anteriores de Home mobile e desktop, detalhe de oportunidade, painel empresarial, chat mobile e desktop, hover da sidebar, último indicador do carrossel e erro de login. A captura anterior do login desktop em 1366 px mostrou a composição apertada entre título, subtítulo e cartão de usuário. As três imagens do login final foram revisadas e permanecem locais em `node_modules/.cache/f61-capturas/login-freelancer/`. As imagens anteriores das outras telas continuam representativas, e os retestes verificaram o comportamento dinâmico.
+
+| Verificação da revisão final | Resultado |
+| --- | --- |
+| `npm test` e `npm run build` | 275/275. Build aprovado, com 94 entradas no precache. |
+| `node tests/responsividade.browser.mjs --sem-capturas` e `--matriz-atual --sem-capturas` | A suíte padrão passou na revisão anterior do login. No redesign ilustrado, o reteste da matriz completa passou com 493 combinações. Na primeira rodada, apesar de zero overflow, houve uma exceção intermitente de rolagem em `MessageList.vue`. |
+| `node tests/f61-capturas.browser.mjs --validar-login` | Login aprovado em 390, 1024, 1366, 1440 e 1920 px. |
+| Carrossel, sidebar e chat | Regressões direcionadas aprovadas em 390, 1024, 1366 e 1920 px, verificando os estados aplicáveis a cada breakpoint. |
+| `node tests/notificacoes.browser.mjs --pwa --sem-capturas` | Suíte combinada aprovada. 36/36 cenários, instalação, push simulado, offline e atualização após fechar as abas anteriores. |
+
+F61 pronta para revisão do PR local. As falhas históricas listadas acima e o aceite em ambiente real seguem registrados para triagem na F43, incluindo API, autenticação, uploads, Web Push com permissões reais, zoom e dispositivos físicos. As capturas desta revisão ficam fora do Git.A partir de 1024 px, a coluna de apresenta??o mostra a marca, o t?tulo ?Onde talentos encontram oportunidades?, um subt?tulo e uma ilustra??o original de uma pessoa trabalhando em um notebook. A cena ? um SVG inline com janela, fones, mesa e cadeira. A apresenta??o entra em sequ?ncia. Ao focar o e-mail, o personagem inclina a cabe?a e dirige o olhar ao notebook. Ao focar a senha, inclina a cabe?a para o outro lado e baixa o olhar. A m?o se move brevemente durante a digita??o e retorna ao repouso. `prefers-reduced-motion: reduce` desativa esses movimentos. O SVG ? decorativo, fica fora da ?rvore de acessibilidade e ? ocultado abaixo de 1024 px.
+
+O formul?rio reaproveita os controles e handlers de login e Google. A auditoria de navegador verifica geometria, Tab do t?tulo para o e-mail, hover do bot?o, poses diferentes por campo, anima??o durante digita??o, retorno ao repouso e aus?ncia de anima??o quando o movimento ? reduzido. O cen?rio com resposta simulada verifica a desativa??o tempor?ria dos controles no loading, seguida de reativa??o e erro de credenciais.
+
+Foram abertas as imagens anteriores de Home mobile e desktop, detalhe de oportunidade, painel empresarial, chat mobile e desktop, hover da sidebar, último indicador do carrossel e erro de login. A captura anterior do login desktop em 1366 px mostrou a composição apertada entre título, subtítulo e cartão de usuário. As três imagens do login final foram revisadas e permanecem locais em `node_modules/.cache/f61-capturas/login-final/`. As imagens anteriores das outras telas continuam representativas, e os retestes verificaram o comportamento dinâmico.
+
+| Verificação da revisão final | Resultado |
+| --- | --- |
+| `npm test` e `npm run build` | 275/275. Build aprovado, com 94 entradas no precache. |
+| `node tests/responsividade.browser.mjs --sem-capturas` e `--matriz-atual --sem-capturas` | Ambos aprovados. Matriz com 493 combinações. |
+| `node tests/f61-capturas.browser.mjs --validar-login` | Login aprovado em 390, 768, 1024, 1366, 1440 e 1920 px. |
+| Carrossel, sidebar e chat | Regressões direcionadas aprovadas em 390, 1024, 1366 e 1920 px, verificando os estados aplicáveis a cada breakpoint. |
+| `node tests/notificacoes.browser.mjs --pwa --sem-capturas` | Suíte combinada aprovada. 36/36 cenários, instalação, push simulado, offline e atualização após fechar as abas anteriores. |
+
+F61 pronta para revisão do PR local. As falhas históricas listadas acima e o aceite em ambiente real seguem registrados para triagem na F43, incluindo API, autenticação, uploads, Web Push com permissões reais, zoom e dispositivos físicos. As capturas desta revisão ficam fora do Git.
+
+### Refinamento de marca e altura do login
+
+No desktop, o símbolo passou de 56 para 76 px e a assinatura visual de 142 para 184 px. O topo reserva espaço para a marca maior. O título tem teto de 50 px e pode usar até 19 caracteres de referência de largura (`19ch`). O subtítulo tem entrelinha mais compacta e fica mais próximo do título. A ilustração conserva o desenho e a interação, com altura ajustada à janela.
+
+O layout usa `100dvh` como altura mínima, com menos padding e espaçamento vertical. A página pode crescer e rolar naturalmente se os controles precisarem de mais espaço. O teste mede a altura rolável do documento com a barra do navegador habilitada e verifica também o estado de erro. As três capturas de refinamento ficam locais em `node_modules/.cache/f61-capturas/login-refinado/`.

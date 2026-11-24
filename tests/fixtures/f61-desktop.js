@@ -39,6 +39,7 @@ export function instalarFixturesF61(api, cenario = '') {
       last_message: { id: 12, body: 'Combinado.', author: { id: 9 } },
     },
   ]
+  if (cenario.startsWith('avisos-')) salas[0].unread = Number(cenario.replace('avisos-', ''))
   const mensagens = [
     ['Olá! Vi sua candidatura e gostei do portfólio.', 7, '2026-11-22T11:40:00Z'],
     ['Que bom! Tenho disponibilidade para começar na próxima semana.', 49, '2026-11-22T11:42:00Z'],
@@ -76,6 +77,15 @@ export function instalarFixturesF61(api, cenario = '') {
 
   api.defaults.adapter = async (config) => {
     const path = config.url.split('?')[0]
+    if (path === 'token/' && config.method === 'post') {
+      await new Promise(resolve => setTimeout(resolve, 300))
+      throw new axios.AxiosError('Credenciais inválidas', 'ERR_BAD_REQUEST', config, null, {
+        status: 400,
+        data: { detail: 'E-mail ou senha inválidos.' },
+        config,
+        headers: {},
+      })
+    }
     if (config.method === 'get' && !perfilDaConta(path)) {
       if (cenario === 'carregando') return new Promise(() => {})
       if (cenario === 'erro')
@@ -92,12 +102,29 @@ export function instalarFixturesF61(api, cenario = '') {
       return { config, status: 204, headers: {} }
     if (config.method === 'get') {
       let data
-      if (path === 'chat/rooms/') data = pagina(salas)
+      if (path === 'freelances/' && config.params?.preco_min > 100000)
+        data = pagina([])
+      else if (path === 'freelances/2/' && cenario.startsWith('detalhe-')) {
+        const vaga = base.jobs.find((job) => job.id === 2)
+        data = cenario === 'detalhe-curto'
+          ? { ...vaga, descricao: 'Atualizar o catálogo.', requisitos: '', beneficios: '' }
+          : { ...vaga, descricao: Array(20).fill(vaga.descricao).join('\n\n') }
+      } else if (path === 'chat/rooms/') data = pagina(salas)
       else if (/^chat\/rooms\/\d+\/$/.test(path))
         data = salas.find((s) => s.id === Number(path.split('/')[2]))
       else if (/^chat\/rooms\/\d+\/messages\/$/.test(path))
         data = {
-          results: path === 'chat/rooms/42/messages/' ? mensagens : [],
+          results: path === 'chat/rooms/42/messages/'
+            ? mensagens
+            : path === 'chat/rooms/43/messages/'
+              ? [{
+                  id: 9,
+                  room: 43,
+                  author: pessoa(8, 'Estúdio de teste'),
+                  body: 'Mensagem exclusiva da página institucional.',
+                  created: '2026-11-21T15:30:00Z',
+                }]
+              : [],
           next_before: null,
         }
       else if (path === 'notificacoes/') {

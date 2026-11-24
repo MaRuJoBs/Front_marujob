@@ -103,12 +103,20 @@ const getImageUrl = (path) => {
 }
 
 const atualizarSlide = () => {
-  const primeiro = slideContainer.value?.firstElementChild
+  const carrossel = slideContainer.value
+  const primeiro = carrossel?.firstElementChild
   const segundo = primeiro?.nextElementSibling
   if (!segundo) return
 
+  // No desktop amplo, o último slide começa depois do limite de rolagem.
+  const limite = carrossel.scrollWidth - carrossel.clientWidth
+  if (limite > 0 && carrossel.scrollLeft >= limite - 1) {
+    slideAtual.value = slides.value.length - 1
+    return
+  }
+
   const passo = segundo.offsetLeft - primeiro.offsetLeft
-  if (passo > 0) slideAtual.value = Math.round(slideContainer.value.scrollLeft / passo)
+  if (passo > 0) slideAtual.value = Math.round(carrossel.scrollLeft / passo)
 }
 </script>
 

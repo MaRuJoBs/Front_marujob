@@ -15,9 +15,19 @@ const comparisonOnly = process.env.F49_COMPARE_ONLY === '1'
 const compareHistorical = comparisonOnly || process.argv.includes('--comparar-baseline-historica')
 const matrizAtual = process.argv.includes('--matriz-atual')
 const larguraEsperada = (client) => Math.min(client, 420)
+const larguraSidebar = (width) => (width < 1024 ? 0 : width < 1280 ? 72 : 240)
+const larguraAmpla = (client, width, tipo) => {
+  if (width >= 1024) return Math.min(client - larguraSidebar(width), width < 1440 ? 1152 : 1280)
+  return width >= 768 && tipo !== 'empresa' ? Math.min(client, 1200) : larguraEsperada(client)
+}
 const colunaCentralizada = (left, width, client) => Math.abs(left - (client - width) / 2) <= 1
 const portaVite = matrizAtual ? 5207 : 5197
 const portaChrome = matrizAtual ? 19549 : 19449
+async function capturar(arquivo) {
+  if (process.argv.includes('--sem-capturas')) return
+  const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+  writeFileSync(resolve(folder, arquivo), Buffer.from(shot.data, 'base64'))
+}
 const folder = resolve(
   'node_modules/.cache/feat49-browser',
   matrizAtual
@@ -238,10 +248,11 @@ try {
         '/mensagens?room=42',
       ],
     }
-    const viewports = [320, 360, 375, 390, 420, 430, 768, 1024, 1280, 1440, 1920].map((width) => [
-      width,
-      width === 768 ? 1024 : width === 1024 ? 768 : 900,
-    ])
+    const viewports = [
+      [320, 700], [360, 900], [375, 812], [390, 844], [420, 900], [430, 932],
+      [768, 1024], [820, 1180], [1024, 768], [1280, 720], [1366, 768],
+      [1440, 900], [1920, 1080], [2560, 1440],
+    ]
     viewports.push([390, 320], [390, 600], [390, 700])
     const linhas = []
     for (const [tipo, rotasPorPapel] of Object.entries(rotas)) {
@@ -278,7 +289,8 @@ try {
             const shell = document.querySelector('.app')
             const pagina = document.querySelector('.app-content')
             const nav = document.querySelector('.app-navigation')
-            const barra = nav?.getBoundingClientRect()
+            const barra = nav?.getClientRects().length ? nav.getBoundingClientRect() : null
+            const sidebar = document.querySelector('.desktop-nav')?.getBoundingClientRect().width ?? 0
             const conteudo = pagina.getBoundingClientRect()
             const root = document.documentElement
             const iconeDestaque = pagina.querySelector('.imagem > i:has(+ .selo)')
@@ -286,7 +298,7 @@ try {
               iconeDestaque.getBoundingClientRect().bottom >
                 iconeDestaque.nextElementSibling.getBoundingClientRect().top
             scrollTo(0, root.scrollHeight)
-            const rooms = pagina.querySelector('.mensagens--lista .rooms')
+            const rooms = pagina.querySelector('.mensagens--lista .rooms, .mensagens--desktop .rooms')
             const lista = rooms?.querySelector('.rooms__list')
             if (lista) {
               lista.scrollTop = lista.scrollHeight
@@ -296,7 +308,7 @@ try {
             const intervaloChat = ultimoItem && {
               alturaAcao: ultimoItem.height,
               alturaVisivel: Math.max(0,
-                Math.min(lista.getBoundingClientRect().bottom, rooms.getBoundingClientRect().bottom, barra.top, ultimoItem.bottom) -
+                Math.min(lista.getBoundingClientRect().bottom, rooms.getBoundingClientRect().bottom, barra?.top ?? innerHeight, ultimoItem.bottom) -
                 Math.max(lista.getBoundingClientRect().top, rooms.getBoundingClientRect().top, ultimoItem.top)),
             }
             const fora = [...pagina.querySelectorAll('button, a[href], input, textarea, select')].filter(el => {
@@ -310,7 +322,9 @@ try {
               .sort((a,b) => b.bottom - a.bottom)[0]
             const tituloHome = pagina.querySelector('.home-hero h1')
             return { rota: testRouter.currentRoute.value.fullPath, overflow: root.scrollWidth - root.clientWidth,
-              larguraUtil: root.clientWidth,
+              larguraUtil: root.clientWidth, sidebar,
+              wide: testRouter.currentRoute.value.meta.layout === 'wide',
+              chatDesktop: Boolean(pagina.querySelector('.mensagens--desktop')),
               esquerdaConteudo: conteudo.left,
               tamanhoTitulo: tituloHome && parseFloat(getComputedStyle(tituloHome).fontSize),
               seloSobreIcone,
@@ -325,14 +339,12 @@ try {
           const resultado = { tipo, path, width, height, inset, ...info }
           linhas.push(resultado)
           if ([320, 768, 1920].includes(width) || height === 320 || info.overflow > 1) {
-            const shot = await cdp('Page.captureScreenshot', { format: 'png' })
             const arquivo = `matriz-${tipo}-${path.replace(/[^a-z0-9]+/gi, '-')}-${width}x${height}.png`
-            writeFileSync(resolve(folder, arquivo), Buffer.from(shot.data, 'base64'))
+            await capturar(arquivo)
           }
           await evaluate('scrollTo(0, 0)')
           if (path === '/home' && [320, 768, 1920].includes(width)) {
-            const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-            writeFileSync(resolve(folder, `home-topo-${width}.png`), Buffer.from(shot.data, 'base64'))
+            await capturar(`home-topo-${width}.png`)
           }
         }
         console.log('MATRIZ', tipo, width, height, caminhos.length)
@@ -354,13 +366,21 @@ try {
         !item.alinhado ||
         item.fora.length ||
         item.seloSobreIcone ||
-        Math.abs(item.larguraConteudo - larguraEsperada(item.larguraUtil)) > 1 ||
+        item.sidebar !== (item.tipo === 'publico' ? 0 : larguraSidebar(item.width)) ||
+        Math.abs(item.larguraConteudo - (
+          item.tipo === 'publico' && item.width >= 1024
+            ? item.larguraUtil
+            : item.wide
+              ? larguraAmpla(item.larguraUtil, item.width, item.tipo)
+              : larguraEsperada(item.larguraUtil - item.sidebar)
+        )) > 1 ||
         (item.path === '/home' &&
-          (!colunaCentralizada(item.esquerdaConteudo, item.larguraConteudo, item.larguraUtil) ||
-            item.tamanhoTitulo !== 38 ||
-            item.colunasDestaques !== 1 ||
-            item.colunasOportunidades !== 1)) ||
-        item.footer !== (item.tipo !== 'publico' && !semFooter.has(item.path)) ||
+          (!colunaCentralizada(item.esquerdaConteudo - item.sidebar, item.larguraConteudo, item.larguraUtil - item.sidebar) ||
+            item.tamanhoTitulo < 38 || item.tamanhoTitulo > (item.width < 768 ? 38 : 52) ||
+            item.colunasDestaques !== (item.width < 768 ? 1 : 2) ||
+            item.colunasOportunidades !== (item.width < 768 ? 1 : item.width < 1024 ? 2 : 3))) ||
+        item.footer !== (item.width < 1024 && item.tipo !== 'publico' && !semFooter.has(item.path)) ||
+        (item.path.startsWith('/mensagens') && item.chatDesktop !== (item.width >= 1024)) ||
         (item.path === '/mensagens'
           ? !item.intervaloChat ||
             item.intervaloChat.alturaVisivel < item.intervaloChat.alturaAcao - 1
@@ -392,27 +412,28 @@ try {
           `overflow ${tipo} ${width}`,
         )
         const shell = await evaluate('document.querySelector(".app").getBoundingClientRect().width')
+        const desktop = width >= 1024
+        const navigation = desktop ? '.desktop-nav' : '.app-navigation'
+        const client = await evaluate('document.documentElement.clientWidth')
         assert.equal(
           shell,
-          Math.min(
-            await evaluate('document.documentElement.clientWidth'),
-            tipo === 'empresa' ? 420 : 1200,
-          ),
+          desktop ? client : Math.min(client, tipo === 'empresa' ? 420 : 1200),
         )
+        assert.equal(await evaluate('document.querySelector(".desktop-nav").getBoundingClientRect().width'), larguraSidebar(width))
+        assert.equal(await evaluate('document.querySelector(".app-navigation").getBoundingClientRect().width > 0'), !desktop)
         assert.equal(
           await evaluate(
-            '[...document.querySelectorAll(".app-navigation .item")].every(e=>{const r=e.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.left>=0&&r.right<=innerWidth})',
+            `(()=>{const itens=[...document.querySelectorAll('${navigation} ${desktop ? '.desktop-nav__item' : '.item'}')];return itens.length>0&&itens.every(e=>{const r=e.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.left>=0&&r.right<=innerWidth})})()`,
           ),
           true,
         )
         await evaluate('document.querySelector("details summary").click()')
         assert.equal(await evaluate('document.querySelector("details").open'), true)
-        const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-        writeFileSync(resolve(folder, `${tipo}-${width}.png`), Buffer.from(shot.data, 'base64'))
+        await capturar(`${tipo}-${width}.png`)
         await evaluate('window.scrollTo(0,document.documentElement.scrollHeight)')
         assert.equal(
           await evaluate(
-            'document.querySelector("#fim").getBoundingClientRect().bottom <= document.querySelector(".app-navigation").getBoundingClientRect().top',
+            `document.querySelector("#fim").getBoundingClientRect().bottom <= ${desktop ? 'innerHeight' : 'document.querySelector(".app-navigation").getBoundingClientRect().top'}`,
           ),
           true,
           'footer cobre final',
@@ -423,13 +444,13 @@ try {
           windowsVirtualKeyCode: 9,
         })
         await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', windowsVirtualKeyCode: 9 })
-        await evaluate('document.querySelector(".app-navigation a").focus()')
+        await evaluate(`document.querySelector('${navigation} a').focus()`)
         assert.equal(
           await evaluate('getComputedStyle(document.activeElement).outlineStyle'),
           'solid',
         )
         const destino = tipo === 'empresa' ? '/mensagens' : '/freelances'
-        await evaluate(`document.querySelector('.app-navigation a[href="${destino}"]').click()`)
+        await evaluate(`document.querySelector('${navigation} a[href="${destino}"]').click()`)
         assert.equal(await evaluate('window.testRouter.currentRoute.value.path'), destino)
         await evaluate('window.testRouter.push("/")')
         assert.equal(await evaluate('document.querySelector(".app-navigation") === null'), true)
@@ -442,7 +463,7 @@ try {
         const available = await evaluate('document.documentElement.clientWidth')
         assert.equal(
           await evaluate('document.querySelector(".app-content").getBoundingClientRect().width'),
-          Math.min(available, width >= 768 && tipo !== 'empresa' ? 1200 : 420),
+          larguraAmpla(available, width, tipo),
         )
         assert.equal(
           await evaluate(
@@ -482,11 +503,7 @@ try {
         await wait(150)
         const overflow = await evaluate('document.documentElement.scrollWidth > innerWidth')
         assert.equal(overflow, false, `Overflow em ${path} a ${width}px`)
-        const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-        writeFileSync(
-          resolve(folder, `real-${path.slice(1)}-${width}.png`),
-          Buffer.from(shot.data, 'base64'),
-        )
+        await capturar(`real-${path.slice(1)}-${width}.png`)
         results.push({ tipo, path, width, overflow })
         console.log('REAL', path, width, 'overflow:', overflow)
       }
@@ -532,15 +549,14 @@ try {
           'Promise.all([...document.images].map(e=>e.complete?Promise.resolve():new Promise(r=>{e.onload=r;e.onerror=r})))',
         )
         const metrics = await evaluate(`(()=>{
-        const rect=s=>{const e=document.querySelector(s);if(!e)return null;const r=e.getBoundingClientRect(),c=getComputedStyle(e);return {x:r.x,y:r.y,width:r.width,height:r.height,paddingBottom:c.paddingBottom,fontSize:c.fontSize,columns:c.gridTemplateColumns}}
+        const rect=s=>{const e=document.querySelector(s);if(!e?.getClientRects().length)return null;const r=e.getBoundingClientRect(),c=getComputedStyle(e);return {x:r.x,y:r.y,width:r.width,height:r.height,paddingBottom:c.paddingBottom,fontSize:c.fontSize,columns:c.gridTemplateColumns}}
         return {viewport:innerWidth,viewportHeight:innerHeight,client:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,
           shell:rect('.app'),content:rect('.app-content'),header:rect('.home-topbar, .header, .empresa-header'),slogan:rect('.slogan'),
           card:rect('.card, .job-card, .vaga, .box, .portfolio-card'),grid:rect('.grid-oportunidades'),
-          footer:rect('.app-navigation'),main:rect('main'),images:[...document.querySelectorAll('img')].map(e=>({width:e.width,height:e.height,naturalWidth:e.naturalWidth,naturalHeight:e.naturalHeight}))}
+          sidebar:rect('.desktop-nav'),footer:rect('.app-navigation'),main:rect('main'),images:[...document.querySelectorAll('img')].map(e=>({width:e.width,height:e.height,naturalWidth:e.naturalWidth,naturalHeight:e.naturalHeight}))}
       })()`)
         const file = path.slice(1).replaceAll('/', '-') + '-' + width
-        const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-        writeFileSync(resolve(folder, file + '.png'), Buffer.from(shot.data, 'base64'))
+        await capturar(file + '.png')
         if (!snapshot) {
           if (metrics.footer) {
             assert.ok(metrics.footer.x >= metrics.content.x, 'Footer fora da coluna: ' + path)
@@ -563,13 +579,13 @@ try {
             'Conteúdo preenchido ausente: ' + path,
           )
           assert.ok(
-            Math.abs(metrics.content.width - larguraEsperada(metrics.client)) <= 1,
+            Math.abs(metrics.content.width - larguraAmpla(metrics.client, width, tipo)) <= 1,
             `Largura inesperada para ${path} a ${width}px`,
           )
           if (path === '/home') {
-            assert.ok(metrics.header?.height > 0, 'Cabeçalho da Home ausente')
+            assert.equal(Boolean(metrics.header?.height), width < 1024, 'Visibilidade do cabeçalho da Home')
             assert.ok(
-              colunaCentralizada(metrics.content.x, metrics.content.width, metrics.client),
+              colunaCentralizada(metrics.content.x - larguraSidebar(width), metrics.content.width, metrics.client - larguraSidebar(width)),
               `Home fora do centro a ${width}px`,
             )
             const avancouCarrossel = await evaluate(`(async () => {
@@ -648,11 +664,7 @@ try {
             await evaluate(
               `(()=>{const state=${JSON.stringify(state)};for(const [name,value] of Object.entries(state)){const e=document.querySelector('[name="'+name+'"]');e.value=value;e.dispatchEvent(new Event(e.tagName==='SELECT'?'change':'input',{bubbles:true}));e.dispatchEvent(new Event('blur',{bubbles:true}))}})()`,
             )
-            const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-            writeFileSync(
-              resolve(folder, file + '-form-' + index + '.png'),
-              Buffer.from(shot.data, 'base64'),
-            )
+            await capturar(file + '-form-' + index + '.png')
           }
           assert.equal(
             await evaluate('document.querySelectorAll("[aria-invalid=true]").length'),
@@ -746,11 +758,7 @@ try {
       await evaluate(
         'Promise.all([...document.images].map(e=>e.complete?Promise.resolve():new Promise(r=>{e.onload=r;e.onerror=r})))',
       )
-      const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-      writeFileSync(
-        resolve(folder, `comparacao-${page}-${width}.png`),
-        Buffer.from(shot.data, 'base64'),
-      )
+      await capturar(`comparacao-${page}-${width}.png`)
     }
   const resultsFile = resolve(folder, 'results.json')
   const previous =
