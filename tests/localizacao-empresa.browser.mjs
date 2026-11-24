@@ -208,11 +208,13 @@ try {
     assert.equal(await evaluate('window.chamadas.filter(c=>c.method==="patch").length'), 0)
     if (width === 375) {
       await evaluate('scrollTo(0,0)')
-      const { data } = await cdp('Page.captureScreenshot', {
-        format: 'png',
-        captureBeyondViewport: true,
-      })
-      writeFileSync(resolve(folder, 'editar-perfil-empresa.png'), Buffer.from(data, 'base64'))
+      if (!process.argv.includes('--sem-capturas')) {
+        const { data } = await cdp('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: true,
+        })
+        writeFileSync(resolve(folder, 'editar-perfil-empresa.png'), Buffer.from(data, 'base64'))
+      }
     }
     await click('Salvar alterações')
     await until('!!document.querySelector(".cabecalho-institucional")')
@@ -223,11 +225,13 @@ try {
     )
     if (width === 375) {
       await evaluate('scrollTo(0,0)')
-      const { data } = await cdp('Page.captureScreenshot', {
-        format: 'png',
-        captureBeyondViewport: true,
-      })
-      writeFileSync(resolve(folder, 'perfil-empresa.png'), Buffer.from(data, 'base64'))
+      if (!process.argv.includes('--sem-capturas')) {
+        const { data } = await cdp('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: true,
+        })
+        writeFileSync(resolve(folder, 'perfil-empresa.png'), Buffer.from(data, 'base64'))
+      }
     }
     await evaluate('window.router.push("/empresa/configuracoes")')
     await wait(50)

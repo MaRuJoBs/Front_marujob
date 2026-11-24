@@ -197,8 +197,10 @@ try {
       true,
       `Foto não invade o nome em ${width}px`,
     )
-    const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-    writeFileSync(resolve(folder, `lista-${width}.png`), Buffer.from(shot.data, 'base64'))
+    if (!process.argv.includes('--sem-capturas')) {
+      const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+      writeFileSync(resolve(folder, `lista-${width}.png`), Buffer.from(shot.data, 'base64'))
+    }
   }
   await click('Próxima')
   await until('document.querySelector(".paginacao [aria-current=page]")?.textContent.includes("2")')

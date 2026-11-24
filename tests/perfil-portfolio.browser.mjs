@@ -2,7 +2,7 @@
 import { createServer } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync, existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import assert from 'node:assert/strict'
 import { setTimeout as esperar } from 'node:timers/promises'
@@ -12,6 +12,7 @@ const pasta = resolve('node_modules/.cache/feat40-browser')
 mkdirSync(pasta, { recursive: true })
 const roteiro = `
 import {createApp,nextTick} from 'vue'
+import {createPinia} from 'pinia'
 import {createRouter,createMemoryHistory} from 'vue-router'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
 import {library} from '@fortawesome/fontawesome-svg-core'
@@ -19,12 +20,7 @@ import {fas} from '@fortawesome/free-solid-svg-icons'
 import '/src/assets/main.css'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 import App from '/src/App.vue'
-import Perfil from '/src/components/PerfilComponent.vue'
-import Editar from '/src/components/EditarPerfil.vue'
-import Portfolio from '/src/components/PortfolioComponent.vue'
-import Formulario from '/src/components/PortfolioAdicionarComponent.vue'
-import Detalhe from '/src/components/PortfolioDetalheComponent.vue'
-import Camera from '/src/components/CameraCapture.vue'
+import {routes} from '/src/router/routes.js'
 import api from '/src/services/api.js'
 import {sessao} from '/src/services/authSession.js'
 library.add(fas)
@@ -32,6 +28,13 @@ api.defaults.baseURL='/api/'
 const user={id:1,name:'Nome de teste visual',profissao:'Profissão cadastrada',localizacao:'Cidade cadastrada, SC',sobre:'Descrição profissional de teste visual. '.repeat(10),email:'email.longo@exemplo.test',telefone:'123',habilidades:['Vue','API'],profile_image:'/__imagem40?aspect=portrait'}
 const projeto={id:1,titulo:'Projeto com título longo '.repeat(5),categoria:'Categoria cadastrada',descricao:'Descrição longa. '.repeat(30),tags:['Vue','API'],link:'https://example.com',imagem:'/__imagem40?aspect=wide'}
 sessao.usuario=user;sessao.tipo='usuario';localStorage.setItem('token','somente-teste')
+window.WebSocket=class {
+ static OPEN=1
+ readyState=0
+ constructor(){queueMicrotask(()=>{this.readyState=1;this.onopen?.()})}
+ send(){}
+ close(){this.readyState=3}
+}
 let deletes=0
 api.defaults.adapter=async config=>{
  let data,status=200
@@ -41,18 +44,22 @@ api.defaults.adapter=async config=>{
  else data={count:2,next:config.url.includes('page=2')?null:'?page=2',results:[{...projeto,id:config.url.includes('page=2')?2:1}]}
  return {config,status,data,headers:{},statusText:''}
 }
-const routes=[{path:'/perfil',component:Perfil},{path:'/editar-perfil',component:Editar},{path:'/portfolio',component:Portfolio},{path:'/portfolio/adicionar',component:Formulario},{path:'/portfolio/:id/editar',component:Formulario},{path:'/portfolio/:id',component:Detalhe},{path:'/camera',component:Camera,meta:{hideFooter:true}}]
 const router=createRouter({history:createMemoryHistory(),routes})
 await router.push(new URLSearchParams(location.search).get('route')||'/perfil');await router.isReady()
-const app=createApp(App);app.use(router);app.component('FontAwesomeIcon',FontAwesomeIcon);app.mount('#app')
+const app=createApp(App);app.use(createPinia());app.use(router);app.component('FontAwesomeIcon',FontAwesomeIcon);app.mount('#app')
 await new Promise(r=>setTimeout(r,150));await nextTick();await document.fonts.ready
-await Promise.all([...document.images].map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=r;img.onerror=r})))
+await Promise.all([...document.images].map(img=>{
+ img.loading='eager'
+ return img.complete?Promise.resolve():new Promise(r=>{img.onload=r;img.onerror=r})
+}))
 if([...document.images].some(img=>!img.naturalWidth)) throw Error('Fixture de imagem não carregou')
 window.teste={router,get deletes(){return deletes}}
 document.body.dataset.pronto='sim'
 `
 const vite = await createServer({
   configFile: false,
+  cacheDir: resolve('node_modules/.cache/f43/vite-perfil-portfolio'),
+  optimizeDeps: { noDiscovery: true, include: [] },
   plugins: [
     vue(),
     {
@@ -85,7 +92,7 @@ const vite = await createServer({
     },
   ],
   resolve: { alias: { '@': resolve('src') } },
-  server: { host: '127.0.0.1', port: 5190, strictPort: true },
+  server: { host: '127.0.0.1', port: 5290, strictPort: true },
   appType: 'custom',
 })
 await vite.listen()
@@ -94,10 +101,12 @@ const proc = spawn(
   [
     '--headless=new',
     '--disable-gpu',
+    '--disable-background-timer-throttling',
+    '--disable-renderer-backgrounding',
     '--no-first-run',
     '--no-default-browser-check',
-    `--user-data-dir=${pasta}/chrome-profile`,
-    '--remote-debugging-port=19440',
+    `--user-data-dir=${mkdtempSync(resolve(pasta, 'chrome-profile-'))}`,
+    '--remote-debugging-port=19694',
     'about:blank',
   ],
   { windowsHide: true, stdio: 'ignore' },
@@ -105,10 +114,15 @@ const proc = spawn(
 let ws,
   id = 0
 const pendentes = new Map()
+const erros = []
 async function cdp(method, params = {}) {
   const numero = ++id
   return new Promise((resolve, reject) => {
-    pendentes.set(numero, { resolve, reject })
+    const timer = setTimeout(() => {
+      pendentes.delete(numero)
+      reject(Error('CDP timeout: ' + method))
+    }, 20000)
+    pendentes.set(numero, { resolve, reject, timer })
     ws.send(JSON.stringify({ id: numero, method, params }))
   })
 }
@@ -121,7 +135,7 @@ try {
   let target
   for (let i = 0; i < 80; i++) {
     try {
-      target = (await (await fetch('http://127.0.0.1:19440/json/list')).json()).find(
+      target = (await (await fetch('http://127.0.0.1:19694/json/list')).json()).find(
         (t) => t.type === 'page',
       )
       if (target) break
@@ -137,9 +151,10 @@ try {
   ws.onmessage = (event) => {
     const m = JSON.parse(event.data)
     if (m.method === 'Runtime.exceptionThrown')
-      console.error(JSON.stringify(m.params.exceptionDetails))
+      erros.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text)
     const p = pendentes.get(m.id)
     if (p) {
+      clearTimeout(p.timer)
       pendentes.delete(m.id)
       m.error ? p.reject(Error(JSON.stringify(m.error))) : p.resolve(m.result)
     }
@@ -162,16 +177,19 @@ try {
         deviceScaleFactor: 1,
         mobile: largura < 500,
       })
-      await cdp('Page.navigate', {
-        url: 'http://127.0.0.1:5190/__feat40?route=' + encodeURIComponent(route),
-      })
+      const url = 'http://127.0.0.1:5290/__feat40?route=' + encodeURIComponent(route) + '&largura=' + largura
+      await cdp('Page.navigate', { url })
       let pronto = false
       for (let i = 0; i < 100; i++) {
         await esperar(100)
-        pronto = await avaliar("document.body.dataset.pronto==='sim'")
+        const leitura = await cdp('Runtime.evaluate', {
+          expression: `location.href === ${JSON.stringify(url)} && document.body?.dataset.pronto === 'sim'`,
+          returnByValue: true,
+        })
+        pronto = leitura.result?.value === true
         if (pronto) break
       }
-      assert.ok(pronto, route + ' carregamento')
+      assert.ok(pronto, route + ' carregamento. Exceções: ' + erros.join('; '))
       const medidas = await avaliar(
         '({largura:innerWidth,scroll:document.documentElement.scrollWidth,texto:document.body.innerText})',
       )
@@ -180,7 +198,8 @@ try {
         route + ' overflow ' + largura + ' ' + medidas.scroll,
       )
       assert.ok(!medidas.texto.includes('falta alterar'))
-      assert.equal(await avaliar("document.querySelectorAll('nav.app-navigation').length"), 1)
+      assert.equal(await avaliar("Boolean(document.querySelector('.app-navigation')?.getClientRects().length)"), largura < 1024)
+      assert.equal(await avaliar("Boolean(document.querySelector('.desktop-nav')?.getClientRects().length)"), largura >= 1024)
       if (route === '/editar-perfil' && largura < 500) {
         await cdp('Emulation.setDeviceMetricsOverride', {
           width: largura,
@@ -205,23 +224,40 @@ try {
         await avaliar("document.querySelector('button.excluir').click()")
         assert.equal(await avaliar("document.querySelector('dialog').open"), true)
         assert.equal(await avaliar('document.activeElement.textContent.trim()'), 'Cancelar')
-        const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-        writeFileSync(
-          resolve(pasta, 'dialogo-' + largura + '.png'),
-          Buffer.from(shot.data, 'base64'),
-        )
+        if (!process.argv.includes('--sem-capturas')) {
+          const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+          writeFileSync(
+            resolve(pasta, 'dialogo-' + largura + '.png'),
+            Buffer.from(shot.data, 'base64'),
+          )
+        }
         await avaliar("document.querySelector('dialog button').click()")
         assert.equal(await avaliar('window.teste.deletes'), 0)
       }
-      const shot = await cdp('Page.captureScreenshot', { format: 'png' })
-      writeFileSync(
-        resolve(pasta, route.replaceAll('/', '-') + '-' + largura + '.png'),
-        Buffer.from(shot.data, 'base64'),
-      )
+      if (route === '/portfolio/adicionar' && largura === 375) {
+        const { root } = await cdp('DOM.getDocument')
+        const { nodeId } = await cdp('DOM.querySelector', { nodeId: root.nodeId, selector: 'input[type=file]' })
+        assert.ok(nodeId, 'Campo de imagem do projeto')
+        await cdp('DOM.setFileInputFiles', {
+          nodeId, files: [resolve('src/assets/images/logo.png')],
+        })
+        assert.ok(await avaliar(`(async () => {
+          await new Promise(r => setTimeout(r, 150))
+          return [...document.images].some(img => img.src.startsWith('blob:') && img.naturalWidth > 0)
+        })()`), 'O arquivo aceito aparece na prévia do projeto')
+      }
+      if (!process.argv.includes('--sem-capturas')) {
+        const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+        writeFileSync(
+          resolve(pasta, route.replaceAll('/', '-') + '-' + largura + '.png'),
+          Buffer.from(shot.data, 'base64'),
+        )
+      }
       console.log('PASSOU', route, largura)
       total++
     }
-  console.log(total + '/24 cenários responsivos aprovados; capturas: ' + pasta)
+  assert.deepEqual(erros, [])
+  console.log(total + '/24 cenários responsivos aprovados.')
 } finally {
   ws?.close()
   proc.kill()

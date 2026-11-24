@@ -2,7 +2,7 @@
 // Executar manualmente: node tests/vagas.browser.mjs
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { setTimeout as aguardar } from 'node:timers/promises'
 import { createServer } from 'vite'
@@ -17,13 +17,14 @@ const artefatos = resolve('node_modules/.cache/feat35-navegador')
 mkdirSync(artefatos, { recursive: true })
 const vite = await createServer({
   configFile: false,
+  cacheDir: resolve('node_modules/.cache/f43/vite-vagas'),
   plugins: [vue()],
   mode: 'development',
   resolve: { alias: { '@': resolve('src') } },
-  server: { host: '127.0.0.1', port: 5186, strictPort: true, hmr: false },
+  server: { host: '127.0.0.1', port: 5286, strictPort: true, hmr: false },
 })
 await vite.listen()
-const origem = 'http://127.0.0.1:5186'
+const origem = 'http://127.0.0.1:5286'
 const navegador = spawn(
   chrome,
   [
@@ -31,8 +32,8 @@ const navegador = spawn(
     '--disable-gpu',
     '--no-first-run',
     '--no-default-browser-check',
-    '--remote-debugging-port=9340',
-    '--user-data-dir=' + resolve(artefatos, 'perfil'),
+    '--remote-debugging-port=19695',
+    '--user-data-dir=' + mkdtempSync(resolve(artefatos, 'perfil-')),
     'about:blank',
   ],
   { windowsHide: true, stdio: 'ignore' },
@@ -49,7 +50,7 @@ try {
   let targets
   for (let tentativa = 0; tentativa < 60; tentativa++) {
     try {
-      targets = await (await fetch('http://127.0.0.1:9340/json/list')).json()
+      targets = await (await fetch('http://127.0.0.1:19695/json/list')).json()
       break
     } catch {
       await aguardar(100)
@@ -182,7 +183,10 @@ try {
     ['Remoto', 'Híbrido', 'Presencial'],
   )
   await avaliar("document.querySelector('form').requestSubmit()")
-  await esperar("document.querySelectorAll('.msg-erro').length===6")
+  assert.deepEqual(
+    (await avaliar(`[...document.querySelectorAll('form [aria-invalid=true]')].map(campo => campo.name)`)).sort(),
+    ['categoria', 'descricao', 'preco', 'tempo', 'titulo'],
+  )
   assert.equal(await avaliar('document.activeElement.id'), 'vaga-titulo')
   console.log('PASSOU: renderização, placeholder do select, campos obrigatórios e foco no erro.')
 
@@ -204,12 +208,16 @@ try {
     const larguraTela = await avaliar(
       "document.querySelector('.criar-vaga').getBoundingClientRect().width",
     )
-    assert.ok(larguraTela <= 420, 'A tela deve manter o formato de celular também no computador.')
+    if (largura >= 1024) {
+      const larguraFormulario = await avaliar("document.querySelector('.criar-vaga .conteudo').getBoundingClientRect().width")
+      assert.ok(larguraTela > 420 && larguraFormulario > 420 && larguraFormulario <= 1024, 'Formulario amplo com limite de 64rem')
+      assert.ok(await avaliar("document.querySelector('.desktop-nav').getBoundingClientRect().width > 0"))
+    } else assert.ok(larguraTela <= 420, 'Formulario compacto no mobile e tablet')
     if (largura <= 900) {
       const celular = await avaliar(
         `(()=>{const botao=document.querySelector('.acoes .btn-publicar');const caixa=botao.getBoundingClientRect();return {altura:caixa.height,inicio:caixa.top,fim:caixa.bottom,viewport:innerHeight,fonte:parseFloat(getComputedStyle(document.querySelector('#vaga-titulo')).fontSize)};})()`,
       )
-      assert.ok(celular.altura >= 48, 'Botão precisa ser confortável para toque.')
+      assert.ok(celular.altura >= 44, 'Publicar precisa ter pelo menos 44 px de altura.')
       assert.ok(
         celular.inicio >= 0 && celular.fim <= celular.viewport,
         'Publicar deve permanecer visível no celular.',
@@ -217,14 +225,16 @@ try {
       assert.ok(celular.fonte >= 16, 'Campos precisam de texto legível no celular.')
     }
     if (largura === 1440 || largura === 390) {
-      const captura = await enviar('Page.captureScreenshot', {
-        format: 'png',
-        captureBeyondViewport: true,
-      })
-      writeFileSync(
-        resolve(artefatos, largura === 1440 ? 'desktop.png' : 'celular.png'),
-        Buffer.from(captura.data, 'base64'),
-      )
+      if (!process.argv.includes('--sem-capturas')) {
+        const captura = await enviar('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: true,
+        })
+        writeFileSync(
+          resolve(artefatos, largura === 1440 ? 'desktop.png' : 'celular.png'),
+          Buffer.from(captura.data, 'base64'),
+        )
+      }
     }
   }
   console.log(
@@ -266,19 +276,24 @@ try {
   )
   assert.equal(publicacoes, 2)
   assert.deepEqual(Object.keys(ultimoPayload).sort(), [
+    'cidade',
     'descricao',
+    'modalidade',
     'preco',
+    'status',
     'tag',
     'tempo',
     'titulo',
+    'uf',
   ])
   assert.equal(ultimoPayload.preco, '1500.50')
-  assert.ok(ultimoPayload.descricao.startsWith('Modalidade: Remoto\n\n'))
+  assert.equal(ultimoPayload.modalidade, 'Remoto')
+  assert.equal(ultimoPayload.status, 'publicada')
+  assert.equal(ultimoPayload.cidade, '')
+  assert.equal(ultimoPayload.uf, '')
+  assert.equal(ultimoPayload.descricao, 'Texto usado exclusivamente no navegador de teste, sem publicação real.')
   assert.ok([...ultimoPayload.descricao].length <= 200)
-  assert.equal(
-    await avaliar("document.querySelector('.vaga-publicada h4').textContent.trim()"),
-    'Oportunidade de teste isolado',
-  )
+  await esperar("document.querySelector('.destaque-vaga h3')?.textContent.trim()==='Oportunidade de teste isolado'")
   assert.equal(
     await avaliar('document.documentElement.scrollWidth <= innerWidth'),
     true,

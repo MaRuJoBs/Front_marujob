@@ -78,6 +78,7 @@ const rows = computed(() => {
 
 function onScroll() {
   const el = scroller.value
+  if (!el) return
 
   nearBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 80
 }
