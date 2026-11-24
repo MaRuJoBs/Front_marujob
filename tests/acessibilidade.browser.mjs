@@ -28,7 +28,7 @@ import '/src/assets/main.css'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 library.add(fas)
 // O SDK externo só é representado para evitar rede/contas Google no teste.
-window.google={accounts:{id:{initialize(){},renderButton(el){const b=document.createElement('button');b.type='button';b.textContent='Google (SDK isolado)';el.append(b)},disableAutoSelect(){},cancel(){}}}}
+window.google={accounts:{id:{initialize(){},renderButton(el,opcoes){const b=document.createElement('button');b.type='button';b.textContent='Google (SDK isolado)';b.style.width=opcoes.width+'px';el.append(b)},disableAutoSelect(){},cancel(){}}}}
 const params=new URLSearchParams(location.search),state=params.get('state')||'filled',path=params.get('path')||'/home'
 const fixture=instalarFixtures(api)
 fixture.projetos.forEach(p=>{p.categoria='Website';p.tags=['Vue']})
@@ -57,6 +57,7 @@ document.body.dataset.ready='true'
 `
 const vite = await createServer({
   configFile: false,
+  define: { 'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify('client-id-simulado') },
   resolve: { alias: { '@': resolve('src') } },
   optimizeDeps: { noDiscovery: true, include: [] },
   plugins: [
@@ -206,6 +207,101 @@ try {
   await cdp('Page.enable')
   await cdp('Runtime.enable')
   await cdp('Emulation.setFocusEmulationEnabled', { enabled: true })
+  async function medirCadastro() {
+    return evaluate(`(() => {
+      const {left:painelEsquerda,right:painelDireita,bottom:painelBase,top:painelTopo} =
+        document.querySelector('.cadastro-apresentacao').getBoundingClientRect();
+      const form = document.querySelector('.cadastro form');
+      const {left,right,top,width} = form.getBoundingClientRect();
+      const controles = [...form.querySelectorAll('input:not([hidden]),button,a')];
+      return {
+        semOverflow: document.documentElement.scrollWidth <= innerWidth,
+        duasColunas: painelDireita < left && Math.abs(painelTopo-top) < 200,
+        empilhado: painelBase <= top && Math.abs(painelEsquerda-left) < 2,
+        larguraConjunto: right-painelEsquerda,
+        espacoColunas: left-painelDireita,
+        camposInteiros: width > 0 && controles.every(el => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.left >= left && rect.right <= right + 1;
+        }),
+        campos: form.querySelectorAll('input').length,
+        google: Boolean(form.querySelector('.google-login button')),
+      };
+    })()`)
+  }
+  for (const path of ['/register', '/registerEmpresa']) {
+    for (const width of [320, 375, 390, 430, 768, 1024, 1366, 1440, 1920]) {
+      await open(path, width)
+      const layout = await medirCadastro()
+      const cenario = `${path} em ${width}px — ${JSON.stringify(layout)}`
+      assert.ok(layout.semOverflow && layout.camposInteiros && layout.google, cenario)
+      assert.equal(layout.campos, 4, cenario)
+      if (width >= 1024) {
+        assert.ok(layout.duasColunas && layout.larguraConjunto <= 1101, cenario)
+        assert.ok(layout.espacoColunas >= 32 && layout.espacoColunas <= 48, cenario)
+      } else {
+        assert.ok(layout.empilhado, cenario)
+      }
+      record('Cadastro responsivo com campos e Google visíveis', { path, width })
+    }
+
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 960, height: 406, deviceScaleFactor: 2, mobile: false })
+    const reflow = await medirCadastro()
+    assert.ok(reflow.empilhado && reflow.semOverflow && reflow.camposInteiros, path)
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 350, deviceScaleFactor: 1, mobile: true })
+    await evaluate('document.querySelector(".btn-voltar").focus()')
+    await key('Tab')
+    assert.ok(await evaluate('document.activeElement.matches(".photo-box:focus-visible")'))
+    await key('Tab')
+    assert.ok(await evaluate('document.activeElement.matches("input[autocomplete=name]:focus-visible")'))
+
+    const { root } = await cdp('DOM.getDocument')
+    const { nodeId } = await cdp('DOM.querySelector', { nodeId: root.nodeId, selector: '.cadastro input[type=file]' })
+    await cdp('DOM.setFileInputFiles', { nodeId, files: [resolve('src/assets/images/logo.png')] })
+    for (let i = 0; i < 30 && !(await evaluate('document.querySelector(".preview-img")?.naturalWidth')); i++) {
+      await wait(50)
+    }
+    assert.ok(await evaluate('document.querySelector(".preview-img")?.naturalWidth > 0'))
+    await evaluate(`(() => {
+      const campo = document.querySelector('input[id$="-confirmarSenha"]');
+      campo.focus();campo.scrollIntoView({block:'center'});
+      const form = campo.form;form.noValidate = true;form.requestSubmit();
+    })()`)
+    assert.ok(await evaluate(`(() => {
+      const campo=document.activeElement,rect=campo.getBoundingClientRect();
+      return campo.id.endsWith('-confirmarSenha') && rect.top>=0 && rect.bottom<=innerHeight;
+    })()`))
+    assert.match(await evaluate('document.querySelector(".cadastro [role=alert]").textContent'), /Nome é obrigatório/)
+    assert.equal(await evaluate('mutations.length'), 0)
+    await evaluate(`(() => {
+      const form=document.querySelector('.cadastro form');
+      const valores=['Nome de teste','cadastro@example.test','senha-de-teste','senha-de-teste'];
+      [...form.querySelectorAll('input')].forEach((campo,index)=>{
+        campo.value=valores[index];campo.dispatchEvent(new Event('input',{bubbles:true}));
+      });
+      form.requestSubmit();
+    })()`)
+    await wait(100)
+    assert.ok(await evaluate(`(() => {
+      const form=document.querySelector('.cadastro form');
+      return form.getAttribute('aria-busy')==='true'
+        && [...form.querySelectorAll('input')].every(campo=>campo.disabled)
+        && form.querySelector('.criarConta').disabled
+        && form.querySelector('.google-login').inert
+        && [...form.querySelectorAll('[role=status]')].some(el=>el.textContent.includes('Aguarde'));
+    })()`))
+    await evaluate('liberarMutacao()')
+    await wait(100)
+    assert.match(await evaluate('document.querySelector(".cadastro [role=alert]").textContent'), /indisponível/)
+    assert.ok((await medirCadastro()).semOverflow, path)
+    await evaluate('document.querySelector(".btn-voltar").focus()')
+    await key('Enter')
+    for (let i = 0; i < 30 && await evaluate('testRouter.currentRoute.value.path !== "/"'); i++) {
+      await wait(50)
+    }
+    assert.equal(await evaluate('testRouter.currentRoute.value.path'), '/')
+    record('Cadastro com reflow de 200%, viewport reduzido, upload, teclado, voltar, erro e loading', { path })
+  }
   const paths = [
     '/',
     '/register',
