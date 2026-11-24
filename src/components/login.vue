@@ -24,7 +24,7 @@ function animarDigitacao() {
 
 onBeforeUnmount(() => clearTimeout(fimDigitacao))
 const motivos = {
-  grupo: 'Não foi possível identificar o grupo da sua conta. Contate o suporte.',
+  grupo: 'O servidor retornou um tipo de conta ausente, inválido ou inconsistente. Contate o suporte.',
   conexao: 'Não foi possível validar sua sessão. Verifique sua conexão e tente novamente.',
   sessao: 'Sua sessão expirou. Entre novamente.',
 }

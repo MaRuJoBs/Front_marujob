@@ -29,7 +29,7 @@ export async function restaurarSessao() {
     if (!tipo) {
       limparSessao()
       const error = new Error(
-        'Não foi possível identificar o grupo da sua conta. Contate o suporte para verificar o cadastro no servidor.',
+        'O servidor retornou um tipo de conta ausente, inválido ou inconsistente. Contate o suporte.',
       )
       error.code = 'AUTH_GROUP_MISSING'
       throw error
