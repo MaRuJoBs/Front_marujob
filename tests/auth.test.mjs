@@ -2,7 +2,7 @@ import test, { beforeEach, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { setImmediate as aguardar } from 'node:timers/promises'
 import axios from 'axios'
-import { createServer } from 'vite'
+import { createServer, loadEnv } from 'vite'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createRenderer, h, nextTick } from 'vue'
 
@@ -78,7 +78,7 @@ const vite = await createServer({
   configFile: false,
   mode: 'test',
   optimizeDeps: { noDiscovery: true, include: [] },
-  server: { middlewareMode: true, watch: null },
+  server: { middlewareMode: true, watch: null, hmr: false },
   appType: 'custom',
 })
 const auth = await vite.ssrLoadModule('/src/services/authService.js')
@@ -147,12 +147,33 @@ after(async () => {
   delete globalThis.localStorage
 })
 
-test('identifica grupos por nome e objeto, com acentos; rejeita grupos ausentes e ambíguos', () => {
+test('identifica o papel por groups ou tipo e rejeita ausência, ambiguidade e conflito', () => {
   assert.equal(session.identificarTipo(perfil()), 'usuario')
   assert.equal(session.identificarTipo({ groups: [{ id: 2, name: 'Empresa' }] }), 'empresa')
   assert.equal(session.identificarTipo({ groups: [' usuario '] }), 'usuario')
+  assert.equal(session.identificarTipo({ tipo: 'usuario' }), 'usuario')
+  assert.equal(session.identificarTipo({ groups: [2], tipo: 'empresa' }), 'empresa')
+  assert.equal(
+    session.identificarTipo({ groups: [{ name: 'Empresa' }], tipo: 'empresa' }),
+    'empresa',
+  )
+  assert.equal(session.identificarTipo({ groups: ['Usuário'], tipo: 'empresa' }), null)
+  assert.equal(session.identificarTipo({ groups: ['Usuário', 'Empresa'], tipo: 'empresa' }), null)
+  assert.equal(session.identificarTipo({ groups: [], tipo: 'administrador' }), null)
+  assert.equal(session.identificarTipo({ groups: [], tipo: null }), null)
+  assert.equal(session.identificarTipo({ groups: ['usuario'], tipo: null }), null)
   for (const groups of [undefined, [], [1], ['Administrador'], ['Usuário', 'Empresa']]) {
     assert.equal(session.identificarTipo({ groups }), null)
+  }
+})
+
+test('a configuração de produção aponta para a API HTTPS publicada', () => {
+  const { VITE_API_URL } = loadEnv('production', process.cwd())
+  const url = new URL(VITE_API_URL)
+  assert.equal(url.protocol, 'https:')
+  assert.equal(url.pathname, '/api/')
+  if (!process.env.VITE_API_URL) {
+    assert.equal(url.hostname, 'marujob.class.fabricadesoftware.ifc.edu.br')
   }
 })
 
@@ -171,6 +192,7 @@ for (const tipo of ['usuario', 'empresa']) {
 
   test(`cadastro ${tipo} envia multipart, evita envio duplo e faz login`, async () => {
     const pendente = adiar()
+    const consulta = adiar()
     transporte = async (config) => {
       if (config.url === 'registro/') {
         assert.equal(config.headers.Authorization, undefined)
@@ -179,9 +201,14 @@ for (const tipo of ['usuario', 'empresa']) {
         await pendente.promise
         return resposta(config, {}, 201)
       }
-      return resposta(config, config.url === 'token/' ? tokens : perfil(tipo))
+      if (config.url === 'token/') return resposta(config, tokens)
+      assert.equal(config.url, 'usuarios/me/')
+      assert.equal(config.headers.Authorization, 'Bearer access-inicial')
+      await consulta.promise
+      return resposta(config, { id: 1, tipo })
     }
     const { cadastro, router, desmontar } = await montarCadastro(tipo)
+    router.beforeEach(guards.protegerRota)
     try {
       cadastro.name.value = ' Nome Teste '
       cadastro.email.value = 'teste@example.com'
@@ -191,10 +218,15 @@ for (const tipo of ['usuario', 'empresa']) {
       assert.equal(cadastro.loading.value, true)
       await cadastro.criarConta()
       pendente.resolve()
+      await aguardar()
+      assert.equal(chamadas.at(-1).url, 'usuarios/me/')
+      assert.equal(auth.sessao.tipo, null)
+      assert.equal(router.currentRoute.value.path, '/')
+      consulta.resolve()
       await envio
       assert.equal(chamadas.filter((c) => c.url === 'registro/').length, 1)
       assert.equal(cadastro.loading.value, false)
-      assert.equal(router.currentRoute.value.path, auth.paginaInicial())
+      assert.equal(router.currentRoute.value.path, tipo === 'empresa' ? '/homeEmpresa' : '/home')
     } finally {
       desmontar()
     }
@@ -227,8 +259,12 @@ test('cadastro valida campos e mantém erros de validação retornados pela API'
   }
 })
 
-test('conta criada com falha no login não provoca um segundo cadastro', async () => {
-  transporte = (config) => (config.url === 'registro/' ? resposta(config, {}, 201) : falhar(config))
+test('conta criada com falha ao confirmar o papel não provoca um segundo cadastro', async () => {
+  transporte = (config) => {
+    if (config.url === 'registro/') return resposta(config, {}, 201)
+    if (config.url === 'token/') return resposta(config, tokens)
+    return resposta(config, { id: 1, groups: [], tipo: null })
+  }
   const { cadastro, desmontar } = await montarCadastro('empresa')
   try {
     cadastro.name.value = 'Empresa'
@@ -238,7 +274,10 @@ test('conta criada com falha no login não provoca um segundo cadastro', async (
     await cadastro.criarConta()
     assert.equal(chamadas.filter((c) => c.url === 'registro/').length, 1)
     assert.equal(cadastro.contaCriada.value, true)
+    assert.equal(cadastro.ocupado.value, true)
     assert.match(cadastro.erros.value[0], /Sua conta foi criada/)
+    assert.match(cadastro.erros.value[1], /tipo de conta ausente/)
+    assert.equal(session.obterAccessToken(), null)
   } finally {
     desmontar()
   }
@@ -257,6 +296,19 @@ test('resposta sem grupo não libera acesso nem deixa sessão parcial', async ()
   await assert.rejects(auth.login('teste@example.com', 'senha123'), { code: 'AUTH_GROUP_MISSING' })
   assert.equal(session.obterRefreshToken(), null)
   assert.equal(auth.sessao.usuario, null)
+})
+
+test('perfil contraditório encerra sessão e o guard encaminha ao login', async () => {
+  session.salvarTokens(tokens)
+  transporte = (config) => resposta(config, { id: 1, groups: ['Usuário'], tipo: 'empresa' })
+  const router = criarRouter()
+  router.beforeEach(guards.protegerRota)
+  await router.push('/homeEmpresa')
+  assert.equal(router.currentRoute.value.name, 'login')
+  assert.equal(router.currentRoute.value.query.motivo, 'grupo')
+  assert.equal(auth.sessao.usuario, null)
+  assert.equal(auth.sessao.tipo, null)
+  assert.equal(armazenamento.size, 0)
 })
 
 test('tokens ausentes na resposta de login não são gravados como undefined', async () => {

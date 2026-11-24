@@ -15,19 +15,20 @@ export function useCadastro(tipo) {
   const preview = ref(null)
   const erros = ref([])
   const contaCriada = ref(false)
+  const cadastroBloqueado = computed(() => loading.value || contaCriada.value)
   const google = useGoogleAuth({
     tipo,
     cadastro: true,
-    ocupado: loading,
+    ocupado: cadastroBloqueado,
     onSuccess: () => router.replace(paginaInicial()),
     onError: (mensagens) => {
       erros.value = mensagens
     },
   })
-  const ocupado = computed(() => loading.value || google.googleLoading.value)
+  const ocupado = computed(() => cadastroBloqueado.value || google.googleLoading.value)
 
   const criarConta = async () => {
-    if (ocupado.value || contaCriada.value) return
+    if (ocupado.value) return
     erros.value = []
     if (!name.value.trim()) erros.value.push('Nome é obrigatório.')
     if (!emailValido(email.value)) erros.value.push('Informe um e-mail válido.')

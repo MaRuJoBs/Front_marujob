@@ -47,8 +47,9 @@ export function atualizarNecessidadeSenha(precisa) {
 }
 
 export function identificarTipo(usuario) {
-  if (!Array.isArray(usuario?.groups)) return null
-  const grupos = usuario.groups
+  // O backend retorna null quando a conta não tem um papel autorizado.
+  if (usuario?.tipo === null) return null
+  const grupos = (Array.isArray(usuario?.groups) ? usuario.groups : [])
     .map((grupo) => (typeof grupo === 'string' ? grupo : grupo?.name))
     .filter((nome) => typeof nome === 'string')
     .map((nome) =>
@@ -60,8 +61,13 @@ export function identificarTipo(usuario) {
     )
   const empresa = grupos.includes('empresa')
   const usuarioComum = grupos.includes('usuario')
-  if (empresa === usuarioComum) return null
-  return empresa ? 'empresa' : 'usuario'
+  if (empresa && usuarioComum) return null
+
+  const tipoGrupo = empresa ? 'empresa' : usuarioComum ? 'usuario' : null
+  const tipoServidor =
+    usuario?.tipo === 'empresa' || usuario?.tipo === 'usuario' ? usuario.tipo : null
+  if (tipoGrupo && tipoServidor && tipoGrupo !== tipoServidor) return null
+  return tipoServidor ?? tipoGrupo
 }
 
 export const paginaInicial = () => (sessao.tipo === 'empresa' ? '/homeEmpresa' : '/home')
