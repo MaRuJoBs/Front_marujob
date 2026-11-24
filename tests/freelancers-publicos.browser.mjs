@@ -22,6 +22,7 @@ import '/src/assets/main.css'
 import api from '/src/services/api.js'
 import {sessao} from '/src/services/authSession.js'
 window.chamadas=[];window.modo='normal'
+api.defaults.baseURL=location.origin+'/api/'
 window.perfilProprio={id:1,name:'Profissional de teste',profissao:'Desenvolvimento',habilidades:['Vue'],localizacao:'Cidade privada',sobre:'Sobre profissional',telefone:'',perfil_publico:false,cidade_publica:''}
 window.trocarParaFreelancer=()=>{sessao.tipo='usuario';sessao.usuario=window.perfilProprio}
 sessao.tipo='empresa';sessao.usuario={id:1}
@@ -39,7 +40,7 @@ api.defaults.adapter=async config=>{
  if(params.habilidade==='Vue')await new Promise(r=>setTimeout(r,800))
  const pessoa={id:7,nome:params.habilidade||'Profissional de teste',profissao:'Desenvolvimento',cidade:'Blumenau',habilidades:['Vue'],foto_perfil:location.origin+'/src/assets/images/perfil.png',email:'NAO-EXIBIR',latitude:10}
  return {config,status:200,data:config.url==='freelancers/'?{count:window.modo==='vazio'?0:3,next:params.page===1?'?page=2':null,previous:params.page===2?'?page=1':null,results:window.modo==='vazio'?[]:[pessoa]}:{...pessoa,descricao:'Descrição pública',portfolio:[
-  {id:1,titulo:'Projeto publicado de teste',publico:true,categoria:'Web',descricao:'Descrição completa do projeto',tags:['Vue','CSS'],imagem:pessoa.foto_perfil,link:'https://example.org/projeto'},
+  {id:1,titulo:'Projeto publicado de teste',publico:true,categoria:'Web',descricao:'Descrição completa do projeto',tags:['Vue','CSS'],imagem:'src/assets/images/perfil.png',link:'https://example.org/projeto'},
   {id:2,titulo:'Projeto privado de teste',publico:false},
   {id:3,titulo:'Outro projeto',link:'javascript:alert(1)'},
  ]}}
@@ -226,6 +227,7 @@ try {
   assert.equal(await evaluate('document.querySelectorAll("a[href^=javascript]").length'), 0)
   const caminhoProjeto = '/empresa/freelancers/7/portfolio/1'
   assert.equal(await evaluate('document.querySelectorAll(".projeto-card-link a").length'), 0)
+  await until('document.querySelector(".projeto-card-link img")?.naturalWidth > 0')
   assert.equal(await evaluate('new URL(document.querySelector(".projeto-card-link").href).pathname'), caminhoProjeto)
   await evaluate('document.querySelector(".projeto-card-link").click()')
   await until('document.querySelector(".projeto-detalhe h1")?.textContent==="Projeto publicado de teste"')

@@ -68,7 +68,6 @@ watch(perfil, () => {
                 v-if="projeto.imagem"
                 :src="projeto.imagem"
                 alt=""
-                loading="lazy"
                 referrerpolicy="no-referrer"
                 @error="$event.target.hidden = true"
               />

@@ -32,7 +32,7 @@ test('projeção pública elimina dados privados e rejeita links perigosos', () 
       portfolio: [
         { id: 2, titulo: 'Projeto de teste', link: 'javascript:alert(1)', email: 'privado' },
         { id: 3, titulo: 'Projeto privado', publico: false },
-        { id: 4, titulo: 'Projeto público', publico: true },
+        { id: 4, titulo: 'Projeto público', publico: true, imagem: 'media/projeto.webp' },
       ],
     },
     true,
@@ -43,6 +43,10 @@ test('projeção pública elimina dados privados e rejeita links perigosos', () 
   assert.deepEqual(perfil.portfolio.map(({ id }) => id), [2, 4])
   assert.equal(perfil.portfolio[0].link, null)
   assert.equal(perfil.portfolio[0].email, undefined)
+  assert.equal(
+    new URL(perfil.portfolio[1].imagem).pathname,
+    '/media/projeto.webp',
+  )
   assert.equal(service.linkPublico('https://example.org/projeto'), 'https://example.org/projeto')
   assert.equal(service.linkPublico('https://user:senha@example.org'), null)
 })

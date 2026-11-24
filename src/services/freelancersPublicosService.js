@@ -1,6 +1,7 @@
 import api from './api.js'
 import { capturarEmpresa } from './freelanceService.js'
 import { resolverImagem } from '../utils/imagens.js'
+import { imagemUrl } from '../utils/perfilPortfolio.js'
 import { sessao } from './authSession.js'
 
 const texto = (valor) => (typeof valor === 'string' ? valor : '')
@@ -38,7 +39,7 @@ export function perfilPublico(data, detalhe = false) {
         categoria: texto(projeto.categoria),
         descricao: texto(projeto.descricao),
         tags: lista(projeto.tags),
-        imagem: resolverImagem(projeto.imagem),
+        imagem: imagemUrl(projeto.imagem, api.defaults.baseURL) || null,
         link: linkPublico(projeto.link),
       }))
   }
