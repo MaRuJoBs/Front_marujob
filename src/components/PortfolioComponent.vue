@@ -237,10 +237,6 @@ onMounted(carregar)
   font-size: 0.875rem;
   color: var(--mrj-color-text);
 }
-.input-busca:focus-within {
-  outline: 3px solid var(--mrj-color-focus);
-  outline-offset: 3px;
-}
 .titulo {
   display: flex;
   align-items: center;

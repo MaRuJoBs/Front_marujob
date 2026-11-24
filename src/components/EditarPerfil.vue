@@ -537,7 +537,7 @@ const receberFotoCamera = (arquivo) => {
   border-radius: 12px;
 }
 .publicacao-perfil input:focus-visible {
-  outline: 3px solid #76519e;
+  outline: var(--mrj-focus-width) solid #76519e;
   outline-offset: 3px;
 }
 .editar-perfil {
@@ -772,8 +772,8 @@ fieldset.conteudo {
   height: 1px;
   opacity: 0;
 }
-.opcao-foto:focus-within {
-  outline: 3px solid var(--mrj-color-focus);
+.opcao-foto:has(input:focus-visible) {
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
   outline-offset: 3px;
 }
 .cancelar-foto {

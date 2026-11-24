@@ -502,7 +502,7 @@ textarea {
   font-size: 16px;
 }
 :is(textarea, select, input, a):focus-visible {
-  outline: 3px solid var(--mrj-color-focus);
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
   outline-offset: 3px;
 }
 :is(textarea, select)[aria-invalid='true'] {
@@ -579,8 +579,8 @@ main > .erro {
   background: var(--mrj-color-secondary);
   font-size: var(--mrj-font-size-sm);
 }
-.upload-logo:focus-within {
-  outline: 3px solid var(--mrj-color-focus);
+.upload-logo:has(input:focus-visible) {
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
   outline-offset: 3px;
 }
 .upload-logo:has(input:disabled) {

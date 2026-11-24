@@ -409,7 +409,6 @@ select {
   background: #5a22b5;
 }
 
-.input-wrapper:focus-within,
 button:focus-visible {
   outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
   outline-offset: var(--mrj-focus-offset);

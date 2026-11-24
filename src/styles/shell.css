@@ -10,6 +10,8 @@
     var(--mrj-freelancer-footer-height) + var(--mrj-freelancer-footer-offset)
   );
   --mrj-page-reserve: 0px;
+  --mrj-focus-ring-width: 2px;
+  -webkit-tap-highlight-color: transparent;
   width: 100%;
   max-width: var(--mrj-shell-width);
   min-height: 100vh;
@@ -27,11 +29,19 @@
   margin-inline: auto;
 }
 
-/* F52: fallback para controles legados que removiam o outline localmente. */
-.app :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: var(--mrj-focus-width, 3px) solid var(--mrj-color-focus, #63369e);
-  outline-offset: var(--mrj-focus-offset, 3px);
-  box-shadow: 0 0 0 2px #fff;
+.app[data-foco-ponteiro] {
+  --mrj-focus-ring-width: 0px;
+}
+
+/* Os destinos de navegação recebem foco para leitura e ordem de tabulação. */
+.app-content:focus,
+.app-content :is(h1, h2)[tabindex='-1']:focus {
+  outline: none;
+}
+
+.app :is(button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex^='-'])):focus-visible {
+  outline: var(--mrj-focus-ring-width) solid var(--mrj-color-focus, #63369e);
+  outline-offset: var(--mrj-focus-offset, 2px);
 }
 
 .app :is(button, a, input, select, textarea, [tabindex]) {

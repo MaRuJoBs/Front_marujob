@@ -123,7 +123,7 @@
   cursor: pointer;
 }
 .seletor-categoria select:focus-visible {
-  outline: 3px solid #76519e;
+  outline: var(--mrj-focus-width) solid #76519e;
   outline-offset: 3px;
 }
 .grade {
@@ -288,10 +288,11 @@
   align-items: stretch;
   padding: 0;
 }
-.projeto-card:has(.projeto-card-link:hover),
-.projeto-card:focus-within {
-  border-color: #76519e;
-  box-shadow: 0 8px 24px #50336e1f;
+@media (hover: hover) {
+  .projeto-card:has(.projeto-card-link:hover) {
+    border-color: #76519e;
+    box-shadow: 0 8px 24px #50336e1f;
+  }
 }
 .projeto-card-link {
   display: block;
@@ -405,7 +406,7 @@ button:disabled {
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #76519e;
+  outline: var(--mrj-focus-width) solid #76519e;
   outline-offset: 3px;
 }
 .paginacao {

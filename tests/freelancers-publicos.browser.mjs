@@ -229,9 +229,21 @@ try {
   assert.equal(await evaluate('document.querySelectorAll(".projeto-card-link a").length'), 0)
   await until('document.querySelector(".projeto-card-link img")?.naturalWidth > 0')
   assert.equal(await evaluate('new URL(document.querySelector(".projeto-card-link").href).pathname'), caminhoProjeto)
-  await evaluate('document.querySelector(".projeto-card-link").click()')
+  const pontoCard = await evaluate(`(()=>{
+    const link=document.querySelector('.projeto-card-link');
+    link.scrollIntoView({block:'center'});
+    const {left,top,width,height}=link.getBoundingClientRect();
+    return {x:left+width/2,y:top+height/2};
+  })()`)
+  await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...pontoCard })
+  assert.ok(await evaluate(`(()=>{
+    const estilo=getComputedStyle(document.querySelector('.projeto-card-link'));
+    return estilo.outlineStyle==='none' || parseFloat(estilo.outlineWidth)===0;
+  })()`))
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...pontoCard })
   await until('document.querySelector(".projeto-detalhe h1")?.textContent==="Projeto publicado de teste"')
   assert.equal(await evaluate('location.pathname'), caminhoProjeto)
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".projeto-detalhe h1")).outlineStyle'), 'none')
   assert.equal(await evaluate('document.querySelector(".projeto-detalhe .descricao").textContent'), 'Descrição completa do projeto')
   assert.deepEqual(await evaluate('[...document.querySelectorAll(".projeto-detalhe .habilidades li")].map(el=>el.textContent)'), ['Vue', 'CSS'])
   assert.equal(await evaluate('document.querySelector(".projeto-detalhe .sobretitulo").textContent'), 'Web')
@@ -252,7 +264,7 @@ try {
   await until('location.pathname==="/empresa/freelancers/7" && document.querySelector(".projeto-card-link")')
   await evaluate('document.querySelector(".diretorio > button").focus()')
   await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
-  assert.equal(await evaluate('document.activeElement.matches(".projeto-card-link:focus-visible") && getComputedStyle(document.activeElement).outlineStyle==="solid"'), true)
+  assert.equal(await evaluate('document.activeElement.matches(".projeto-card-link:focus-visible") && parseFloat(getComputedStyle(document.activeElement).outlineWidth) >= 2'), true)
   await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
   await until('document.querySelector(".projeto-detalhe h1")')
   await cdp('Page.navigate', { url: 'http://127.0.0.1:5195/empresa/freelancers/7/portfolio/2' })

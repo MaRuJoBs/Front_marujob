@@ -120,6 +120,15 @@ onUnmounted(() => {
   navigator.serviceWorker?.removeEventListener('message', aoReceberPush)
 })
 const conteudo = ref(null)
+const focoPorPonteiro = ref(false)
+function usarFocoDeTeclado(event) {
+  const digitando = event.target.matches(
+    'textarea, [contenteditable], input:not([type=checkbox], [type=radio], [type=range], [type=file])',
+  )
+  if (event.key === 'Tab' || !digitando) {
+    focoPorPonteiro.value = false
+  }
+}
 const focarConteudo = () => conteudo.value?.focus()
 watch(
   () => route.path,
@@ -157,6 +166,9 @@ const paginasComReserva = new Set([
 <template>
   <div
     class="app"
+    :data-foco-ponteiro="focoPorPonteiro || null"
+    @pointerdown.capture="focoPorPonteiro = true"
+    @keydown.capture="usarFocoDeTeclado"
     :class="{
       'app--navigation': !rodapeOculto && sessao.usuario,
       'app--desktop-nav': navegacaoDesktop,

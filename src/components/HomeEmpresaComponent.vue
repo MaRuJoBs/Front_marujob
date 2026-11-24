@@ -549,7 +549,7 @@ button:disabled {
   cursor: pointer;
 }
 :is(button, a, input, select):focus-visible {
-  outline: 3px solid var(--mrj-color-focus);
+  outline: var(--mrj-focus-width) solid var(--mrj-color-focus);
   outline-offset: 3px;
 }
 .sr-only {
