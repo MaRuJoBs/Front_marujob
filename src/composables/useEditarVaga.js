@@ -17,6 +17,7 @@ import {
 } from '../utils/vagaForm.js'
 import { useGerenciamentoVagas } from '../stores/gerenciamentoVagas.js'
 import { useVagasStore } from '../stores/vagas.js'
+import { contarAprovados, listarCandidaturasEmpresa } from '../services/notificacoesService.js'
 
 export function useEditarVaga() {
   const route = useRoute()
@@ -110,6 +111,15 @@ export function useEditarVaga() {
     if (!enviosStore.iniciarEnvio(envio)) return
     try {
       const payload = montarPayloadEdicao(form, original)
+      if (payload.max_profissionais != null) {
+        const aprovados = contarAprovados(await listarCandidaturasEmpresa(id))
+        conta.verificar()
+        if (!ativa || geracaoEnvio !== geracao) return
+        if (payload.max_profissionais < aprovados) {
+          erros.value.max_profissionais = `O limite não pode ser menor que ${aprovados}, o total de profissionais já aprovados.`
+          return
+        }
+      }
       const vaga = await editarVaga(id, payload)
       if (
         !ativa ||

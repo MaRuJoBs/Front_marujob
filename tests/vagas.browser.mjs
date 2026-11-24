@@ -44,6 +44,7 @@ let modoPublicacao = 400
 let publicacoes = 0
 let ultimoPayload
 let vagaPersistida = null
+let logoPerfil = '/src/assets/images/logo.png'
 let scriptInicial
 
 try {
@@ -98,6 +99,19 @@ try {
           name: 'Empresa de teste FEAT-35',
           groups: [conta === 'empresa' ? 'Empresa' : 'Usuário'],
         }
+      else if (path.endsWith('/empresas/me/'))
+        data = { empresa: 35, name: 'Empresa de teste FEAT-35', profile_image: origem + logoPerfil }
+      else if (path.endsWith('/candidaturas/')) {
+        const itens = vagaPersistida ? [
+          { id: 1, oportunidade: 3501, freelancer: 50, status: 'aprovada', freelancer_detalhes: { name: 'Candidato aprovado' } },
+          { id: 2, oportunidade: 3501, freelancer: 51, status: 'pendente', freelancer_detalhes: { name: 'Candidato pendente' } },
+        ] : []
+        data = { count: itens.length, next: null, previous: null, results: itens }
+      }
+      else if (path.endsWith('/freelances/3501/')) {
+        if (request.method === 'PATCH') vagaPersistida = { ...vagaPersistida, ...JSON.parse(request.postData) }
+        data = vagaPersistida
+      }
       else if (path.endsWith('/freelances/') && request.method === 'POST') {
         publicacoes++
         ultimoPayload = JSON.parse(request.postData)
@@ -122,7 +136,7 @@ try {
           { name: 'Content-Type', value: 'application/json' },
           { name: 'Access-Control-Allow-Origin', value: origem },
           { name: 'Access-Control-Allow-Headers', value: 'authorization,content-type' },
-          { name: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
+          { name: 'Access-Control-Allow-Methods', value: 'GET,POST,PATCH,OPTIONS' },
         ],
         body: Buffer.from(status === 204 ? '' : JSON.stringify(data)).toString('base64'),
       })
@@ -270,6 +284,15 @@ try {
   )
 
   modoPublicacao = 201
+  await avaliar(`(() => {
+    const limite=document.querySelector('#limite-profissionais');limite.value='quantidade';
+    limite.dispatchEvent(new Event('change',{bubbles:true}));
+  })()`)
+  await esperar("!!document.querySelector('#quantidade-profissionais')")
+  await avaliar(`(() => {
+    const quantidade=document.querySelector('#quantidade-profissionais');quantidade.value='1';
+    quantidade.dispatchEvent(new Event('input',{bubbles:true}));
+  })()`)
   await avaliar("document.querySelector('form').requestSubmit()")
   await esperar(
     "location.pathname==='/homeEmpresa' && !!document.querySelector('.confirmacao-publicacao')",
@@ -278,6 +301,7 @@ try {
   assert.deepEqual(Object.keys(ultimoPayload).sort(), [
     'cidade',
     'descricao',
+    'max_profissionais',
     'modalidade',
     'preco',
     'status',
@@ -287,6 +311,7 @@ try {
     'uf',
   ])
   assert.equal(ultimoPayload.preco, '1500.50')
+  assert.equal(ultimoPayload.max_profissionais, 1)
   assert.equal(ultimoPayload.modalidade, 'Remoto')
   assert.equal(ultimoPayload.status, 'publicada')
   assert.equal(ultimoPayload.cidade, '')
@@ -294,11 +319,28 @@ try {
   assert.equal(ultimoPayload.descricao, 'Texto usado exclusivamente no navegador de teste, sem publicação real.')
   assert.ok([...ultimoPayload.descricao].length <= 200)
   await esperar("document.querySelector('.destaque-vaga h3')?.textContent.trim()==='Oportunidade de teste isolado'")
-  assert.equal(
-    await avaliar('document.documentElement.scrollWidth <= innerWidth'),
-    true,
-    'O início da empresa também precisa caber no celular.',
-  )
+  await esperar("document.querySelector('.destaque-vaga .empresa-vaga img')?.naturalWidth > 0")
+  await esperar("document.querySelector('.destaque-vaga').textContent.includes('1 de 1')")
+  await avaliar("document.querySelector('.destaque-vaga').click()")
+  await esperar("document.querySelector('#candidaturas-titulo')?.parentElement.textContent.includes('Candidato pendente')")
+  await avaliar("[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Encerrar vaga preenchida')).click()")
+  await esperar("document.querySelector('#candidaturas-titulo') && document.body.textContent.includes('Encerrada') && document.body.textContent.includes('Candidato aprovado')")
+  logoPerfil = '/src/assets/images/slogan.png'
+  await enviar('Page.navigate', { url: origem + '/homeEmpresa' })
+  await esperar(`[...document.querySelectorAll('.grupo-vagas')].some(g =>
+    g.textContent.includes('Histórico de vagas') && g.textContent.includes('1 de 1') &&
+    g.querySelector('img')?.src.includes('slogan.png') && g.querySelector('img')?.naturalWidth > 0)`)
+  assert.equal(await avaliar("!!document.querySelector('.destaque-vaga')"), false)
+  for (const largura of [320, 1440]) {
+    await enviar('Emulation.setDeviceMetricsOverride', {
+      width: largura, height: 1000, deviceScaleFactor: 1, mobile: largura < 500,
+    })
+    assert.equal(await avaliar('document.documentElement.scrollWidth <= innerWidth'), true)
+    assert.ok(await avaliar(`[...document.querySelectorAll('.grupo-vagas a')].every(a => {
+      const r=a.getBoundingClientRect();return r.left>=0 && r.right<=innerWidth;
+    })`))
+  }
+  console.log('PASSOU: histórico com contagem, candidaturas preservadas e logo atualizado em mobile e desktop.')
   assert.ok(falhas.length === 0, falhas.join('\n'))
   console.log('PASSOU: confirmação após 201, redirecionamento e exibição dos dados retornados.')
   console.log(

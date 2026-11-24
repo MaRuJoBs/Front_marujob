@@ -1,11 +1,19 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import EmpresaHeader from '@/components/EmpresaHeader.vue'
 import ConfirmarExclusaoVaga from '@/components/ConfirmarExclusaoVaga.vue'
+import IdentidadeEmpresaVaga from '@/components/IdentidadeEmpresaVaga.vue'
+import { useIdentidadeEmpresaVaga } from '@/composables/useIdentidadeEmpresaVaga'
+import { capturarEmpresa } from '@/services/freelanceService'
+import {
+  contarAprovados,
+  encerrarVagaPreenchida,
+  listarCandidaturasEmpresa,
+} from '@/services/notificacoesService'
+import { statusCandidatura } from '@/utils/notificacoes'
 import { useDetalheVagaEmpresa } from '@/composables/useDetalheVagaEmpresa'
 import { useGerenciamentoVagas } from '@/stores/gerenciamentoVagas'
-import { sessao } from '@/services/authSession'
 import {
   formularioDaVaga,
   detalhesComplementaresVaga,
@@ -13,6 +21,9 @@ import {
   formatarTempo,
   formatarDataPublicacao,
   formatarFaixaSalarial,
+  resumoAprovados,
+  vagaAberta,
+  vagaPreenchida,
 } from '@/utils/vagaForm'
 import {
   faCalendar,
@@ -27,6 +38,60 @@ import {
 const router = useRouter()
 const store = useGerenciamentoVagas()
 const { vaga, carregando, erro, recarregar } = useDetalheVagaEmpresa()
+const perfilEmpresa = useIdentidadeEmpresaVaga()
+const candidaturas = ref(null)
+const erroCandidaturas = ref('')
+const buscandoCandidaturas = ref(false)
+const encerrando = ref(false)
+const feedbackEncerramento = ref('')
+const aprovados = computed(() =>
+  candidaturas.value ? contarAprovados(candidaturas.value) : undefined,
+)
+watch(vaga, async (atual, _, invalidar) => {
+  candidaturas.value = null
+  erroCandidaturas.value = ''
+  buscandoCandidaturas.value = false
+  encerrando.value = false
+  feedbackEncerramento.value = ''
+  if (!atual) return
+  const controller = new AbortController()
+  invalidar(() => controller.abort())
+  buscandoCandidaturas.value = true
+  try {
+    const dados = await listarCandidaturasEmpresa(atual.id, { signal: controller.signal })
+    if (!controller.signal.aborted) candidaturas.value = dados
+  } catch {
+    if (!controller.signal.aborted)
+      erroCandidaturas.value = 'Não foi possível consultar as candidaturas.'
+  } finally {
+    if (!controller.signal.aborted) buscandoCandidaturas.value = false
+  }
+})
+async function tentarEncerrar() {
+  const atual = vaga.value
+  const conta = capturarEmpresa()
+  if (!atual || encerrando.value || !vagaAberta(atual) || !vagaPreenchida(atual, aprovados.value))
+    return
+  encerrando.value = true
+  feedbackEncerramento.value = ''
+  try {
+    const encerrada = await encerrarVagaPreenchida(atual.id)
+    if (conta.atual() && vaga.value === atual) {
+      if (encerrada) {
+        store.registrarEdicao(encerrada)
+        recarregar()
+      } else
+        feedbackEncerramento.value =
+          'A situação da vaga mudou. Atualize os detalhes antes de tentar novamente.'
+    }
+  } catch {
+    if (conta.atual() && vaga.value === atual)
+      feedbackEncerramento.value =
+        'Não foi possível confirmar o encerramento. Atualize a vaga ou tente novamente.'
+  } finally {
+    if (conta.atual() && vaga.value === atual) encerrando.value = false
+  }
+}
 const informacoes = computed(() => (vaga.value ? formularioDaVaga(vaga.value) : null))
 const detalhes = computed(() =>
   [
@@ -78,12 +143,9 @@ const detalhes = computed(() =>
       </section>
       <template v-else-if="vaga">
         <section class="resumo-vaga" aria-labelledby="vaga-titulo">
-          <div class="vaga-icone" aria-hidden="true">
-            <FontAwesomeIcon :icon="['fas', 'briefcase']" />
-          </div>
           <div class="resumo-texto">
+            <IdentidadeEmpresaVaga :vaga="vaga" :perfil="perfilEmpresa" />
             <h1 id="vaga-titulo" tabindex="-1">{{ vaga.titulo }}</h1>
-            <p v-if="sessao.usuario?.name" class="nome-empresa">{{ sessao.usuario.name }}</p>
             <div class="condicoes-vaga">
               <span v-if="informacoes.modalidade"
                 ><FontAwesomeIcon :icon="faHouse" aria-hidden="true" />
@@ -96,6 +158,25 @@ const detalhes = computed(() =>
             </div>
           </div>
           <span class="preco">{{ formatarPagamento(vaga.preco) }}</span>
+        </section>
+        <section class="bloco-descricao" aria-labelledby="candidaturas-titulo">
+          <h2 id="candidaturas-titulo">Profissionais e candidaturas</h2>
+          <p v-if="buscandoCandidaturas" role="status">Consultando candidaturas…</p>
+          <p v-else>{{ resumoAprovados(vaga, aprovados) }}</p>
+          <p v-if="erroCandidaturas" role="alert">{{ erroCandidaturas }}</p>
+          <p v-if="candidaturas?.length === 0">Nenhuma candidatura registrada.</p>
+          <ul v-if="candidaturas?.length">
+            <li v-for="candidatura in candidaturas" :key="candidatura.id">
+              {{ candidatura.freelancer_detalhes.name || 'Candidatura #' + candidatura.id }}
+              — {{ statusCandidatura[candidatura.status] }}
+            </li>
+          </ul>
+          <div v-if="vagaAberta(vaga) && vagaPreenchida(vaga, aprovados)" class="acoes">
+            <button type="button" :disabled="encerrando" @click="tentarEncerrar">
+              {{ encerrando ? 'Confirmando encerramento…' : 'Encerrar vaga preenchida' }}
+            </button>
+          </div>
+          <p v-if="feedbackEncerramento" role="alert">{{ feedbackEncerramento }}</p>
         </section>
 
         <section class="bloco-descricao" aria-labelledby="descricao-titulo">
@@ -132,7 +213,12 @@ const detalhes = computed(() =>
             ><FontAwesomeIcon :icon="['fas', 'pen']" aria-hidden="true" /> Editar vaga</router-link
           >
         </div>
-        <button type="button" class="excluir-vaga" @click="store.pedirExclusao(vaga)">
+        <button
+          v-if="vagaAberta(vaga)"
+          type="button"
+          class="excluir-vaga"
+          @click="store.pedirExclusao(vaga)"
+        >
           <FontAwesomeIcon :icon="['fas', 'trash']" aria-hidden="true" /> Excluir oportunidade
         </button>
       </template>
@@ -154,22 +240,10 @@ const detalhes = computed(() =>
 }
 .resumo-vaga {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-start;
   gap: var(--mrj-space-3);
   margin-bottom: 16px;
-}
-.vaga-icone {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 48px;
-  height: 52px;
-  border-radius: var(--mrj-radius-md);
-  color: var(--mrj-color-primary);
-  background: var(--mrj-color-primary);
-  color: var(--mrj-color-on-primary);
-  font-size: 22px;
 }
 .resumo-texto {
   flex: 1;
@@ -180,12 +254,6 @@ h1 {
   font-size: 19px;
   font-weight: 700;
   line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-.nome-empresa {
-  margin-top: 5px;
-  color: var(--mrj-color-text-secondary);
-  font-size: var(--mrj-font-size-sm);
   overflow-wrap: anywhere;
 }
 .condicoes-vaga {
@@ -212,6 +280,10 @@ h1 {
   color: var(--mrj-color-text-secondary);
   font-size: var(--mrj-font-size-sm);
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.bloco-descricao ul {
+  padding-inline-start: 1.25rem;
   overflow-wrap: anywhere;
 }
 .bloco-descricao {
@@ -331,10 +403,6 @@ button:focus-visible {
 @media (max-width: 359px) {
   .detalhe-conteudo {
     padding-inline: 12px;
-  }
-  .vaga-icone {
-    width: 48px;
-    height: 52px;
   }
 }
 @media (max-width: 359px) {

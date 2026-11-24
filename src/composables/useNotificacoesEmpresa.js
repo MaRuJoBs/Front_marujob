@@ -5,6 +5,7 @@ import {
   listarNotificacoes,
   consultarCandidatura,
   decidirCandidatura,
+  encerrarVagaPreenchida,
   marcarNotificacaoLida,
 } from '../services/notificacoesService.js'
 import { erroNotificacoes, statusCandidatura, filtrosNotificacoes } from '../utils/notificacoes.js'
@@ -214,6 +215,18 @@ export function useNotificacoesEmpresa() {
       feedback.value = `Decisão confirmada: candidatura ${statusCandidatura[c.status].toLowerCase()}.`
       confirmacao.value = null
       atualizarLista = true
+      if (c.status === 'aprovada') {
+        try {
+          if (await encerrarVagaPreenchida(c.oportunidade)) {
+            if (contaAtual(conta)) feedback.value += ' Vaga encerrada e disponível no histórico.'
+          }
+        } catch (erroEncerramento) {
+          if (contaAtual(conta))
+            erroAcao.value = erroEncerramento.message.startsWith('O limite') ?
+              erroEncerramento.message :
+              'A aprovação foi confirmada. Não foi possível verificar o encerramento da vaga. Consulte os detalhes da oportunidade.'
+        }
+      }
     } catch (error) {
       if (!contaAtual(conta)) return
       erroAcao.value = erroNotificacoes(error)

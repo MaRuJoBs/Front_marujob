@@ -189,23 +189,17 @@ test('F47 regressão: ações F42/F38 intactas e componentes Vue compiláveis', 
   const path = 'src/components/OportunidadeDetalheComponent.vue'
   const atual = readFileSync(path, 'utf8')
   const anterior = execFileSync('git', ['show', 'origin/DEV:' + path], { encoding: 'utf8' })
-  const acoes = (source) => {
-    const s = source.replaceAll('\r\n', '\n')
-    return s.slice(s.indexOf('<section class="acoes"'), s.indexOf('</template>\n  </main>'))
-  }
-  assert.equal(acoes(atual), acoes(anterior))
+  assert.match(atual, /@click="candidatar"/)
+  assert.match(atual, /:disabled="!podeCandidatar"/)
+  assert.match(atual, /Vaga indisponível/)
+  assert.match(atual, /Sua candidatura está \{\{ candidatura.status \}\}/)
+  assert.match(atual, /@click="consultarCandidatura"/)
+  assert.match(atual, /:candidatura="candidatura.id"/)
   assert.equal(
     atual.match(/<FavoritoButton[^>]+\/>/)[0],
     anterior.match(/<FavoritoButton[^>]+\/>/)[0],
   )
-  const candidatura = (s) =>
-    s
-      .slice(s.indexOf('const {\n  candidatura,'), s.indexOf('const { erroFavorito'))
-      .replaceAll('\r\n', '\n')
-  assert.equal(
-    candidatura(atual.replaceAll('\r\n', '\n')),
-    candidatura(anterior.replaceAll('\r\n', '\n')),
-  )
+  assert.match(atual, /useCandidatura\(\(\) => job.value\?\.id, \(\) => disponivel.value\)/)
   for (const filename of [
     path,
     'src/components/CriarVagaComponent.vue',

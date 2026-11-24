@@ -41,6 +41,7 @@ const falhar = (config, status, data = {}) => {
 }
 const corpo = (config) => (typeof config.data === 'string' ? JSON.parse(config.data) : config.data)
 const formularioValido = () => ({
+  max_profissionais: null,
   cidade: '',
   uf: '',
   status: 'publicada',
@@ -60,6 +61,7 @@ const formularioValido = () => ({
   tempo: '40',
 })
 const vagaCriada = {
+  max_profissionais: null,
   modalidade: 'Remoto',
   cidade: '',
   uf: '',
@@ -71,6 +73,7 @@ const vagaCriada = {
   preco: '1500.50',
   tempo: '40',
 }
+
 const pendente = () => {
   let resolve
   const promise = new Promise((r) => {
@@ -179,6 +182,7 @@ after(async () => {
 
 test('formulário começa vazio, incluindo select e pagamento', () => {
   assert.deepEqual(formUtils.novoRascunhoVaga(), {
+    max_profissionais: null,
     titulo: '',
     categoria: '',
     modalidade: '',
@@ -318,6 +322,7 @@ test('payload sem complementos preserva os cinco campos existentes, com textos n
   assert.deepEqual(payload, {
     titulo: 'Título',
     descricao: 'Descrição',
+    max_profissionais: null,
     modalidade: 'Remoto',
     cidade: '',
     uf: '',
@@ -541,12 +546,89 @@ test('resposta após logout não exibe publicação nem redireciona a conta segu
   }
 })
 
+test('F66 publica sem limite ou com 1 e 3, valida inteiros e confirma o valor retornado', async () => {
+  autenticar()
+  let persistida
+  transporte = (c) => {
+    if (c.method === 'post') {
+      persistida = { ...vagaCriada, empresa: 7, ...corpo(c) }
+      return resposta(c, persistida)
+    }
+    return resposta(c, persistida, 200)
+  }
+  for (const max_profissionais of [null, '1', '3']) {
+    const form = { ...formularioValido(), max_profissionais }
+    assert.deepEqual(formUtils.validarVaga(form), {})
+    const payload = formUtils.montarPayloadVaga(form)
+    assert.equal(payload.max_profissionais, max_profissionais === null ? null : Number(max_profissionais))
+    const publicada = await publicarVaga(payload)
+    assert.deepEqual(formUtils.camposNaoConfirmados(publicada, payload), [])
+    assert.equal((await servicoGestao.consultarVagaPropria(publicada.id)).max_profissionais, payload.max_profissionais)
+  }
+  for (const max_profissionais of ['', '0', '2.5', '-1', '2e3', 'NaN', '2147483648']) {
+    assert.match(formUtils.validarVaga({ ...formularioValido(), max_profissionais }).max_profissionais, /inteiro/)
+  }
+  assert.deepEqual(formUtils.camposNaoConfirmados({}, { max_profissionais: null }), ['Limite de profissionais'])
+  assert.equal(formUtils.formularioDaVaga({ max_profissionais: 0 }).max_profissionais, null)
+})
+
 const propria = (id = 12, empresa = 7) => ({
   ...vagaCriada,
   modalidade: '',
   id,
   empresa,
   descricao: 'Modalidade: Remoto\n\nDescrição original',
+})
+
+test('F66 impede reduzir abaixo dos aprovados e salva novo limite e remoção após recarregar', async () => {
+  autenticar()
+  let vaga = { ...propria(), max_profissionais: 3 }
+  const aprovadas = [1, 2].map(id => ({ id, freelancer: id, oportunidade: vaga.id, status: 'aprovada' }))
+  transporte = (c) => {
+    if (c.url === 'candidaturas/') return resposta(c, { count: 2, results: aprovadas, next: null }, 200)
+    if (c.method === 'patch') vaga = { ...vaga, ...corpo(c) }
+    return resposta(c, vaga, 200)
+  }
+  const primeira = await montarEdicao()
+  try {
+    assert.equal(primeira.estado.form.max_profissionais, 3)
+    primeira.estado.form.max_profissionais = '1'
+    await primeira.estado.publicar()
+    assert.match(primeira.estado.erros.value.max_profissionais, /2/)
+    assert.ok(!chamadas.some(c => c.method === 'patch'))
+    primeira.estado.form.max_profissionais = '4'
+    await primeira.estado.publicar()
+    assert.equal(vaga.max_profissionais, 4)
+  } finally {
+    primeira.desmontar()
+  }
+  const segunda = await montarEdicao()
+  try {
+    assert.equal(segunda.estado.form.max_profissionais, 4)
+    segunda.estado.form.max_profissionais = null
+    await segunda.estado.publicar()
+    assert.equal((await servicoGestao.consultarVagaPropria(vaga.id)).max_profissionais, null)
+  } finally {
+    segunda.desmontar()
+  }
+})
+
+test('F66 restringe a identidade ao proprietário e usa somente campos públicos da oportunidade', async () => {
+  const { identidadeEmpresaVaga } = await vite.ssrLoadModule('/src/utils/identidadeEmpresaVaga.js')
+  const base = 'https://api.test/api/'
+  const perfil = { id: 7, name: 'Empresa 7', profile_image: '/media/7.png', email: 'privado@test' }
+  assert.deepEqual(identidadeEmpresaVaga(propria(), perfil, base), {
+    name: 'Empresa 7', profile_image: 'https://api.test/media/7.png',
+  })
+  assert.deepEqual(identidadeEmpresaVaga({ ...propria(13, 9), empresa_nome: 'Empresa 9',
+    empresa_foto: 'https://cdn.test/9.png', foto: '/privado.png' }, perfil, base), {
+    name: 'Empresa 9', profile_image: 'https://cdn.test/9.png',
+  })
+  assert.deepEqual(identidadeEmpresaVaga({ empresa: 9, empresa_foto: 'https://a:b@privado.test/9.png' }, perfil, base), {
+    name: '', profile_image: null,
+  })
+  assert.equal(identidadeEmpresaVaga(propria(), { ...perfil, profile_image: '/media/novo.png' }, base).profile_image,
+    'https://api.test/media/novo.png')
 })
 
 test('listagem percorre páginas, filtra proprietário e nulos, usa JWT e mantém histórico após nova consulta', async () => {

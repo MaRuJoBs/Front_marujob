@@ -6,7 +6,7 @@ import {
   mensagemErroCandidatura,
 } from '../services/candidaturasService.js'
 
-export function useCandidatura(oportunidade) {
+export function useCandidatura(oportunidade, disponivel = () => true) {
   const candidatura = ref(null),
     carregando = ref(false),
     enviando = ref(false)
@@ -17,6 +17,7 @@ export function useCandidatura(oportunidade) {
   const podeEnviar = computed(
     () =>
       permitida.value &&
+      disponivel() &&
       oportunidade() != null &&
       consultada.value &&
       !candidatura.value &&

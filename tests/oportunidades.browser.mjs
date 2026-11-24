@@ -31,8 +31,14 @@ localStorage.clear()
 sessao.usuario = { id: 37, name: 'Conta de teste', groups: ['Usuário'] }
 sessao.tipo = 'usuario'
 const consultas = []
-let incompleto=false, longo=false
-const item = id => incompleto ? {id,titulo:'Campos opcionais ausentes',descricao:null,tag:null,preco:null,tempo:null} : ({id, titulo:longo ? 'TítuloExtensoSemEspaços'.repeat(30) : 'Projeto de identidade visual', descricao:'Desenvolver a identidade visual de um projeto e organizar os arquivos finais.', tag:'design', preco:'200.00', tempo:'20'})
+let incompleto=false, longo=false, fechada=false
+const item = id => incompleto ? {id,titulo:'Campos opcionais ausentes',descricao:null,tag:null,preco:null,tempo:null} : ({
+ id, titulo:longo ? 'TítuloExtensoSemEspaços'.repeat(30) : 'Projeto de identidade visual',
+ descricao:'Desenvolver a identidade visual de um projeto e organizar os arquivos finais.',
+ tag:'design', preco:'200.00', tempo:'20', status:fechada && id===2?'encerrada':undefined,
+ ...(id===1?{empresa:10,empresa_nome:'Estúdio Um',empresa_foto:location.origin+'/src/assets/images/logo.png'}:{}),
+ ...(id===2?{empresa:20,empresa_nome:'Estúdio Dois',empresa_foto:location.origin+'/src/assets/images/slogan.png'}:{}),
+})
 api.defaults.adapter = async config => {
   consultas.push(config)
   const page = Number(config.params?.page || 1)
@@ -56,6 +62,11 @@ try {
  if(screen==='listagem') {
   conferir(document.querySelectorAll('.vaga').length===10,'Primeira página')
   const cartao=document.querySelector('.vaga')
+  const logos=[...document.querySelectorAll('.vaga .empresa-vaga img')]
+  await esperar(()=>logos.length===2 && logos.every(img=>img.naturalWidth>0))
+  conferir(logos[0].src.endsWith('/logo.png') && logos[1].src.endsWith('/slogan.png'),'Logos ligados ao dono de cada vaga')
+  conferir(cartao.querySelector('.empresa-vaga').textContent.includes('Estúdio Um'),'Nome público da empresa')
+  conferir(!!document.querySelectorAll('.vaga')[2].querySelector('.empresa-vaga-logo[role=img]'),'Sem imagem usa ícone neutro')
   const altura=cartao.getBoundingClientRect().height
   conferir(altura<=innerHeight/3,'Card ocupa no máximo um terço do viewport de teste: '+altura+'px')
   const informacoes=cartao.querySelector('.info').getBoundingClientRect()
@@ -79,8 +90,15 @@ try {
   conferir(JSON.parse(localStorage.getItem('marujobs:favoritos:usuario:37')).includes(1),'Favorito local')
   await router.push('/oportunidade/1');await esperar(()=>document.querySelector('.informacoes-card'))
   conferir(document.querySelector('.favorito').getAttribute('aria-pressed')==='true','Favorito nos detalhes')
+  conferir(document.querySelector('.empresa-vaga').textContent.includes('Estúdio Um'),'Identidade da empresa nos detalhes')
   longo=true
   await router.push('/freelances');await esperar(()=>document.querySelector('.vaga'))
+  fechada=true
+  await router.push('/oportunidade/2');await esperar(()=>document.querySelector('.informacoes-card'))
+  conferir(document.querySelector('.btn-candidatar').disabled &&
+    document.querySelector('.btn-candidatar').textContent.includes('indisponível'),'Vaga encerrada bloqueia candidatura')
+  await router.push('/freelances');await esperar(()=>document.querySelector('.vaga'))
+  conferir(document.querySelectorAll('.vaga').length===9,'Vaga encerrada sai da lista aberta')
   conferir(document.documentElement.scrollWidth<=innerWidth,'Título extenso sem transbordamento')
   longo=false
   await router.push('/oportunidade/1');await esperar(()=>document.querySelector('.informacoes-card'))

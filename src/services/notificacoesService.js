@@ -1,6 +1,8 @@
 import api from './api.js'
 import { sessao, obterAccessToken, obterRefreshToken } from './authSession.js'
-import { capturarEmpresa } from './freelanceService.js'
+import { capturarEmpresa, consultarVagaPropria, editarVaga } from './freelanceService.js'
+import { proximaPaginaCandidaturas } from './candidaturasService.js'
+import { limiteProfissionais, vagaPreenchida } from '../utils/vagaForm.js'
 import {
   idValido,
   statusValido,
@@ -9,6 +11,7 @@ import {
 } from '../utils/notificacoes.js'
 
 const mutacoes = new Set()
+const encerramentos = new Map()
 function empresaAtual() {
   const conta = capturarEmpresa()
   conta.verificar()
@@ -119,7 +122,95 @@ export async function decidirCandidatura(id, acao, config) {
       mutacao: `decisao:${id}`,
     }),
   )
-  if (String(data.id) !== String(id) || data.status === 'pendente')
+  if (
+    String(data.id) !== String(id) ||
+    data.status !== (acao === 'aprovar' ? 'aprovada' : 'recusada')
+  )
     throw new Error('Decisão não confirmada.')
   return data
+}
+
+export async function listarCandidaturasEmpresa(oportunidade, { signal } = {}) {
+  const conta = empresaAtual()
+  if (oportunidade != null) validarId(oportunidade)
+  const visitadas = new Set()
+  const candidaturas = new Map()
+  let pagina = 1
+  let total
+  while (pagina !== null) {
+    conta.verificar()
+    if (visitadas.has(pagina)) throw new Error('Paginação de candidaturas repetida.')
+    visitadas.add(pagina)
+    const data = await requisitar('get', 'candidaturas/', {
+      signal,
+      params: { page: pagina, ...(oportunidade == null ? {} : { oportunidade }) },
+    })
+    if (
+      !Array.isArray(data?.results) ||
+      !Number.isSafeInteger(data.count) ||
+      data.count < 0 ||
+      (total != null && data.count !== total)
+    )
+      throw new Error('Listagem de candidaturas indisponível.')
+    total = data.count
+    for (const item of data.results.map(normalizarCandidatura)) {
+      const chave = String(item.id)
+      if (
+        candidaturas.has(chave) ||
+        (oportunidade != null && String(item.oportunidade) !== String(oportunidade))
+      )
+        throw new Error('Listagem de candidaturas inconsistente.')
+      candidaturas.set(chave, item)
+    }
+    if (candidaturas.size > total || (data.next != null && !data.results.length))
+      throw new Error('Listagem de candidaturas inconsistente.')
+    pagina = data.next == null ? null : proximaPaginaCandidaturas(data.next, oportunidade)
+  }
+  conta.verificar()
+  if (candidaturas.size !== total) throw new Error('Consulta de candidaturas incompleta.')
+  return [...candidaturas.values()]
+}
+
+export const contarAprovados = (candidaturas) =>
+  candidaturas.filter(({ status }) => status === 'aprovada').length
+
+export function encerrarVagaPreenchida(id) {
+  const conta = empresaAtual()
+  const chave = `${sessao.revisao}:${conta.id}:${validarId(id)}`
+  if (encerramentos.has(chave)) return encerramentos.get(chave)
+  const operacao = (async () => {
+    const vaga = await consultarVagaPropria(id)
+    conta.verificar()
+    if (vaga.status !== 'publicada' || limiteProfissionais(vaga.max_profissionais) === null)
+      return null
+    const candidaturas = await listarCandidaturasEmpresa(id)
+    conta.verificar()
+    const aprovados = contarAprovados(candidaturas)
+    if (!vagaPreenchida(vaga, aprovados)) return null
+    try {
+      const encerrada = await editarVaga(
+        id,
+        { status: 'encerrada' },
+        {
+          antesDeSalvar: (atual) =>
+            atual.status === 'publicada' && vagaPreenchida(atual, aprovados),
+        },
+      )
+      conta.verificar()
+      if (!encerrada) return null
+      if (
+        String(encerrada?.id) !== String(id) ||
+        String(encerrada.empresa) !== String(conta.id) ||
+        encerrada.status !== 'encerrada'
+      )
+        throw new Error('Encerramento não confirmado.')
+      return encerrada
+    } catch {
+      throw new Error(
+        'O limite de profissionais foi atingido, mas o encerramento não foi confirmado. Confira a vaga e tente encerrar novamente.',
+      )
+    }
+  })().finally(() => encerramentos.delete(chave))
+  encerramentos.set(chave, operacao)
+  return operacao
 }
