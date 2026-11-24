@@ -70,6 +70,7 @@ const {
           <span class="categoria">
             {{ projeto.categoria }}
           </span>
+          <span class="categoria">{{ projeto.publico === true ? 'Público' : 'Privado' }}</span>
         </div>
 
         <div class="tags">

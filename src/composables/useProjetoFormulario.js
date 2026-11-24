@@ -11,6 +11,7 @@ export function useProjetoFormulario() {
     categoria = ref(''),
     descricao = ref(''),
     link = ref(''),
+    publico = ref(false),
     tags = ref([]),
     novaTag = ref(''),
     editando = ref(false),
@@ -25,6 +26,7 @@ export function useProjetoFormulario() {
     envio++
     titulo.value = categoria.value = descricao.value = link.value = novaTag.value = ''
     tags.value = []
+    publico.value = false
     foto.carregarImagem(null)
     pronto.value = false
     salvando.value = false
@@ -38,6 +40,7 @@ export function useProjetoFormulario() {
     categoria.value = p.categoria || ''
     descricao.value = p.descricao || ''
     link.value = p.link || ''
+    publico.value = p.publico === true
     tags.value = Array.isArray(p.tags) ? [...p.tags] : []
     foto.carregarImagem(p.imagem)
     pronto.value = true
@@ -69,6 +72,7 @@ export function useProjetoFormulario() {
       descricao: descricao.value,
       link: link.value.trim(),
       tags: [...tags.value],
+      publico: publico.value,
     }
     camposErro.value = {}
     if (!dados.titulo || dados.titulo.length > 255)
@@ -99,7 +103,12 @@ export function useProjetoFormulario() {
         mostrarSucesso.value = true
         try {
           const confirmado = await consultarProjeto(p.id, config)
-          if (!config.signal.aborted) preencher(confirmado)
+          if (!config.signal.aborted) {
+            preencher(confirmado)
+            if (confirmado.publico !== dados.publico)
+              recurso.erro.value =
+                'A visibilidade retornada pela API difere da opção salva. Confira nos detalhes do projeto.'
+          }
         } catch {
           if (!config.signal.aborted)
             recurso.erro.value =
@@ -115,6 +124,7 @@ export function useProjetoFormulario() {
     categoria,
     descricao,
     link,
+    publico,
     tags,
     novaTag,
     editando,

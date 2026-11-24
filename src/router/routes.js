@@ -12,6 +12,12 @@ export const routes = [
     meta: { requiresAuth: true, tipo: 'empresa', layout: 'wide' },
   },
   {
+    path: '/empresa/freelancers/:id/portfolio/:projetoId',
+    name: 'projeto-publico-freelancer',
+    component: () => import('../views/ProjetoPublicoFreelancerView.vue'),
+    meta: { requiresAuth: true, tipo: 'empresa', layout: 'wide' },
+  },
+  {
     path: '/empresa/configuracoes',
     name: 'configuracoes-empresa',
     component: () => import('../views/ConfiguracoesEmpresaView.vue'),

@@ -24,6 +24,7 @@ const load = (p) => vite.ssrLoadModule('/src/' + p)
 const { default: api } = await load('services/api.js')
 const { sessao, limparSessao } = await load('services/authSession.js')
 const service = await load('services/perfilPortfolioService.js')
+const { obterFreelancer } = await load('services/freelancersPublicosService.js')
 const utils = await load('utils/perfilPortfolio.js')
 const { usePerfilPortfolio } = await load('composables/usePerfilPortfolio.js')
 const { useEditarPerfil } = await load('composables/useEditarPerfil.js')
@@ -349,6 +350,7 @@ test('criação inicia tags vazias, valida e bloqueia envio repetido após 201',
   const { e, fechar } = await montar(useProjetoFormulario)
   try {
     assert.deepEqual(e.tags.value, [])
+    assert.equal(e.publico.value, false)
     await e.salvarProjeto()
     assert.equal(chamadas.length, 0)
     e.titulo.value = 'Novo'
@@ -366,8 +368,42 @@ test('criação inicia tags vazias, valida e bloqueia envio repetido após 201',
     assert.deepEqual(JSON.parse(chamadas.find((c) => c.method === 'post').data).tags, [])
     assert.ok(e.mostrarSucesso.value)
     assert.equal((await service.consultarProjeto(2)).titulo, 'Novo')
+    assert.equal((await service.consultarProjeto(2)).publico, false)
   } finally {
     fechar()
+  }
+})
+test('criação com imagem publica o projeto e reabre a edição com a visibilidade salva', async () => {
+  const responder = transporte
+  transporte = (c) => {
+    if (c.method !== 'post') return responder(c)
+    assert.equal(c.data.get('publico'), 'true')
+    assert.equal(c.data.get('imagem').name, 'projeto.webp')
+    const data = { ...Object.fromEntries(c.data), id: 2, publico: true, imagem: '/media/projeto.webp' }
+    data.tags = JSON.parse(data.tags)
+    projetos.push(data)
+    return { status: 201, data }
+  }
+  const criacao = await montar(useProjetoFormulario)
+  try {
+    const { e } = criacao
+    e.titulo.value = 'Projeto público'
+    e.categoria.value = 'Web'
+    e.descricao.value = 'Descrição'
+    e.publico.value = true
+    e.definirImagem(new File(['imagem'], 'projeto.webp', { type: 'image/webp' }))
+    await e.salvarProjeto()
+    assert.equal(e.erro.value, '')
+    assert.equal(e.projetoSalvo.value, 2)
+  } finally {
+    criacao.fechar()
+  }
+  const edicao = await montar(useProjetoFormulario, '/portfolio/2/editar')
+  try {
+    assert.equal(edicao.e.publico.value, true)
+    assert.match(edicao.e.preview.value, /projeto.webp$/)
+  } finally {
+    edicao.fechar()
   }
 })
 test('edição envia PATCH, preserva imagem omitida e permite limpar tags', async () => {
@@ -383,6 +419,71 @@ test('edição envia PATCH, preserva imagem omitida e permite limpar tags', asyn
     assert.equal(JSON.parse(c.data).imagem, undefined)
     assert.deepEqual(JSON.parse(c.data).tags, [])
     assert.equal((await service.consultarProjeto(1)).imagem, '/media/projeto.png')
+  } finally {
+    fechar()
+  }
+})
+test('visibilidade do projeto e do perfil controla a resposta pública simulada', async () => {
+  projetos[0].publico = false
+  user.perfil_publico = true
+  sessao.usuario = user
+  sessao.tipo = 'usuario'
+  const original = { ...projetos[0] }
+  const transportePrivado = transporte
+  transporte = (c) => {
+    if (c.url !== 'freelancers/1/') {
+      assert.equal(sessao.tipo, 'usuario')
+      return transportePrivado(c)
+    }
+    assert.equal(sessao.tipo, 'empresa')
+    if (!user.perfil_publico) falhar(404)
+    return { id: 1, portfolio: projetos.filter((p) => p.publico === true) }
+  }
+  const perfilEmpresa = async () => {
+    sessao.tipo = 'empresa'
+    try {
+      return await obterFreelancer(1)
+    } finally {
+      sessao.tipo = 'usuario'
+    }
+  }
+  assert.deepEqual(await service.listarProjetos(), [original])
+  assert.deepEqual((await perfilEmpresa()).portfolio, [])
+  for (const publico of [true, false]) {
+    const { e, fechar } = await montar(useProjetoFormulario, '/portfolio/1/editar')
+    try {
+      assert.equal(e.publico.value, !publico)
+      e.publico.value = publico
+      await e.salvarProjeto()
+      assert.equal(e.erro.value, '')
+      const patch = chamadas.findLast((c) => c.method === 'patch')
+      assert.equal(JSON.parse(patch.data).publico, publico)
+      assert.equal(chamadas.at(-1).method, 'get')
+      assert.deepEqual(await service.consultarProjeto(1), { ...original, publico })
+    } finally {
+      fechar()
+    }
+    const { portfolio } = await perfilEmpresa()
+    assert.deepEqual(portfolio.map((p) => p.titulo), publico ? [original.titulo] : [])
+    if (publico) {
+      user.perfil_publico = false
+      await assert.rejects(perfilEmpresa(), (erro) => erro.response?.status === 404)
+      assert.equal((await service.consultarProjeto(1)).publico, true)
+      user.perfil_publico = true
+    }
+  }
+})
+test('avisa quando o GET após salvar não confirma a visibilidade solicitada', async () => {
+  projetos[0].publico = false
+  const responder = transporte
+  transporte = (c) =>
+    c.method === 'patch' ? { ...projetos[0], publico: true } : responder(c)
+  const { e, fechar } = await montar(useProjetoFormulario, '/portfolio/1/editar')
+  try {
+    e.publico.value = true
+    await e.salvarProjeto()
+    assert.equal(e.publico.value, false)
+    assert.match(e.erro.value, /visibilidade retornada pela API/)
   } finally {
     fechar()
   }
@@ -549,6 +650,10 @@ test('upload perfil e projeto persistem URLs do servidor, listas e substituiçõ
     const alvo = c.url === 'usuarios/me/' ? perfil : projeto
     if (c.method === 'patch') {
       const dados = typeof c.data === 'string' ? JSON.parse(c.data) : Object.fromEntries(c.data)
+      if (typeof dados.publico === 'string') {
+        assert.ok(['true', 'false'].includes(dados.publico))
+        dados.publico = dados.publico === 'true'
+      }
       for (const campo of ['habilidades', 'tags'])
         if (typeof dados[campo] === 'string') dados[campo] = JSON.parse(dados[campo])
       for (const campo of ['profile_image', 'imagem'])
@@ -562,11 +667,16 @@ test('upload perfil e projeto persistem URLs do servidor, listas e substituiçõ
   await service.atualizarPerfil({ profile_image: file, habilidades: ['API'] })
   assert.deepEqual((await service.consultarPerfil()).habilidades, ['API'])
   assert.match((await service.consultarPerfil()).profile_image, /nova.webp$/)
-  await service.salvarProjeto(1, { imagem: file, tags: [] })
+  await service.salvarProjeto(1, { imagem: file, tags: [], publico: true, usuario: 99 })
+  assert.equal(chamadas.at(-1).data.get('publico'), 'true')
+  assert.equal(chamadas.at(-1).data.has('usuario'), false)
+  assert.equal((await service.consultarProjeto(1)).publico, true)
   assert.deepEqual((await service.consultarProjeto(1)).tags, [])
   assert.match((await service.consultarProjeto(1)).imagem, /nova.webp$/)
   const segunda = new File(['outra'], 'segunda.png', { type: 'image/png' })
-  await service.salvarProjeto(1, { imagem: segunda, tags: ['API'] })
+  await service.salvarProjeto(1, { imagem: segunda, tags: ['API'], publico: false })
+  assert.equal(chamadas.at(-1).data.get('publico'), 'false')
+  assert.equal((await service.consultarProjeto(1)).publico, false)
   assert.match((await service.consultarProjeto(1)).imagem, /segunda.png$/)
   await service.salvarProjeto(1, { titulo: 'Mantém imagem' })
   assert.match((await service.consultarProjeto(1)).imagem, /segunda.png$/)

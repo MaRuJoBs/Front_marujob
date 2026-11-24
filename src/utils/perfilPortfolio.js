@@ -13,7 +13,7 @@ export const camposPerfil = [
   'perfil_publico',
   'cidade_publica',
 ]
-export const camposProjeto = ['titulo', 'categoria', 'descricao', 'tags', 'link', 'imagem']
+export const camposProjeto = ['titulo', 'categoria', 'descricao', 'tags', 'link', 'imagem', 'publico']
 
 export function validarLista(lista) {
   if (

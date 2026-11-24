@@ -132,6 +132,7 @@ onMounted(carregar)
             <h2>{{ projeto.titulo }}</h2>
 
             <p>{{ projeto.categoria }}</p>
+            <small>{{ projeto.publico === true ? 'Público' : 'Privado' }}</small>
 
             <div class="tags">
               <span v-for="tag in projeto.tags" :key="tag">

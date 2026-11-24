@@ -5,6 +5,7 @@ import { habilidadesSugeridas, opcoesTags } from '@/utils/tags'
 const {
   titulo,
   categoria,
+  publico,
   descricao,
   link,
   tags,
@@ -237,6 +238,26 @@ function selecionarTag(event) {
               v-model="link"
               placeholder="https://..."
             />
+          </div>
+
+          <div>
+            <input
+              id="projeto-publico"
+              v-model="publico"
+              type="checkbox"
+              :aria-invalid="!!camposErro.publico"
+              :aria-describedby="camposErro.publico
+                ? 'projeto-publico-ajuda projeto-publico-erro'
+                : 'projeto-publico-ajuda'"
+            />
+            <label for="projeto-publico">Exibir no meu perfil público</label>
+            <p id="projeto-publico-ajuda">
+              Quando ativado, este projeto poderá ser visualizado pelas empresas que acessarem seu
+              perfil público.
+            </p>
+            <p id="projeto-publico-erro" v-if="camposErro.publico" role="alert">
+              {{ camposErro.publico }}
+            </p>
           </div>
 
           <p id="projeto-imagem-erro" v-if="erroImagem" role="alert">{{ erroImagem }}</p>
